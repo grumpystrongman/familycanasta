@@ -6,6 +6,7 @@ import "./team.css";
 import "./teamStyles.css";
 import "./play.css";
 import "./scoring.css";
+import "./flexibleGame.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode><App /></React.StrictMode>
