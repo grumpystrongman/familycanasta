@@ -14,5 +14,15 @@ jobs:
         with:
           node-version: 22
       - run: npm install
-      - run: npm test
-      - run: npm run build
+      - name: Grouped meld planner tests
+        run: node --test src/game/multiMeldPlanner.test.js
+      - name: Opening requirement tests
+        run: node --test src/game/engine.test.js
+      - name: Discard pickup tests
+        run: node --test src/game/discardPickupPlanner.test.js
+      - name: Robot pickup tests
+        run: node --test src/game/botEngine.test.js
+      - name: Full test discovery
+        run: npm test
+      - name: Production build
+        run: npm run build
