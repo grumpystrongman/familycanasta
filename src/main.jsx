@@ -8,6 +8,8 @@ import RedThreeBoard from "./RedThreeBoard";
 import RedThreeTurnControl from "./RedThreeTurnControl";
 import BlackThreeRuleFix from "./BlackThreeRuleFix";
 import SafeDiscardRule from "./SafeDiscardRule";
+import HomeRulesOptions from "./HomeRulesOptions";
+import ScoringDisplayFix from "./ScoringDisplayFix";
 import "./styles.css";
 import "./team.css";
 import "./teamStyles.css";
@@ -23,6 +25,7 @@ import "./multiMeld.css";
 import "./redThreeBoard.css";
 import "./redThreeTurn.css";
 import "./safeDiscard.css";
+import "./homeRules.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
@@ -34,5 +37,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
     <RedThreeTurnControl />
     <BlackThreeRuleFix />
     <SafeDiscardRule />
-  </React.StrictMode>
+    <HomeRulesOptions />
+    <ScoringDisplayFix />
+  </React.StrictMode>,
 );
