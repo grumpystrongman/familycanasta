@@ -12,6 +12,13 @@ function labelFor(card) {
   return `${card.rank} ${SUIT_SYMBOLS[card.suit] || "★"}`;
 }
 
+function setActionButtonLabel(button, text) {
+  const textNode = [...button.childNodes].find((node) => node.nodeType === 3);
+  if (textNode) textNode.textContent = ` ${text}`;
+  else button.appendChild(document.createTextNode(` ${text}`));
+  button.setAttribute("aria-label", text);
+}
+
 function applyBoardColors() {
   document.querySelectorAll(".board-meld .real-card").forEach((card) => {
     const label = card.getAttribute("aria-label") || "";
@@ -94,8 +101,6 @@ export default function MultiMeldEnhancer() {
     () => selectedIds.map((id) => hand.find((card) => card.id === id)).filter(Boolean),
     [selectedIds, hand],
   );
-  const naturalRanks = [...new Set(selectedCards.filter((card) => !isWild(card) && card.rank !== "3").map((card) => card.rank))];
-  const isMulti = naturalRanks.length > 1;
   const uid = auth?.currentUser?.uid;
   const members = Object.values(room?.members || {}).sort((a, b) => a.seat - b.seat);
   const active = members[Number(room?.publicState?.currentPlayerIndex || 0)];
@@ -112,17 +117,17 @@ export default function MultiMeldEnhancer() {
   const stagedPoints = openingOwner === uid ? Number(room?.publicState?.openingTurnPoints || 0) : 0;
   const openingNeed = team >= 0 ? openingRequirement(Number(room?.publicState?.teamScores?.[team] || 0)) : 0;
   const openingInProgress = Boolean(canAct && !teamOpened && openingOwner === uid && stagedPoints > 0);
-  const canContinueOpening = Boolean(openingInProgress && selectedCards.length > 0);
-  const showGroupedButton = Boolean(isMulti || canContinueOpening);
+  const usesGroupedAction = Boolean(selectedCards.length > 0 && !selectedCards.every(isWild));
   const openingConflict = Boolean(!teamOpened && openingOwner && openingOwner !== uid);
   const projectedOpeningPoints = stagedPoints + plan.totalPoints;
   const openingSatisfied = teamOpened || projectedOpeningPoints >= openingNeed;
   const selectionIsLegal = Boolean(plan.valid && !openingConflict);
+  const meldWord = plan.groups.length === 1 ? "meld" : "melds";
   const buttonText = teamOpened
-    ? `Play ${plan.groups.length} meld${plan.groups.length === 1 ? "" : "s"} · ${plan.totalPoints} pts`
+    ? `Play ${plan.groups.length} ${meldWord} · ${plan.totalPoints} pts`
     : openingSatisfied
-      ? `Play opening melds · ${plan.totalPoints} pts`
-      : `Stage opening melds · ${plan.totalPoints} pts`;
+      ? `Play opening ${meldWord} · ${projectedOpeningPoints} pts`
+      : `Stage opening ${meldWord} · ${projectedOpeningPoints}/${openingNeed} pts`;
 
   useEffect(() => {
     const openingUid = room?.publicState?.openingTurnUid;
@@ -144,6 +149,30 @@ export default function MultiMeldEnhancer() {
     return () => document.removeEventListener("click", blockIncompleteOpeningDiscard, true);
   }, [openingInProgress, stagedPoints, openingNeed]);
 
+  useEffect(() => {
+    if (!advisor || !usesGroupedAction) return undefined;
+    const primaryButton = [...advisor.children].find((child) => child.matches?.("button:not(.discard-button)"));
+    if (!primaryButton) return undefined;
+
+    setActionButtonLabel(primaryButton, buttonText);
+    primaryButton.classList.add("grouped-meld-primary");
+    primaryButton.disabled = !canAct || busy || !selectionIsLegal;
+
+    const playAllProposedMelds = (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation?.();
+      if (!canAct || busy || !selectionIsLegal) return;
+      run(() => playGroupedMelds(roomCode, uid, selectedIds));
+    };
+
+    primaryButton.addEventListener("click", playAllProposedMelds, true);
+    return () => {
+      primaryButton.removeEventListener("click", playAllProposedMelds, true);
+      primaryButton.classList.remove("grouped-meld-primary");
+    };
+  }, [advisor, usesGroupedAction, buttonText, canAct, busy, selectionIsLegal, roomCode, uid, selectedIds]);
+
   async function run(action) {
     setBusy(true);
     setError("");
@@ -158,20 +187,22 @@ export default function MultiMeldEnhancer() {
 
   return advisor ? createPortal(
     <div className="multi-meld-tools">
-      {openingInProgress && !showGroupedButton && (
+      {openingInProgress && !usesGroupedAction && (
         <span className="multi-meld-help">
           Opening staged: {stagedPoints} of {openingNeed} points. Add another legal meld or undo before discarding.
         </span>
       )}
 
-      {showGroupedButton && (
+      {usesGroupedAction && (
         <div className="multi-meld-preview" aria-live="polite">
-          <div className="multi-meld-preview-title">Proposed melds</div>
+          <div className="multi-meld-preview-title">
+            {teamOpened ? "Proposed melds" : `Opening play (${projectedOpeningPoints} / ${openingNeed})`}
+          </div>
           <div className="multi-meld-list">
             {plan.groups.map((group) => (
               <div className={`multi-meld-row ${group.error ? "invalid" : "valid"}`} key={`${group.rank}-${group.cards.map((card) => card.id).join("-")}`}>
                 <div className="multi-meld-row-heading">
-                  <strong>{group.rank === "Wild" ? "Wild cards" : `${group.rank}s`}</strong>
+                  <strong>{group.error ? "✕" : "✓"} {group.rank === "Wild" ? "Wild cards" : `${group.rank}s`}</strong>
                   <span>{group.points} pts</span>
                 </div>
                 <div className="multi-meld-card-list">{group.cards.map(labelFor).join(", ")}</div>
@@ -199,17 +230,8 @@ export default function MultiMeldEnhancer() {
         </div>
       )}
 
-      {showGroupedButton && (
-        <button
-          className="multi-meld-button"
-          disabled={!canAct || busy || !selectionIsLegal}
-          onClick={() => run(() => playGroupedMelds(roomCode, uid, selectedIds))}
-        >
-          {buttonText}
-        </button>
-      )}
       <button className="undo-play-button" disabled={!canUndo || busy} onClick={() => run(() => undoLastPlay(roomCode, uid))}>Undo last play</button>
-      {showGroupedButton && <span className="multi-meld-help">Wild cards attach to the nearest selected natural rank in your hand.</span>}
+      {usesGroupedAction && <span className="multi-meld-help">The main play button commits every valid proposed meld together. Wild cards attach to the nearest selected natural rank.</span>}
       {error && <span className="multi-meld-error">{error}</span>}
     </div>,
     advisor,
