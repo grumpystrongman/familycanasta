@@ -5,8 +5,8 @@ import {
   isRedThree,
   isWild,
   openingRequirementForTeam,
-} from "./engine";
-import { planDiscardPickup } from "./discardPickupPlanner";
+} from "./engine.js";
+import { planDiscardPickup } from "./discardPickupPlanner.js";
 
 const rankOrder = ["4","5","6","7","8","9","10","J","Q","K","A","2","JOKER","3"];
 
