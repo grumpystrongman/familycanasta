@@ -18,7 +18,6 @@ export const DEFAULT_RULES = {
   allowWildCanasta: false,
   freezeOnWild: true,
   freezeOnBlackThree: true,
-  discardPileStartsFrozen: true,
   maxWildsPerMeld: 3,
   cleanCanastaBonus: 500,
   dirtyCanastaBonus: 300,
@@ -35,7 +34,13 @@ export function createDeck(deckCount = 2) {
   for (let deck = 0; deck < deckCount; deck += 1) {
     for (const suit of SUITS) {
       for (const rank of RANKS) {
-        cards.push({ id: makeCardId(deck, suit, rank), deck, suit, rank, color: suit === "H" || suit === "D" ? "red" : "black" });
+        cards.push({
+          id: makeCardId(deck, suit, rank),
+          deck,
+          suit,
+          rank,
+          color: suit === "H" || suit === "D" ? "red" : "black",
+        });
       }
     }
     cards.push({ id: makeCardId(deck, "J", "JOKER", 0), deck, suit: "J", rank: "JOKER", color: "black" });
@@ -96,7 +101,10 @@ export function teamRecord(teamCount, valueFactory) {
 export function scoreTeamBoard(room, team, wentOutTeam = null) {
   const rules = { ...DEFAULT_RULES, ...(room.rules || {}) };
   const melds = room.publicState?.teamBoards?.[team] || [];
-  const boardCardPoints = melds.flatMap((meld) => meld.cards || []).reduce((sum, card) => sum + cardPoints(card), 0);
+  const boardCardPoints = melds
+    .flatMap((meld) => meld.cards || [])
+    .reduce((sum, card) => sum + cardPoints(card), 0);
+
   let cleanCanastas = 0;
   let dirtyCanastas = 0;
   for (const meld of melds) {
@@ -104,6 +112,7 @@ export function scoreTeamBoard(room, team, wentOutTeam = null) {
     if ((meld.cards || []).some(isWild)) dirtyCanastas += 1;
     else cleanCanastas += 1;
   }
+
   const redThreeCards = Object.entries(room.publicState?.redThrees || {})
     .filter(([uid]) => Number(room.members?.[uid]?.team) === Number(team))
     .flatMap(([, cards]) => cards || []);
@@ -115,6 +124,7 @@ export function scoreTeamBoard(room, team, wentOutTeam = null) {
     .filter((member) => Number(member.team) === Number(team))
     .flatMap((member) => room.privateHands?.[member.uid] || [])
     .reduce((sum, card) => sum + cardPoints(card), 0);
+
   return {
     boardCardPoints,
     cleanCanastas,
@@ -135,13 +145,32 @@ export function finishRound(room, wentOutUid) {
   const teamCount = Number(state.rules?.teamCount || 2);
   const breakdowns = teamRecord(teamCount, (team) => scoreTeamBoard(state, team, wentOutTeam));
   const currentScores = state.publicState?.teamScores || Array.from({ length: teamCount }, () => 0);
-  state.publicState.teamScores = Array.from({ length: teamCount }, (_, team) => Number(currentScores[team] || 0) + breakdowns[team].roundTotal);
+  state.publicState.teamScores = Array.from(
+    { length: teamCount },
+    (_, team) => Number(currentScores[team] || 0) + breakdowns[team].roundTotal,
+  );
   state.publicState.roundBreakdowns = breakdowns;
-  state.publicState.phase = "handOver";
-  state.publicState.turnPhase = "complete";
   state.publicState.wentOutUid = wentOutUid;
   state.publicState.wentOutTeam = wentOutTeam;
-  state.publicState.lastAction = `${state.members?.[wentOutUid]?.nickname || "A player"} went out. Round scoring is complete.`;
+
+  const targetScore = Number(state.rules?.targetScore || 5000);
+  const winningScore = Math.max(...state.publicState.teamScores);
+  const winnerTeam = state.publicState.teamScores.findIndex((score) => Number(score) === winningScore);
+  const gameIsOver = winningScore >= targetScore;
+
+  if (gameIsOver) {
+    state.status = "gameOver";
+    state.publicState.phase = "gameOver";
+    state.publicState.turnPhase = "complete";
+    state.publicState.winnerTeam = winnerTeam;
+    state.publicState.winningScore = winningScore;
+    state.publicState.gameEndedAt = Date.now();
+    state.publicState.lastAction = `Team ${TEAM_NAMES[winnerTeam]} wins the game with ${winningScore.toLocaleString()} points!`;
+  } else {
+    state.publicState.phase = "handOver";
+    state.publicState.turnPhase = "complete";
+    state.publicState.lastAction = `${state.members?.[wentOutUid]?.nickname || "A player"} went out. Round scoring is complete.`;
+  }
   return state;
 }
 
@@ -167,6 +196,7 @@ export function dealHand({ players, rules, dealerIndex, existingScores }) {
   const hands = Object.fromEntries(players.map((player) => [player.uid, []]));
   const redThrees = Object.fromEntries(players.map((player) => [player.uid, []]));
   const order = [];
+
   for (let cardNumber = 0; cardNumber < Number(rules.cardsPerPlayer || 11); cardNumber += 1) {
     for (let offset = 1; offset <= players.length; offset += 1) {
       const playerIndex = (dealerIndex + offset) % players.length;
@@ -176,12 +206,17 @@ export function dealHand({ players, rules, dealerIndex, existingScores }) {
       order.push({ playerUid: player.uid, cardId: card.id });
     }
   }
-  for (const player of players) hands[player.uid] = replaceRedThrees(hands[player.uid], stock, redThrees[player.uid]);
+
+  for (const player of players) {
+    hands[player.uid] = replaceRedThrees(hands[player.uid], stock, redThrees[player.uid]);
+  }
+
   let firstDiscard = stock.pop();
   while (firstDiscard && isRedThree(firstDiscard)) {
     stock.unshift(firstDiscard);
     firstDiscard = stock.pop();
   }
+
   const scores = existingScores || Array.from({ length: teamCount }, () => 0);
   return {
     publicState: {
@@ -191,8 +226,7 @@ export function dealHand({ players, rules, dealerIndex, existingScores }) {
       turnPhase: "draw",
       stockCount: stock.length,
       discardPile: firstDiscard ? [firstDiscard] : [],
-      discardFrozen: rules.discardPileStartsFrozen !== false,
-      discardPileHasBeenTaken: false,
+      discardFrozen: true,
       teamMelds: teamRecord(teamCount, () => []),
       teamBoards: teamRecord(teamCount, () => []),
       teamScores: scores,
@@ -202,7 +236,7 @@ export function dealHand({ players, rules, dealerIndex, existingScores }) {
       dealOrder: order,
       dealAnimationIndex: 0,
       handNumber: 1,
-      lastAction: "Cards are being dealt. The discard pile starts frozen.",
+      lastAction: "Cards are being dealt.",
       botThinkingUid: null,
     },
     privateHands: hands,
