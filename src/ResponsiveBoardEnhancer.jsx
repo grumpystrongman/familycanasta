@@ -16,8 +16,11 @@ export default function ResponsiveBoardEnhancer() {
     let cleanup = () => {};
 
     function enhance() {
+      const candidate = document.querySelector(".game-page.enhanced-game");
+      if (candidate?.classList.contains("responsive-board-ready")) return;
+
       cleanup();
-      const game = document.querySelector(".game-page.enhanced-game");
+      const game = candidate;
       const table = game?.querySelector(".table");
       const boards = [...(game?.querySelectorAll(".shared-board") || [])];
       const sidebar = game?.querySelector(".score-chat-sidebar");
@@ -114,6 +117,8 @@ export default function ResponsiveBoardEnhancer() {
     }
 
     const observer = new MutationObserver(() => {
+      const game = document.querySelector(".game-page.enhanced-game");
+      if (!game || game.classList.contains("responsive-board-ready")) return;
       window.clearTimeout(observer.timer);
       observer.timer = window.setTimeout(enhance, 30);
     });
@@ -122,6 +127,7 @@ export default function ResponsiveBoardEnhancer() {
 
     return () => {
       observer.disconnect();
+      window.clearTimeout(observer.timer);
       cleanup();
     };
   }, []);
