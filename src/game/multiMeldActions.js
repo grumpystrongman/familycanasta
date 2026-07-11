@@ -15,30 +15,6 @@ function assertPlayTurn(room, uid) {
   return player;
 }
 
-function assignWildsByPosition(cards) {
-  const groups = new Map();
-  const naturalPositions = [];
-  cards.forEach((card, index) => {
-    if (isWild(card)) return;
-    if (card.rank === "3") throw new Error("Threes cannot be used in a normal meld.");
-    if (!groups.has(card.rank)) groups.set(card.rank, []);
-    groups.get(card.rank).push(card);
-    naturalPositions.push({ index, rank: card.rank });
-  });
-  if (!naturalPositions.length) throw new Error("Select at least one natural rank with the wild cards.");
-  cards.forEach((card, index) => {
-    if (!isWild(card)) return;
-    let nearest = naturalPositions[0];
-    for (const candidate of naturalPositions) {
-      const distance = Math.abs(candidate.index - index);
-      const current = Math.abs(nearest.index - index);
-      if (distance < current || (distance === current && candidate.index < nearest.index)) nearest = candidate;
-    }
-    groups.get(nearest.rank).push(card);
-  });
-  return [...groups.entries()].map(([rank, groupCards]) => ({ rank, cards: groupCards }));
-}
-
 function validateGroup(existingCards, selectedCards, rules, rank) {
   const combined = [...existingCards, ...selectedCards];
   const naturals = combined.filter((card) => !isWild(card));
@@ -47,6 +23,69 @@ function validateGroup(existingCards, selectedCards, rules, rank) {
   if (wilds.length > Number(rules?.maxWildsPerMeld || 3)) throw new Error(`The ${rank} meld has too many wild cards.`);
   if (wilds.length >= naturals.length) throw new Error(`The ${rank} meld must have more natural cards than wild cards.`);
   if (!existingCards.length && selectedCards.length < 3) throw new Error(`A new ${rank} meld needs at least three cards.`);
+}
+
+function buildValidGroups(cards, board, rules) {
+  const groups = new Map();
+  const naturalPositions = [];
+  const wildEntries = [];
+
+  cards.forEach((card, index) => {
+    if (isWild(card)) {
+      wildEntries.push({ card, index });
+      return;
+    }
+    if (card.rank === "3") throw new Error("Threes cannot be used in a normal meld.");
+    if (!groups.has(card.rank)) groups.set(card.rank, []);
+    groups.get(card.rank).push(card);
+    naturalPositions.push({ index, rank: card.rank });
+  });
+
+  if (!naturalPositions.length) throw new Error("Select at least one natural rank with the wild cards.");
+
+  const ranks = [...groups.keys()];
+  const candidateRanks = wildEntries.map(({ index }) => [...ranks].sort((left, right) => {
+    const leftDistance = Math.min(...naturalPositions.filter((item) => item.rank === left).map((item) => Math.abs(item.index - index)));
+    const rightDistance = Math.min(...naturalPositions.filter((item) => item.rank === right).map((item) => Math.abs(item.index - index)));
+    return leftDistance - rightDistance;
+  }));
+
+  let best = null;
+  let bestDistance = Number.POSITIVE_INFINITY;
+
+  function search(wildIndex, working, distance) {
+    if (distance >= bestDistance) return;
+    if (wildIndex >= wildEntries.length) {
+      const result = [...working.entries()].map(([rank, groupCards]) => ({ rank, cards: groupCards }));
+      try {
+        for (const group of result) {
+          const existing = board.find((meld) => meld.rank === group.rank);
+          validateGroup(existing?.cards || [], group.cards, rules, group.rank);
+        }
+        best = result;
+        bestDistance = distance;
+      } catch {
+        // Keep searching for a legal assignment of the selected wild cards.
+      }
+      return;
+    }
+
+    const entry = wildEntries[wildIndex];
+    for (const rank of candidateRanks[wildIndex]) {
+      const naturals = naturalPositions.filter((item) => item.rank === rank);
+      const nearestDistance = Math.min(...naturals.map((item) => Math.abs(item.index - entry.index)));
+      const next = new Map([...working.entries()].map(([key, value]) => [key, [...value]]));
+      next.get(rank).push(entry.card);
+      search(wildIndex + 1, next, distance + nearestDistance);
+    }
+  }
+
+  search(0, new Map([...groups.entries()].map(([rank, groupCards]) => [rank, [...groupCards]])), 0);
+
+  if (!best) {
+    throw new Error("The selected cards cannot be divided into legal melds. Each meld needs at least three cards and more natural cards than wild cards.");
+  }
+  return best;
 }
 
 export async function playGroupedMelds(code, uid, orderedCardIds) {
@@ -58,15 +97,22 @@ export async function playGroupedMelds(code, uid, orderedCardIds) {
       const hand = [...(room.privateHands?.[uid] || [])];
       const selected = orderedCardIds.map((id) => hand.find((card) => card.id === id));
       if (selected.some((card) => !card)) throw new Error("One selected card is no longer in your hand.");
-      const groups = assignWildsByPosition(selected);
+
       room.publicState.teamBoards ||= {};
       room.publicState.teamBoards[player.team] ||= [];
       room.publicState.opened ||= {};
       room.publicState.handCounts ||= {};
       const board = room.publicState.teamBoards[player.team];
-      for (const group of groups) {
-        const existing = board.find((meld) => meld.rank === group.rank);
-        validateGroup(existing?.cards || [], group.cards, room.rules, group.rank);
+      const groups = buildValidGroups(selected, board, room.rules);
+
+      const selectedPoints = selected.reduce((sum, card) => sum + cardPoints(card), 0);
+      const alreadyOpened = Boolean(room.publicState.opened[player.team]);
+      const stagedBefore = Number(room.publicState.openingTurnPoints || 0);
+      const need = openingRequirement(Number(room.publicState.teamScores?.[player.team] || 0));
+      const stagedAfter = alreadyOpened ? 0 : stagedBefore + selectedPoints;
+
+      if (!alreadyOpened && room.publicState.openingTurnUid && room.publicState.openingTurnUid !== uid) {
+        throw new Error("Another player has an unfinished opening meld.");
       }
 
       room.publicState.undoPlay = {
@@ -75,9 +121,9 @@ export async function playGroupedMelds(code, uid, orderedCardIds) {
         privateHand: hand,
         team: player.team,
         teamBoard: structuredClone(board),
-        opened: Boolean(room.publicState.opened[player.team]),
+        opened: alreadyOpened,
         openingTurnUid: room.publicState.openingTurnUid || null,
-        openingTurnPoints: Number(room.publicState.openingTurnPoints || 0),
+        openingTurnPoints: stagedBefore,
         handCount: hand.length,
         lastAction: room.publicState.lastAction || "",
       };
@@ -88,16 +134,11 @@ export async function playGroupedMelds(code, uid, orderedCardIds) {
         else board.push({ rank: group.rank, cards: group.cards });
       }
 
-      const selectedPoints = selected.reduce((sum, card) => sum + cardPoints(card), 0);
-      let openingComplete = Boolean(room.publicState.opened[player.team]);
-      let stagedTotal = Number(room.publicState.openingTurnPoints || 0);
-      if (!openingComplete) {
-        if (room.publicState.openingTurnUid && room.publicState.openingTurnUid !== uid) throw new Error("Another player has an unfinished opening meld.");
+      let openingComplete = alreadyOpened;
+      if (!alreadyOpened) {
         room.publicState.openingTurnUid = uid;
-        stagedTotal += selectedPoints;
-        room.publicState.openingTurnPoints = stagedTotal;
-        const need = openingRequirement(Number(room.publicState.teamScores?.[player.team] || 0));
-        if (stagedTotal >= need) {
+        room.publicState.openingTurnPoints = stagedAfter;
+        if (stagedAfter >= need) {
           room.publicState.opened[player.team] = true;
           room.publicState.openingTurnUid = null;
           room.publicState.openingTurnPoints = 0;
@@ -111,8 +152,8 @@ export async function playGroupedMelds(code, uid, orderedCardIds) {
       room.publicState.turnPhase = "play";
       const groupText = groups.map((group) => `${group.rank}s`).join(", ");
       room.publicState.lastAction = openingComplete
-        ? `${player.nickname} played ${groups.length} meld${groups.length === 1 ? "" : "s"}: ${groupText}.`
-        : `${player.nickname} staged ${groupText}; opening total is now ${stagedTotal} points.`;
+        ? `${player.nickname} played ${groups.length} meld${groups.length === 1 ? "" : "s"}: ${groupText} for ${selectedPoints} points.`
+        : `${player.nickname} staged ${groupText}; opening total is now ${stagedAfter} of ${need} points.`;
 
       if (room.privateHands[uid].length === 0) {
         if (!openingComplete) throw new Error("You cannot go out until the opening meld requirement is complete.");
