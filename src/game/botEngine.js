@@ -113,32 +113,43 @@ function candidateMelds(hand, currentMelds, rules) {
   }
 
   const newRanks = Object.entries(naturals)
-    .filter(([rank]) => !currentMelds.some((meld) => meld.rank === rank))
+    .filter(([rank]) => !currentMelds.some((meld) => meld.rank === rank));
+  const pairs = newRanks
+    .filter(([, cards]) => cards.length === 2)
+    .sort(([, left], [, right]) => {
+      const leftPoints = left.reduce((sum, card) => sum + cardPoints(card), 0);
+      const rightPoints = right.reduce((sum, card) => sum + cardPoints(card), 0);
+      return rightPoints - leftPoints;
+    });
+  const naturalMelds = newRanks
+    .filter(([, cards]) => cards.length >= 3)
     .sort(([, left], [, right]) => {
       const leftPoints = left.reduce((sum, card) => sum + cardPoints(card), 0);
       const rightPoints = right.reduce((sum, card) => sum + cardPoints(card), 0);
       return rightPoints - leftPoints;
     });
 
-  for (const [rank, cards] of newRanks) {
-    let usefulWilds = [];
-    if (cards.length === 2 && availableWilds.length) {
-      usefulWilds = availableWilds.splice(0, 1);
-    } else if (cards.length >= 3) {
-      const maxWilds = Math.min(
-        Number(rules.maxWildsPerMeld || 3),
-        cards.length - 1,
-        availableWilds.length,
-      );
-      if (maxWilds > 0 && cards.length < 7) {
-        usefulWilds = availableWilds.splice(0, Math.min(maxWilds, 7 - cards.length));
-      }
-    } else {
-      continue;
-    }
+  for (const [rank, cards] of pairs) {
+    if (!availableWilds.length) break;
+    const selected = [...cards, ...availableWilds.splice(0, 1)];
+    candidates.push({
+      rank,
+      cards: selected,
+      existing: false,
+      score: selected.reduce((sum, card) => sum + cardPoints(card), 0),
+    });
+  }
 
+  for (const [rank, cards] of naturalMelds) {
+    const maxWilds = Math.min(
+      Number(rules.maxWildsPerMeld || 3),
+      cards.length - 1,
+      availableWilds.length,
+    );
+    const usefulWilds = maxWilds > 0 && cards.length < 7
+      ? availableWilds.splice(0, Math.min(maxWilds, 7 - cards.length))
+      : [];
     const selected = [...cards, ...usefulWilds];
-    if (selected.length < 3) continue;
     candidates.push({
       rank,
       cards: selected,
