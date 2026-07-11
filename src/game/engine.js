@@ -174,22 +174,6 @@ export function finishRound(room, wentOutUid) {
   return state;
 }
 
-function replaceRedThrees(hand, stock, redThreePile) {
-  let working = [...hand];
-  let changed = true;
-  while (changed) {
-    changed = false;
-    const index = working.findIndex(isRedThree);
-    if (index >= 0) {
-      redThreePile.push(working[index]);
-      working.splice(index, 1);
-      if (stock.length) working.push(stock.pop());
-      changed = true;
-    }
-  }
-  return sortHand(working);
-}
-
 export function dealHand({ players, rules, dealerIndex, existingScores }) {
   const teamCount = Number(rules.teamCount || 2);
   const stock = shuffle(createDeck(Number(rules.deckCount || (players.length > 4 ? 3 : 2))));
@@ -207,8 +191,10 @@ export function dealHand({ players, rules, dealerIndex, existingScores }) {
     }
   }
 
+  // Red threes dealt into a hand stay there until that player's turn. The player
+  // must lay them down, then receives one replacement card for each red three.
   for (const player of players) {
-    hands[player.uid] = replaceRedThrees(hands[player.uid], stock, redThrees[player.uid]);
+    hands[player.uid] = sortHand(hands[player.uid]);
   }
 
   let firstDiscard = stock.pop();
