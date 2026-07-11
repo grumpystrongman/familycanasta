@@ -1,0 +1,28 @@
+name: Validate
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - name: Grouped meld planner tests
+        run: node --test src/game/multiMeldPlanner.test.js
+      - name: Opening requirement tests
+        run: node --test src/game/engine.test.js
+      - name: Discard pickup tests
+        run: node --test src/game/discardPickupPlanner.test.js
+      - name: Robot pickup tests
+        run: node --test src/game/botEngine.test.js
+      - name: Full test discovery
+        run: npm test
+      - name: Production build
+        run: npm run build

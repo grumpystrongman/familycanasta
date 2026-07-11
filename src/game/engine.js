@@ -83,6 +83,12 @@ export function openingRequirement(score) {
   return 120;
 }
 
+export function openingRequirementForTeam(room, team) {
+  const stored = room?.publicState?.openingRequirements?.[team];
+  if (stored !== undefined && stored !== null) return Number(stored);
+  return openingRequirement(Number(room?.publicState?.teamScores?.[team] || 0));
+}
+
 export const isWild = (card) => card?.rank === "2" || card?.rank === "JOKER";
 export const isRedThree = (card) => card?.rank === "3" && card?.color === "red";
 export const isBlackThree = (card) => card?.rank === "3" && card?.color === "black";
@@ -209,6 +215,10 @@ export function dealHand({ players, rules, dealerIndex, existingScores }) {
   }
 
   const scores = existingScores || Array.from({ length: teamCount }, () => 0);
+  const openingRequirements = teamRecord(
+    teamCount,
+    (team) => openingRequirement(Number(scores[team] || 0)),
+  );
   return {
     publicState: {
       phase: "dealing",
@@ -221,6 +231,7 @@ export function dealHand({ players, rules, dealerIndex, existingScores }) {
       teamMelds: teamRecord(teamCount, () => []),
       teamBoards: teamRecord(teamCount, () => []),
       teamScores: scores,
+      openingRequirements,
       opened: teamRecord(teamCount, () => false),
       redThrees,
       handCounts: Object.fromEntries(players.map((player) => [player.uid, hands[player.uid].length])),

@@ -1,7 +1,8 @@
 import { ref, runTransaction } from "firebase/database";
 import { db } from "../firebase";
-import { finishRound, openingRequirement, sortHand } from "./engine";
+import { finishRound, openingRequirementForTeam, sortHand } from "./engine";
 import { planGroupedMelds } from "./multiMeldPlanner";
+import { validatePendingPickupSelection } from "./discardPickupPlanner";
 
 function orderedPlayers(room) {
   return Object.values(room.members || {}).sort((a, b) => a.seat - b.seat);
@@ -36,17 +37,22 @@ export async function playGroupedMelds(code, uid, orderedCardIds) {
         const invalidMeld = plan.groups.find((group) => group.error);
         throw new Error(invalidMeld?.error || plan.error || "The selected cards cannot be divided into legal melds.");
       }
-      const groups = plan.groups.map((group) => ({ rank: group.rank, cards: group.cards }));
 
+      const groups = plan.groups.map((group) => ({ rank: group.rank, cards: group.cards }));
       const selectedPoints = plan.totalPoints;
       const alreadyOpened = Boolean(room.publicState.opened[player.team]);
-      const stagedBefore = Number(room.publicState.openingTurnPoints || 0);
-      const need = openingRequirement(Number(room.publicState.teamScores?.[player.team] || 0));
-      const stagedAfter = alreadyOpened ? 0 : stagedBefore + selectedPoints;
+      const pending = room.publicState?.pendingDiscardPickup || null;
+      if (pending && pending.uid !== uid) throw new Error("Another player has an unfinished discard-pile opening.");
 
-      if (!alreadyOpened && room.publicState.openingTurnUid && room.publicState.openingTurnUid !== uid) {
-        throw new Error("Another player has an unfinished opening meld.");
+      if (!alreadyOpened) {
+        const pendingError = validatePendingPickupSelection(pending, selected);
+        if (pendingError) throw new Error(pendingError);
+        const need = openingRequirementForTeam(room, player.team);
+        if (selectedPoints < need) {
+          throw new Error(`Your opening play must be committed at once for ${need} points; these melds total ${selectedPoints}.`);
+        }
       }
+
       room.publicState.undoPlay = {
         uid,
         playerIndex: Number(room.publicState.currentPlayerIndex || 0),
@@ -54,8 +60,7 @@ export async function playGroupedMelds(code, uid, orderedCardIds) {
         team: player.team,
         teamBoard: structuredClone(board),
         opened: alreadyOpened,
-        openingTurnUid: room.publicState.openingTurnUid || null,
-        openingTurnPoints: stagedBefore,
+        pendingDiscardPickup: pending ? structuredClone(pending) : null,
         handCount: hand.length,
         lastAction: room.publicState.lastAction || "",
       };
@@ -66,31 +71,18 @@ export async function playGroupedMelds(code, uid, orderedCardIds) {
         else board.push({ rank: group.rank, cards: group.cards });
       }
 
-      let openingComplete = alreadyOpened;
-      if (!alreadyOpened) {
-        room.publicState.openingTurnUid = uid;
-        room.publicState.openingTurnPoints = stagedAfter;
-        if (stagedAfter >= need) {
-          room.publicState.opened[player.team] = true;
-          room.publicState.openingTurnUid = null;
-          room.publicState.openingTurnPoints = 0;
-          openingComplete = true;
-        }
-      }
-
+      room.publicState.opened[player.team] = true;
+      room.publicState.pendingDiscardPickup = null;
+      room.publicState.openingTurnUid = null;
+      room.publicState.openingTurnPoints = 0;
       const used = new Set(orderedCardIds);
       room.privateHands[uid] = sortHand(hand.filter((card) => !used.has(card.id)));
       room.publicState.handCounts[uid] = room.privateHands[uid].length;
       room.publicState.turnPhase = "play";
       const groupText = groups.map((group) => `${group.rank}s`).join(", ");
-      room.publicState.lastAction = openingComplete
-        ? `${player.nickname} played ${groups.length} meld${groups.length === 1 ? "" : "s"}: ${groupText} for ${selectedPoints} points.`
-        : `${player.nickname} staged ${groupText}; opening total is now ${stagedAfter} of ${need} points.`;
+      room.publicState.lastAction = `${player.nickname} played ${groups.length} meld${groups.length === 1 ? "" : "s"}: ${groupText} for ${selectedPoints} points.`;
 
-      if (room.privateHands[uid].length === 0) {
-        if (!openingComplete) throw new Error("You cannot go out until the opening meld requirement is complete.");
-        return finishRound(room, uid);
-      }
+      if (room.privateHands[uid].length === 0) return finishRound(room, uid);
       return room;
     } catch (error) {
       actionError = error.message;
@@ -110,8 +102,9 @@ export async function undoLastPlay(code, uid) {
       room.privateHands[uid] = undo.privateHand;
       room.publicState.teamBoards[player.team] = undo.teamBoard;
       room.publicState.opened[player.team] = undo.opened;
-      room.publicState.openingTurnUid = undo.openingTurnUid;
-      room.publicState.openingTurnPoints = undo.openingTurnPoints;
+      room.publicState.pendingDiscardPickup = undo.pendingDiscardPickup || null;
+      room.publicState.openingTurnUid = null;
+      room.publicState.openingTurnPoints = 0;
       room.publicState.handCounts[uid] = undo.handCount;
       room.publicState.lastAction = `${player.nickname} undid the previous play.`;
       room.publicState.undoPlay = null;

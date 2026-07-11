@@ -6,9 +6,10 @@ import {
   isBlackThree,
   isRedThree,
   isWild,
-  openingRequirement,
+  openingRequirementForTeam,
   sortHand,
 } from "./engine";
+import { planDiscardPickup, validatePendingPickupSelection } from "./discardPickupPlanner";
 
 function orderedPlayers(room) {
   return Object.values(room.members || {}).sort((a, b) => a.seat - b.seat);
@@ -76,111 +77,43 @@ function validateCombinedMeld(cards, rules) {
   return naturals[0].rank;
 }
 
-function buildOpeningPickupPlan(room, player, top, matchingNaturals) {
-  const hand = room.privateHands?.[player.uid] || [];
-  const requirement = openingRequirement(Number(room.publicState?.teamScores?.[player.team] || 0));
-  const maxWilds = Number(room.rules?.maxWildsPerMeld || 3);
-  const used = new Set();
-  const melds = [];
-
-  const forcedCards = [top, ...matchingNaturals];
-  matchingNaturals.forEach((card) => used.add(card.id));
-  melds.push({ rank: top.rank, cards: forcedCards });
-
-  const grouped = hand.reduce((groups, card) => {
-    if (!used.has(card.id) && !isWild(card) && card.rank !== "3") (groups[card.rank] ||= []).push(card);
-    return groups;
-  }, {});
-  for (const [rank, cards] of Object.entries(grouped)) {
-    if (cards.length >= 3) {
-      cards.forEach((card) => used.add(card.id));
-      melds.push({ rank, cards: [...cards] });
-    }
-  }
-
-  const wildCards = hand.filter((card) => isWild(card) && !used.has(card.id));
-  let points = melds.flatMap((meld) => meld.cards).reduce((sum, card) => sum + cardPoints(card), 0);
-  for (const wild of wildCards) {
-    if (points >= requirement) break;
-    const target = melds.find((meld) => {
-      const naturals = meld.cards.filter((card) => !isWild(card)).length;
-      const wilds = meld.cards.filter(isWild).length;
-      return wilds < maxWilds && wilds + 1 < naturals;
-    });
-    if (!target) break;
-    target.cards.push(wild);
-    used.add(wild.id);
-    points += cardPoints(wild);
-  }
-
-  if (points < requirement) {
-    throw new Error(`The pile is frozen and your pickup play must open for ${requirement} points. The available legal melds total ${points}.`);
-  }
-  return { melds, used, points };
-}
-
-function pickupPlan(room, player) {
-  const pile = room.publicState?.discardPile || [];
-  const top = pile[pile.length - 1];
-  if (!top || isWild(top) || isRedThree(top) || isBlackThree(top)) {
-    throw new Error("The top discard cannot be used to take the pile.");
-  }
-
-  const hand = room.privateHands?.[player.uid] || [];
-  const board = room.publicState?.teamBoards?.[player.team] || [];
-  const existing = board.find((meld) => meld.rank === top.rank);
-  const matchingNaturals = hand.filter((card) => !isWild(card) && card.rank === top.rank);
-  const frozen = room.publicState?.discardFrozen !== false;
-  const opened = Boolean(room.publicState?.opened?.[player.team]);
-
-  if (frozen && matchingNaturals.length < 2) {
-    throw new Error("The discard pile is frozen. You need two natural cards matching the top discard.");
-  }
-  if (!frozen && !existing && matchingNaturals.length < 2) {
-    throw new Error("You need two natural matches unless that rank is already on your board.");
-  }
-
-  if (!opened) {
-    if (matchingNaturals.length < 2) throw new Error("Before opening, the top discard must be combined with two natural matches from your hand.");
-    return { type: "opening", top, ...buildOpeningPickupPlan(room, player, top, matchingNaturals) };
-  }
-
-  if (existing && !frozen) return { type: "existing", top, existing, used: new Set() };
-
-  const cards = [top, ...matchingNaturals];
-  validateCombinedMeld(existing ? [...(existing.cards || []), ...cards] : cards, room.rules);
-  return { type: existing ? "existing-with-matches" : "new", top, existing, cards, used: new Set(matchingNaturals.map((card) => card.id)) };
-}
-
 export async function takeDiscardPile(code, uid) {
   let actionError = "The discard pile cannot be taken with your current hand.";
   const result = await runTransaction(ref(db, `rooms/${code}`), (room) => {
     try {
       const player = assertTurn(room, uid, "draw");
-      const plan = pickupPlan(room, player);
-      const pile = [...(room.publicState.discardPile || [])];
-      const lowerPile = pile.slice(0, -1);
+      const plan = planDiscardPickup(room, player);
       const hand = [...(room.privateHands?.[uid] || [])];
       room.publicState.teamBoards ||= {};
       room.publicState.teamBoards[player.team] ||= [];
+      room.publicState.handCounts ||= {};
       const board = room.publicState.teamBoards[player.team];
 
-      if (plan.type === "opening") {
-        for (const meld of plan.melds) {
-          const existing = board.find((item) => item.rank === meld.rank);
-          if (existing) existing.cards = [...(existing.cards || []), ...meld.cards];
-          else board.push(meld);
-        }
-        room.privateHands[uid] = sortHand([...hand.filter((card) => !plan.used.has(card.id)), ...lowerPile]);
-        room.publicState.opened ||= {};
-        room.publicState.opened[player.team] = true;
-      } else if (plan.type === "existing") {
-        plan.existing.cards = [...(plan.existing.cards || []), plan.top];
-        room.privateHands[uid] = sortHand([...hand, ...lowerPile]);
+      if (plan.mode === "pending-opening") {
+        room.privateHands[uid] = sortHand([...hand, ...plan.pile]);
+        room.publicState.pendingDiscardPickup = {
+          uid,
+          team: player.team,
+          rank: plan.rank,
+          topCardId: plan.top.id,
+          matchingNaturalIds: plan.matchingNaturalIds,
+          requiredNaturalCount: plan.requiredNaturalCount,
+          requirement: plan.requirement,
+        };
+        room.publicState.lastAction = `${player.nickname} took the discard pile. Their opening must include the picked-up ${plan.rank} and two natural ${plan.rank}s.`;
       } else {
-        if (plan.existing) plan.existing.cards = [...(plan.existing.cards || []), ...plan.cards];
-        else board.push({ rank: plan.top.rank, cards: plan.cards });
-        room.privateHands[uid] = sortHand([...hand.filter((card) => !plan.used.has(card.id)), ...lowerPile]);
+        if (plan.existing) {
+          plan.existing.cards = [...(plan.existing.cards || []), ...plan.forcedCards];
+        } else {
+          board.push({ rank: plan.top.rank, cards: plan.forcedCards });
+        }
+        const used = new Set(plan.usedNaturalIds);
+        room.privateHands[uid] = sortHand([
+          ...hand.filter((card) => !used.has(card.id)),
+          ...plan.lowerPile,
+        ]);
+        room.publicState.pendingDiscardPickup = null;
+        room.publicState.lastAction = `${player.nickname} took the discard pile, played the top ${plan.top.rank}, and kept the remaining cards in hand.`;
       }
 
       room.publicState.discardPile = [];
@@ -188,8 +121,6 @@ export async function takeDiscardPile(code, uid) {
       room.publicState.discardPileHasBeenTaken = true;
       room.publicState.handCounts[uid] = room.privateHands[uid].length;
       room.publicState.turnPhase = "play";
-      room.publicState.lastAction = `${player.nickname} took the discard pile and played the top ${plan.top.rank}. The new discard pile is unfrozen.`;
-      if (room.privateHands[uid].length === 0) return finishRound(room, uid);
       return room;
     } catch (error) {
       actionError = error.message;
@@ -229,15 +160,26 @@ export async function meldSelectedCards(code, uid, cardIds, targetRank = null) {
         rank = validateCombinedMeld(selected, room.rules);
       }
 
-      if (!room.publicState.opened[player.team]) {
+      const alreadyOpened = Boolean(room.publicState.opened[player.team]);
+      if (!alreadyOpened) {
+        const pending = room.publicState?.pendingDiscardPickup?.uid === uid
+          ? room.publicState.pendingDiscardPickup
+          : null;
+        const pendingError = validatePendingPickupSelection(pending, selected);
+        if (pendingError) throw new Error(pendingError);
         const value = selected.reduce((sum, card) => sum + cardPoints(card), 0);
-        const requirement = openingRequirement(Number(room.publicState.teamScores?.[player.team] || 0));
-        if (value < requirement) throw new Error(`Your opening play needs ${requirement} points; selected cards total ${value}.`);
+        const requirement = openingRequirementForTeam(room, player.team);
+        if (value < requirement) {
+          throw new Error(`Your opening play must be committed at once for ${requirement} points; selected cards total ${value}.`);
+        }
       }
 
       if (existing) existing.cards = [...(existing.cards || []), ...selected];
       else board.push({ rank, cards: selected });
       room.publicState.opened[player.team] = true;
+      room.publicState.pendingDiscardPickup = null;
+      room.publicState.openingTurnUid = null;
+      room.publicState.openingTurnPoints = 0;
       room.privateHands[uid] = hand.filter((card) => !cardIds.includes(card.id));
       room.publicState.handCounts[uid] = room.privateHands[uid].length;
       room.publicState.turnPhase = "play";
@@ -257,6 +199,13 @@ export async function discardSelectedCard(code, uid, cardId) {
   const result = await runTransaction(ref(db, `rooms/${code}`), (room) => {
     try {
       const player = assertTurn(room, uid, "play");
+      const pending = room.publicState?.pendingDiscardPickup;
+      if (pending?.uid === uid) {
+        throw new Error(`Complete the opening with the picked-up ${pending.rank} before discarding.`);
+      }
+      if (room.publicState?.openingTurnUid === uid) {
+        throw new Error("Complete or undo the unfinished opening before discarding.");
+      }
       const hand = room.privateHands?.[uid] || [];
       const card = hand.find((item) => item.id === cardId);
       if (!card) throw new Error("That card is no longer in your hand.");

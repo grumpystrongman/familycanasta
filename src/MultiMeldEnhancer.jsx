@@ -4,9 +4,9 @@ import { onValue, ref } from "firebase/database";
 import { auth, db } from "./firebase";
 import { playGroupedMelds, undoLastPlay } from "./game/multiMeldActions";
 import { planGroupedMelds } from "./game/multiMeldPlanner";
-import { repairAbandonedOpening } from "./game/openingMeldRepair";
 import { guaranteePileUnfrozenAfterPickup } from "./game/discardStateRepair";
-import { isWild, openingRequirement, SUIT_SYMBOLS } from "./game/engine";
+import { validatePendingPickupSelection } from "./game/discardPickupPlanner";
+import { isWild, openingRequirementForTeam, SUIT_SYMBOLS } from "./game/engine";
 
 function labelFor(card) {
   return `${card.rank} ${SUIT_SYMBOLS[card.suit] || "★"}`;
@@ -113,41 +113,36 @@ export default function MultiMeldEnhancer() {
     () => planGroupedMelds(selectedCards, board, room?.rules || {}),
     [selectedCards, board, room?.rules],
   );
-  const openingOwner = room?.publicState?.openingTurnUid || null;
-  const stagedPoints = openingOwner === uid ? Number(room?.publicState?.openingTurnPoints || 0) : 0;
-  const openingNeed = team >= 0 ? openingRequirement(Number(room?.publicState?.teamScores?.[team] || 0)) : 0;
-  const openingInProgress = Boolean(canAct && !teamOpened && openingOwner === uid && stagedPoints > 0);
+  const pendingPickup = room?.publicState?.pendingDiscardPickup?.uid === uid
+    ? room.publicState.pendingDiscardPickup
+    : null;
+  const openingNeed = team >= 0 ? openingRequirementForTeam(room, team) : 0;
   const usesGroupedAction = Boolean(selectedCards.length > 0 && !selectedCards.every(isWild));
-  const openingConflict = Boolean(!teamOpened && openingOwner && openingOwner !== uid);
-  const projectedOpeningPoints = stagedPoints + plan.totalPoints;
-  const openingSatisfied = teamOpened || projectedOpeningPoints >= openingNeed;
-  const selectionIsLegal = Boolean(plan.valid && !openingConflict);
+  const pendingError = validatePendingPickupSelection(pendingPickup, selectedCards);
+  const openingSatisfied = teamOpened || plan.totalPoints >= openingNeed;
+  const selectionIsLegal = Boolean(plan.valid && !pendingError);
+  const canCommitSelection = Boolean(selectionIsLegal && openingSatisfied);
   const meldWord = plan.groups.length === 1 ? "meld" : "melds";
   const buttonText = teamOpened
     ? `Play ${plan.groups.length} ${meldWord} · ${plan.totalPoints} pts`
-    : openingSatisfied
-      ? `Play opening ${meldWord} · ${projectedOpeningPoints} pts`
-      : `Stage opening ${meldWord} · ${projectedOpeningPoints}/${openingNeed} pts`;
+    : pendingError
+      ? "Complete pickup requirements"
+      : openingSatisfied
+        ? `${pendingPickup ? "Play pickup opening" : `Play opening ${meldWord}`} · ${plan.totalPoints} pts`
+        : `Opening needs ${plan.totalPoints}/${openingNeed} pts`;
 
   useEffect(() => {
-    const openingUid = room?.publicState?.openingTurnUid;
-    const hostUid = room?.hostUid;
-    if (!roomCode || !uid || uid !== hostUid || !openingUid || openingUid === active?.uid) return;
-    repairAbandonedOpening(roomCode, uid).catch((event) => setError(event.message));
-  }, [roomCode, uid, room?.hostUid, room?.publicState?.openingTurnUid, active?.uid]);
-
-  useEffect(() => {
-    if (!openingInProgress) return undefined;
-    const blockIncompleteOpeningDiscard = (event) => {
+    if (!pendingPickup) return undefined;
+    const blockPendingPickupDiscard = (event) => {
       if (!event.target.closest(".discard-button")) return;
       event.preventDefault();
       event.stopPropagation();
       event.stopImmediatePropagation?.();
-      setError(`Finish the opening meld (${stagedPoints}/${openingNeed}) or undo it before discarding.`);
+      setError(`Complete the opening with the picked-up ${pendingPickup.rank} before discarding.`);
     };
-    document.addEventListener("click", blockIncompleteOpeningDiscard, true);
-    return () => document.removeEventListener("click", blockIncompleteOpeningDiscard, true);
-  }, [openingInProgress, stagedPoints, openingNeed]);
+    document.addEventListener("click", blockPendingPickupDiscard, true);
+    return () => document.removeEventListener("click", blockPendingPickupDiscard, true);
+  }, [pendingPickup]);
 
   useEffect(() => {
     if (!advisor || !usesGroupedAction) return undefined;
@@ -156,13 +151,13 @@ export default function MultiMeldEnhancer() {
 
     setActionButtonLabel(primaryButton, buttonText);
     primaryButton.classList.add("grouped-meld-primary");
-    primaryButton.disabled = !canAct || busy || !selectionIsLegal;
+    primaryButton.disabled = !canAct || busy || !canCommitSelection;
 
     const playAllProposedMelds = (event) => {
       event.preventDefault();
       event.stopPropagation();
       event.stopImmediatePropagation?.();
-      if (!canAct || busy || !selectionIsLegal) return;
+      if (!canAct || busy || !canCommitSelection) return;
       run(() => playGroupedMelds(roomCode, uid, selectedIds));
     };
 
@@ -171,7 +166,7 @@ export default function MultiMeldEnhancer() {
       primaryButton.removeEventListener("click", playAllProposedMelds, true);
       primaryButton.classList.remove("grouped-meld-primary");
     };
-  }, [advisor, usesGroupedAction, buttonText, canAct, busy, selectionIsLegal, roomCode, uid, selectedIds]);
+  }, [advisor, usesGroupedAction, buttonText, canAct, busy, canCommitSelection, roomCode, uid, selectedIds]);
 
   async function run(action) {
     setBusy(true);
@@ -187,16 +182,20 @@ export default function MultiMeldEnhancer() {
 
   return advisor ? createPortal(
     <div className="multi-meld-tools">
-      {openingInProgress && !usesGroupedAction && (
+      {pendingPickup && !usesGroupedAction && (
         <span className="multi-meld-help">
-          Opening staged: {stagedPoints} of {openingNeed} points. Add another legal meld or undo before discarding.
+          The pile is in your hand. Your atomic opening must include the picked-up {pendingPickup.rank}, two natural {pendingPickup.rank}s from your original hand, and at least {openingNeed} total points.
         </span>
       )}
 
       {usesGroupedAction && (
         <div className="multi-meld-preview" aria-live="polite">
           <div className="multi-meld-preview-title">
-            {teamOpened ? "Proposed melds" : `Opening play (${projectedOpeningPoints} / ${openingNeed})`}
+            {teamOpened
+              ? "Proposed melds"
+              : pendingPickup
+                ? `Discard-pile opening (${plan.totalPoints} / ${openingNeed})`
+                : `Opening play (${plan.totalPoints} / ${openingNeed})`}
           </div>
           <div className="multi-meld-list">
             {plan.groups.map((group) => (
@@ -212,14 +211,16 @@ export default function MultiMeldEnhancer() {
           </div>
 
           {!teamOpened ? (
-            <div className={`multi-meld-total ${selectionIsLegal && openingSatisfied ? "legal" : "not-ready"}`}>
-              <span>Combined valid opening total</span>
-              <strong>{projectedOpeningPoints} / {openingNeed} pts</strong>
-              {stagedPoints > 0 && <small>Includes {stagedPoints} points already staged this turn.</small>}
-              {plan.valid && !openingConflict && !openingSatisfied && (
-                <small>Need {openingNeed - projectedOpeningPoints} more points to open.</small>
+            <div className={`multi-meld-total ${canCommitSelection ? "legal" : "not-ready"}`}>
+              <span>Atomic opening total</span>
+              <strong>{plan.totalPoints} / {openingNeed} pts</strong>
+              {pendingError && <small>{pendingError}</small>}
+              {!pendingError && plan.valid && !openingSatisfied && (
+                <small>Need {openingNeed - plan.totalPoints} more points. No cards move until the full opening is legal.</small>
               )}
-              {openingConflict && <small>Another player has an unfinished opening meld.</small>}
+              {!pendingError && plan.valid && openingSatisfied && (
+                <small>Ready. Every proposed meld will be committed together.</small>
+              )}
             </div>
           ) : (
             <div className={`multi-meld-total ${plan.valid ? "legal" : "not-ready"}`}>
