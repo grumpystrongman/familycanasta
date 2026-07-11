@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Bot, Copy, Crown, LayoutPanelTop, MessageCircle, Play, Plus,
@@ -11,6 +11,7 @@ import {
   createRoom,
   joinRoom,
   removeRobot,
+  runRobotTurn,
   sendMessage,
   setTeamBoardKeeper,
   startOnlineGame,
@@ -18,11 +19,10 @@ import {
   watchPrivateHand,
   watchRoom,
 } from "./services/roomService";
-import { DEFAULT_RULES } from "./game/engine";
+import { DEFAULT_RULES, TEAM_NAMES } from "./game/engine";
 
 const AVATARS = ["🦊","🐻","🦉","🐙","🦁","🐼","🐯","🦄","🐸","🤠"];
 const BACKS = ["midnight","emerald","ruby","royal","sunset","linen"];
-const TEAM_NAMES = ["North", "South"];
 
 function App() {
   const [user, setUser] = useState(null);
@@ -38,6 +38,8 @@ function App() {
   const [busy, setBusy] = useState(false);
   const [rules, setRules] = useState({ ...DEFAULT_RULES, cardBack: "midnight", teamMode: true });
   const [meetLink, setMeetLink] = useState("");
+  const robotTimer = useRef(null);
+  const robotTurnKey = useRef("");
 
   useEffect(() => {
     if (!firebaseReady) return;
@@ -79,6 +81,11 @@ function App() {
     () => Object.values(room?.members || {}).sort((a, b) => a.seat - b.seat),
     [room]
   );
+  const teamCount = Number(room?.rules?.teamCount || rules.teamCount || 2);
+  const teams = useMemo(
+    () => Array.from({ length: teamCount }, (_, team) => members.filter((member) => member.team === team)),
+    [members, teamCount]
+  );
   const me = room?.members?.[user?.uid];
   const messages = useMemo(
     () => Object.entries(room?.messages || {})
@@ -86,7 +93,37 @@ function App() {
       .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0)),
     [room]
   );
-  const teams = [0, 1].map((team) => members.filter((member) => member.team === team));
+
+  useEffect(() => {
+    if (!room || !user || room.hostUid !== user.uid || room.status !== "playing" || room.publicState?.phase !== "playing") return;
+    const active = members[Number(room.publicState?.currentPlayerIndex || 0)];
+    if (!active?.isRobot) {
+      robotTurnKey.current = "";
+      return;
+    }
+    const key = `${room.handNumber}-${room.publicState.currentPlayerIndex}-${active.uid}-${room.publicState.lastAction}`;
+    if (robotTurnKey.current === key) return;
+    robotTurnKey.current = key;
+    clearTimeout(robotTimer.current);
+    robotTimer.current = setTimeout(async () => {
+      try {
+        await runRobotTurn(roomCode, user.uid);
+      } catch (e) {
+        setError(`Robot turn failed: ${e.message}`);
+        robotTurnKey.current = "";
+      }
+    }, active.difficulty === "fast" ? 450 : active.difficulty === "careful" ? 1500 : 900);
+    return () => clearTimeout(robotTimer.current);
+  }, [room?.status, room?.publicState?.phase, room?.publicState?.currentPlayerIndex, room?.publicState?.lastAction, members, roomCode, user, room?.handNumber]);
+
+  function changeTeamCount(value) {
+    const count = Number(value);
+    setRules((current) => ({
+      ...current,
+      teamCount: count,
+      deckCount: count === 3 ? 3 : Math.min(current.deckCount, 3),
+    }));
+  }
 
   async function createGame() {
     if (!user) return;
@@ -118,9 +155,15 @@ function App() {
     await sendMessage(roomCode, me, text);
   }
 
-  async function handleAddRobot(team) {
+  async function handleAddRobot(team, difficulty = "standard") {
     setError("");
-    try { await addRobot(roomCode, user.uid, team, "standard"); }
+    try { await addRobot(roomCode, user.uid, team, difficulty); }
+    catch (e) { setError(e.message); }
+  }
+
+  async function handleTeamChange(team) {
+    setError("");
+    try { await updateMember(roomCode, user.uid, { team: Number(team) }); }
     catch (e) { setError(e.message); }
   }
 
@@ -141,17 +184,18 @@ function App() {
           <div className="brand"><span>FC</span><b>Family Canasta</b></div>
           <p className="eyebrow">PLAY TOGETHER, ANYWHERE</p>
           <h1>Partners at the table. People or robots.</h1>
-          <p className="lede">Build two teams of two, choose who keeps each team’s shared board, and play from computers or phones.</p>
+          <p className="lede">Choose two or three teams of two. Fill any open seat with an autonomous robot that draws, melds, and discards on its own.</p>
           <div className="trust"><Wifi size={16}/> Firebase connected</div>
         </section>
         <section className="entry-panel">
           <label>Nickname</label><input value={nickname} onChange={(e) => setNickname(e.target.value)}/>
           <label>Avatar</label><div className="avatars">{AVATARS.map((item) => <button className={avatar===item?"chosen":""} onClick={()=>setAvatar(item)} key={item}>{item}</button>)}</div>
-          <details><summary><Settings size={16}/> Game setup</summary><div className="settings-grid">
-            <label>Decks<select value={rules.deckCount} onChange={(e)=>setRules({...rules,deckCount:Number(e.target.value)})}><option value={2}>2 decks</option><option value={3}>3 decks</option></select></label>
+          <details open><summary><Settings size={16}/> Game setup</summary><div className="settings-grid">
+            <label>Teams<select value={rules.teamCount} onChange={(e)=>changeTeamCount(e.target.value)}><option value={2}>2 teams · 4 players</option><option value={3}>3 teams · 6 players</option></select></label>
+            <label>Decks<select value={rules.deckCount} onChange={(e)=>setRules({...rules,deckCount:Number(e.target.value)})}><option value={2} disabled={rules.teamCount===3}>2 decks</option><option value={3}>3 decks</option></select></label>
             <label>Starting cards<select value={rules.cardsPerPlayer} onChange={(e)=>setRules({...rules,cardsPerPlayer:Number(e.target.value)})}><option value={11}>11</option><option value={13}>13</option><option value={15}>15</option></select></label>
-            <label>Card back<select value={rules.cardBack} onChange={(e)=>setRules({...rules,cardBack:e.target.value})}>{BACKS.map((b)=><option key={b}>{b}</option>)}</select></label>
-            <label>Meet link<input value={meetLink} onChange={(e)=>setMeetLink(e.target.value)} placeholder="abc-defg-hij"/></label>
+            <label>Card back<select value={rules.cardBack} onChange={(e)=>setRules({...rules,cardBack:e.target.value})}>{BACKS.map((back)=><option key={back}>{back}</option>)}</select></label>
+            <label className="wide-setting">Meet link<input value={meetLink} onChange={(e)=>setMeetLink(e.target.value)} placeholder="abc-defg-hij"/></label>
           </div></details>
           <button className="primary" disabled={!user||busy} onClick={createGame}><Plus/> Create a team game</button>
           <div className="divider"><span/>or join<span/></div>
@@ -165,31 +209,33 @@ function App() {
   if (!room) return <main className="loading">Joining table…</main>;
 
   if (room.status === "lobby") {
+    const requiredSeats = teamCount * 2;
+    const ready = members.length === requiredSeats && teams.every((team) => team.length === 2) && Array.from({ length: teamCount }, (_, team) => room.teamBoardKeepers?.[team]).every(Boolean);
     return (
       <main className="lobby-page">
         <header><div className="brand"><span>FC</span><b>Family Canasta</b></div><div className="code"><small>ROOM</small><b>{roomCode}</b><button onClick={()=>navigator.clipboard.writeText(roomCode)}><Copy size={16}/></button></div></header>
         <section className="team-lobby">
-          <div className="lobby-title"><p className="eyebrow">TWO-PERSON TEAMS</p><h1>Choose the partnerships</h1><p>Each team needs exactly two seats. Empty seats can be filled by robots.</p></div>
-          <div className="team-columns">
-            {[0,1].map((team)=><section className="team-card" key={team}>
+          <div className="lobby-title"><p className="eyebrow">TWO-PERSON TEAMS</p><h1>Choose the partnerships</h1><p>This room uses {teamCount} teams and needs {requiredSeats} total seats. Empty seats can be filled by robots.</p></div>
+          <div className={`team-columns teams-${teamCount}`}>
+            {Array.from({ length: teamCount }, (_, team)=><section className="team-card" key={team}>
               <div className="team-card-head"><div><small>TEAM</small><h2>{TEAM_NAMES[team]}</h2></div><span>{teams[team].length}/2 seats</span></div>
               <div className="team-members">
                 {teams[team].map((member)=><article key={member.uid}>
                   <span className="avatar">{member.avatar}</span>
                   <div><b>{member.nickname}</b><small>{member.isRobot?`Robot · ${member.difficulty}`:member.connected?"Connected":"Reconnecting"}</small></div>
                   {member.isHost&&<Crown size={16}/>} {member.isRobot&&<Bot size={16}/>} 
-                  {member.uid===user.uid&&<select value={member.team} onChange={(e)=>updateMember(roomCode,user.uid,{team:Number(e.target.value)})}><option value={0}>North</option><option value={1}>South</option></select>}
+                  {member.uid===user.uid&&<select value={member.team} onChange={(e)=>handleTeamChange(e.target.value)}>{Array.from({ length: teamCount },(_,option)=><option value={option} key={option}>{TEAM_NAMES[option]}</option>)}</select>}
                   {room.hostUid===user.uid&&member.isRobot&&<button className="icon-button" onClick={()=>removeRobot(roomCode,user.uid,member.uid)}><Trash2 size={15}/></button>}
                 </article>)}
-                {teams[team].length<2&&room.hostUid===user.uid&&<button className="add-robot" onClick={()=>handleAddRobot(team)}><Bot size={18}/> Add robot partner</button>}
+                {teams[team].length<2&&room.hostUid===user.uid&&<div className="robot-add-row"><button className="add-robot" onClick={()=>handleAddRobot(team,"standard")}><Bot size={18}/> Add robot</button><select defaultValue="standard" onChange={(e)=>{const button=e.currentTarget.previousElementSibling;button.onclick=()=>handleAddRobot(team,e.target.value);}}><option value="fast">Fast</option><option value="standard">Standard</option><option value="careful">Careful</option></select></div>}
               </div>
               <label className="board-keeper"><LayoutPanelTop size={17}/><span>Shared board is displayed in front of</span><select value={room.teamBoardKeepers?.[team]||""} onChange={(e)=>setTeamBoardKeeper(roomCode,user.uid,team,e.target.value)} disabled={room.hostUid!==user.uid}><option value="">Choose player</option>{teams[team].map((member)=><option key={member.uid} value={member.uid}>{member.nickname}</option>)}</select></label>
             </section>)}
           </div>
           <aside className="lobby-actions">
-            <div className="summary"><h3>Game setup</h3><p><span>Format</span><b>2 vs 2</b></p><p><span>Decks</span><b>{room.rules.deckCount}</b></p><p><span>First dealer</span><b>Random</b></p><p><span>Team boards</span><b>Shared</b></p></div>
+            <div className="summary"><h3>Game setup</h3><p><span>Format</span><b>{teamCount} teams of 2</b></p><p><span>Players</span><b>{members.length}/{requiredSeats}</b></p><p><span>Decks</span><b>{room.rules.deckCount}</b></p><p><span>First dealer</span><b>Random</b></p><p><span>Robot turns</span><b>Automatic</b></p></div>
             {room.meetLink&&<a className="meet" href={room.meetLink.startsWith("http")?room.meetLink:`https://meet.google.com/${room.meetLink}`} target="_blank" rel="noreferrer"><Video size={17}/> Join Google Meet</a>}
-            {room.hostUid===user.uid?<button className="primary" onClick={handleStart} disabled={members.length!==4}><Play/> Start team game</button>:<p className="waiting">Waiting for the host to begin…</p>}
+            {room.hostUid===user.uid?<button className="primary" onClick={handleStart} disabled={!ready}><Play/> Start {teamCount}-team game</button>:<p className="waiting">Waiting for the host to begin…</p>}
             {error&&<p className="error">{error}</p>}
           </aside>
         </section>
@@ -198,20 +244,20 @@ function App() {
   }
 
   const dealer = members[room.dealerIndex];
-  const active = members[room.publicState?.currentPlayerIndex || 0];
+  const active = members[Number(room.publicState?.currentPlayerIndex || 0)];
   const visibleDealCount = room.publicState?.dealAnimationIndex || 0;
-  const keeperName = (team) => members.find((m)=>m.uid===room.publicState?.boardKeepers?.[team])?.nickname || "Team board";
+  const keeperName = (team) => members.find((member)=>member.uid===room.publicState?.boardKeepers?.[team])?.nickname || "Team board";
 
   return (
     <main className="game-page">
-      <header><div className="brand"><span>FC</span><b>Family Canasta</b></div><div className="turn">{room.publicState?.phase==="dealing"?"Dealing cards…":`${active?.nickname||"Player"}'s turn`}</div><div className="code"><small>ROOM</small><b>{roomCode}</b></div></header>
+      <header><div className="brand"><span>FC</span><b>Family Canasta</b></div><div className="turn">{room.publicState?.phase==="dealing"?"Dealing cards…":room.publicState?.phase==="handOver"?room.publicState.lastAction:active?.isRobot?`${active.nickname} is thinking…`:`${active?.nickname||"Player"}'s turn`}</div><div className="code"><small>ROOM</small><b>{roomCode}</b></div></header>
       <section className="table">
-        <div className="opponents">{members.filter((m)=>m.uid!==user.uid).map((member)=><article key={member.uid}><span>{member.avatar}</span><b>{member.nickname}{member.isRobot?" 🤖":""}</b><small>{room.publicState?.handCounts?.[member.uid]||0} cards · {TEAM_NAMES[member.team]}</small>{dealer?.uid===member.uid&&<em><Crown size={12}/> Dealer</em>}</article>)}</div>
-        <div className="shared-boards">{[0,1].map((team)=><section key={team} className={`shared-board team-${team}`}><div><LayoutPanelTop size={16}/><b>Team {TEAM_NAMES[team]} board</b><small>in front of {keeperName(team)}</small></div><div className="meld-slots">{(room.publicState?.teamBoards?.[team]||[]).length===0?<span>No melds played yet</span>:room.publicState.teamBoards[team].map((meld,index)=><span key={index}>{meld.rank} × {meld.cards?.length||0}</span>)}</div></section>)}</div>
-        <div className="center"><div className="pile back-card"><span>{room.publicState?.stockCount||0}</span></div><div className="dealer-orb"><Shuffle/><small>DEALER</small><b>{dealer?.nickname}</b></div><div className="pile discard-card"><b>{room.publicState?.discardPile?.at(-1)?.rank||"—"}</b><span>{room.publicState?.discardPile?.at(-1)?.suit||""}</span></div></div>
+        <div className="opponents">{members.filter((member)=>member.uid!==user.uid).map((member)=><article className={active?.uid===member.uid?"active-player":""} key={member.uid}><span>{member.avatar}</span><b>{member.nickname}{member.isRobot?" 🤖":""}</b><small>{room.publicState?.handCounts?.[member.uid]||0} cards · {TEAM_NAMES[member.team]}</small>{dealer?.uid===member.uid&&<em><Crown size={12}/> Dealer</em>}</article>)}</div>
+        <div className={`shared-boards boards-${teamCount}`}>{Array.from({ length: teamCount },(_,team)=><section key={team} className={`shared-board team-${team}`}><div><LayoutPanelTop size={16}/><b>Team {TEAM_NAMES[team]} board</b><small>in front of {keeperName(team)}</small></div><div className="meld-slots">{(room.publicState?.teamBoards?.[team]||[]).length===0?<span>No melds played yet</span>:room.publicState.teamBoards[team].map((meld,index)=><span className={meld.cards?.length>=7?"canasta":""} key={`${meld.rank}-${index}`}>{meld.rank} × {meld.cards?.length||0}{meld.cards?.length>=7?" · CANASTA":""}</span>)}</div></section>)}</div>
+        <div className="center"><div className="pile back-card"><span>{room.publicState?.stockCount||0}</span></div><div className="dealer-orb"><Shuffle/><small>DEALER</small><b>{dealer?.nickname}</b><p>{room.publicState?.lastAction}</p></div><div className="pile discard-card"><b>{room.publicState?.discardPile?.at(-1)?.rank||"—"}</b><span>{room.publicState?.discardPile?.at(-1)?.suit||""}</span></div></div>
         <div className="hand"><div className="identity"><span>{me?.avatar}</span><b>{me?.nickname}</b><small>Team {TEAM_NAMES[me?.team||0]}</small>{dealer?.uid===user.uid&&<em>Dealer</em>}</div><div className="cards"><AnimatePresence>{privateHand.map((card,index)=>{const wasDealt=room.publicState?.phase!=="dealing"||visibleDealCount>index*members.length;return wasDealt?<motion.button key={card.id} initial={{y:-320,opacity:0,rotate:12}} animate={{y:0,opacity:1,rotate:(index-privateHand.length/2)*0.8}} transition={{duration:.28,type:"spring"}} className={card.color==="red"?"playing-card red":"playing-card"}><b>{card.rank}</b><span>{card.suit}</span></motion.button>:null;})}</AnimatePresence></div></div>
       </section>
-      <aside className="chat"><h3><MessageCircle size={17}/> Table chat</h3><div className="messages">{messages.map((m)=><article key={m.id}><span>{m.avatar}</span><div><b>{m.nickname}</b><p>{m.text}</p></div></article>)}</div><div className="compose"><input value={message} onChange={(e)=>setMessage(e.target.value)} onKeyDown={(e)=>e.key==="Enter"&&submitMessage()} placeholder="Message the table"/><button onClick={submitMessage}><Send size={17}/></button></div></aside>
+      <aside className="chat"><h3><MessageCircle size={17}/> Table chat</h3><div className="messages">{messages.map((chat)=><article key={chat.id}><span>{chat.avatar}</span><div><b>{chat.nickname}</b><p>{chat.text}</p></div></article>)}</div><div className="compose"><input value={message} onChange={(e)=>setMessage(e.target.value)} onKeyDown={(e)=>e.key==="Enter"&&submitMessage()} placeholder="Message the table"/><button onClick={submitMessage}><Send size={17}/></button></div></aside>
     </main>
   );
 }
