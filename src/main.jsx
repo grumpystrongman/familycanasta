@@ -12,6 +12,7 @@ import "./flexibleGame.css";
 import "./stateEnhancer.css";
 import "./gameCelebration.css";
 import "./wildTarget.css";
+import "./cardAccessibility.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
