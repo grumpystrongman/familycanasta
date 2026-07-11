@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { onValue, ref } from "firebase/database";
 import { auth, db } from "./firebase";
 import { playGroupedMelds, undoLastPlay } from "./game/multiMeldActions";
+import { guaranteePileUnfrozenAfterPickup } from "./game/discardStateRepair";
 import { cardPoints, isWild, SUIT_SYMBOLS } from "./game/engine";
 
 function labelFor(card) {
@@ -41,13 +42,11 @@ export default function MultiMeldEnhancer() {
       if (/^[A-Z0-9]{6}$/.test(code)) setRoomCode(code);
       setAdvisor(document.querySelector(".selection-advisor"));
       applyBoardColors();
-
       const wraps = [...document.querySelectorAll(".cards .hand-card-wrap")];
       if (!wraps.length || !hand.length) {
         setSelectedIds([]);
         return;
       }
-
       const unused = new Set(hand.map((card) => card.id));
       const ordered = [];
       for (const wrap of wraps) {
@@ -60,7 +59,6 @@ export default function MultiMeldEnhancer() {
       }
       setSelectedIds((current) => current.join("|") === ordered.join("|") ? current : ordered);
     };
-
     scan();
     const observer = new MutationObserver(scan);
     observer.observe(document.body, { childList:true, subtree:true, attributes:true, attributeFilter:["class"] });
@@ -77,15 +75,20 @@ export default function MultiMeldEnhancer() {
   }, [roomCode]);
 
   useEffect(() => {
+    const pickedUp = room?.publicState?.discardPileHasBeenTaken === true;
+    const lastAction = String(room?.publicState?.lastAction || "").toLowerCase();
+    if (roomCode && pickedUp && room?.publicState?.discardFrozen !== false && (lastAction.includes("took the discard pile") || lastAction.includes("drew from the discard pile"))) {
+      guaranteePileUnfrozenAfterPickup(roomCode).catch(() => {});
+    }
+  }, [roomCode, room?.publicState?.discardFrozen, room?.publicState?.discardPileHasBeenTaken, room?.publicState?.lastAction]);
+
+  useEffect(() => {
     const uid = auth?.currentUser?.uid;
     if (!roomCode || !uid || !db) return undefined;
     return onValue(ref(db, `rooms/${roomCode}/privateHands/${uid}`), (snapshot) => setHand(snapshot.val() || []));
   }, [roomCode, room?.publicState?.currentPlayerIndex]);
 
-  const selectedCards = useMemo(
-    () => selectedIds.map((id) => hand.find((card) => card.id === id)).filter(Boolean),
-    [selectedIds, hand],
-  );
+  const selectedCards = useMemo(() => selectedIds.map((id) => hand.find((card) => card.id === id)).filter(Boolean), [selectedIds, hand]);
   const naturalRanks = [...new Set(selectedCards.filter((card) => !isWild(card) && card.rank !== "3").map((card) => card.rank))];
   const points = selectedCards.reduce((sum, card) => sum + cardPoints(card), 0);
   const isMulti = naturalRanks.length > 1;
@@ -98,38 +101,16 @@ export default function MultiMeldEnhancer() {
   async function run(action) {
     setBusy(true);
     setError("");
-    try {
-      await action();
-    } catch (event) {
-      setError(event.message);
-    } finally {
-      setBusy(false);
-    }
+    try { await action(); } catch (event) { setError(event.message); } finally { setBusy(false); }
   }
 
-  const controls = advisor ? createPortal(
+  return advisor ? createPortal(
     <div className="multi-meld-tools">
-      {isMulti && (
-        <button
-          className="multi-meld-button"
-          disabled={!canAct || busy}
-          onClick={() => run(() => playGroupedMelds(roomCode, uid, selectedIds))}
-        >
-          Play {naturalRanks.map((rank) => `${rank}s`).join(" + ")} · {points} pts
-        </button>
-      )}
-      <button
-        className="undo-play-button"
-        disabled={!canUndo || busy}
-        onClick={() => run(() => undoLastPlay(roomCode, uid))}
-      >
-        Undo last play
-      </button>
+      {isMulti && <button className="multi-meld-button" disabled={!canAct || busy} onClick={() => run(() => playGroupedMelds(roomCode, uid, selectedIds))}>Play {naturalRanks.map((rank) => `${rank}s`).join(" + ")} · {points} pts</button>}
+      <button className="undo-play-button" disabled={!canUndo || busy} onClick={() => run(() => undoLastPlay(roomCode, uid))}>Undo last play</button>
       {isMulti && <span className="multi-meld-help">Wild cards attach to the nearest selected rank in your hand.</span>}
       {error && <span className="multi-meld-error">{error}</span>}
     </div>,
     advisor,
   ) : null;
-
-  return controls;
 }
