@@ -117,10 +117,12 @@ export default function MultiMeldEnhancer() {
   const openingConflict = Boolean(!teamOpened && openingOwner && openingOwner !== uid);
   const projectedOpeningPoints = stagedPoints + plan.totalPoints;
   const openingSatisfied = teamOpened || projectedOpeningPoints >= openingNeed;
-  const playIsLegal = Boolean(plan.valid && !openingConflict && openingSatisfied);
+  const selectionIsLegal = Boolean(plan.valid && !openingConflict);
   const buttonText = teamOpened
     ? `Play ${plan.groups.length} meld${plan.groups.length === 1 ? "" : "s"} · ${plan.totalPoints} pts`
-    : `Play opening melds · ${plan.totalPoints} pts`;
+    : openingSatisfied
+      ? `Play opening melds · ${plan.totalPoints} pts`
+      : `Stage opening melds · ${plan.totalPoints} pts`;
 
   useEffect(() => {
     const openingUid = room?.publicState?.openingTurnUid;
@@ -179,7 +181,7 @@ export default function MultiMeldEnhancer() {
           </div>
 
           {!teamOpened ? (
-            <div className={`multi-meld-total ${playIsLegal ? "legal" : "not-ready"}`}>
+            <div className={`multi-meld-total ${selectionIsLegal && openingSatisfied ? "legal" : "not-ready"}`}>
               <span>Combined valid opening total</span>
               <strong>{projectedOpeningPoints} / {openingNeed} pts</strong>
               {stagedPoints > 0 && <small>Includes {stagedPoints} points already staged this turn.</small>}
@@ -200,7 +202,7 @@ export default function MultiMeldEnhancer() {
       {showGroupedButton && (
         <button
           className="multi-meld-button"
-          disabled={!canAct || busy || !playIsLegal}
+          disabled={!canAct || busy || !selectionIsLegal}
           onClick={() => run(() => playGroupedMelds(roomCode, uid, selectedIds))}
         >
           {buttonText}
