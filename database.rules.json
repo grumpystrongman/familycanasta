@@ -4,11 +4,11 @@
     ".write": false,
     "rooms": {
       "$roomCode": {
-        ".read": "auth != null && data.child('members').child(auth.uid).exists()",
+        ".read": "auth != null && (data.child('status').val() === 'lobby' || data.child('members').child(auth.uid).exists())",
         ".write": "auth != null && (!data.exists() || data.child('members').child(auth.uid).exists())",
         "members": {
           "$uid": {
-            ".read": "auth != null && root.child('rooms').child($roomCode).child('members').child(auth.uid).exists()",
+            ".read": "auth != null && (root.child('rooms').child($roomCode).child('status').val() === 'lobby' || root.child('rooms').child($roomCode).child('members').child(auth.uid).exists())",
             ".write": "auth != null && auth.uid === $uid"
           }
         },
