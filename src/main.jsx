@@ -4,6 +4,7 @@ import App from "./App";
 import GameStateEnhancer from "./GameStateEnhancer";
 import GameCelebration from "./GameCelebration";
 import MultiMeldEnhancer from "./MultiMeldEnhancer";
+import RedThreeBoard from "./RedThreeBoard";
 import "./styles.css";
 import "./team.css";
 import "./teamStyles.css";
@@ -16,6 +17,7 @@ import "./wildTarget.css";
 import "./cardAccessibility.css";
 import "./boardAccessibility.css";
 import "./multiMeld.css";
+import "./redThreeBoard.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
@@ -23,5 +25,6 @@ ReactDOM.createRoot(document.getElementById("root")).render(
     <GameStateEnhancer />
     <GameCelebration />
     <MultiMeldEnhancer />
+    <RedThreeBoard />
   </React.StrictMode>
 );
