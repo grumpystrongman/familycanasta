@@ -3,8 +3,9 @@ import { createPortal } from "react-dom";
 import { onValue, ref } from "firebase/database";
 import { auth, db } from "./firebase";
 import { playGroupedMelds, undoLastPlay } from "./game/multiMeldActions";
+import { repairAbandonedOpening } from "./game/openingMeldRepair";
 import { guaranteePileUnfrozenAfterPickup } from "./game/discardStateRepair";
-import { cardPoints, isWild, SUIT_SYMBOLS } from "./game/engine";
+import { cardPoints, isWild, openingRequirement, SUIT_SYMBOLS } from "./game/engine";
 
 function labelFor(card) {
   return `${card.rank} ${SUIT_SYMBOLS[card.suit] || "★"}`;
@@ -97,6 +98,35 @@ export default function MultiMeldEnhancer() {
   const active = members[Number(room?.publicState?.currentPlayerIndex || 0)];
   const canAct = Boolean(uid && active?.uid === uid && room?.publicState?.phase === "playing" && room?.publicState?.turnPhase === "play");
   const canUndo = Boolean(canAct && room?.publicState?.undoPlay?.uid === uid);
+  const team = Number(room?.members?.[uid]?.team ?? -1);
+  const teamOpened = team >= 0 && Boolean(room?.publicState?.opened?.[team]);
+  const openingOwner = room?.publicState?.openingTurnUid || null;
+  const stagedPoints = Number(room?.publicState?.openingTurnPoints || 0);
+  const openingNeed = team >= 0 ? openingRequirement(Number(room?.publicState?.teamScores?.[team] || 0)) : 0;
+  const openingInProgress = Boolean(canAct && !teamOpened && openingOwner === uid && stagedPoints > 0);
+  const canContinueOpening = Boolean(openingInProgress && selectedCards.length > 0);
+  const showGroupedButton = Boolean(isMulti || canContinueOpening);
+  const projectedOpeningPoints = stagedPoints + points;
+
+  useEffect(() => {
+    const openingUid = room?.publicState?.openingTurnUid;
+    const hostUid = room?.hostUid;
+    if (!roomCode || !uid || uid !== hostUid || !openingUid || openingUid === active?.uid) return;
+    repairAbandonedOpening(roomCode, uid).catch((event) => setError(event.message));
+  }, [roomCode, uid, room?.hostUid, room?.publicState?.openingTurnUid, active?.uid]);
+
+  useEffect(() => {
+    if (!openingInProgress) return undefined;
+    const blockIncompleteOpeningDiscard = (event) => {
+      if (!event.target.closest(".discard-button")) return;
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation?.();
+      setError(`Finish the opening meld (${stagedPoints}/${openingNeed}) or undo it before discarding.`);
+    };
+    document.addEventListener("click", blockIncompleteOpeningDiscard, true);
+    return () => document.removeEventListener("click", blockIncompleteOpeningDiscard, true);
+  }, [openingInProgress, stagedPoints, openingNeed]);
 
   async function run(action) {
     setBusy(true);
@@ -106,7 +136,18 @@ export default function MultiMeldEnhancer() {
 
   return advisor ? createPortal(
     <div className="multi-meld-tools">
-      {isMulti && <button className="multi-meld-button" disabled={!canAct || busy} onClick={() => run(() => playGroupedMelds(roomCode, uid, selectedIds))}>Play {naturalRanks.map((rank) => `${rank}s`).join(" + ")} · {points} pts</button>}
+      {openingInProgress && (
+        <span className="multi-meld-help">
+          Opening staged: {stagedPoints} of {openingNeed} points. Add another legal meld or undo before discarding.
+        </span>
+      )}
+      {showGroupedButton && (
+        <button className="multi-meld-button" disabled={!canAct || busy} onClick={() => run(() => playGroupedMelds(roomCode, uid, selectedIds))}>
+          {openingInProgress
+            ? `Continue opening · ${projectedOpeningPoints}/${openingNeed} pts`
+            : `Play ${naturalRanks.map((rank) => `${rank}s`).join(" + ")} · ${points} pts`}
+        </button>
+      )}
       <button className="undo-play-button" disabled={!canUndo || busy} onClick={() => run(() => undoLastPlay(roomCode, uid))}>Undo last play</button>
       {isMulti && <span className="multi-meld-help">Wild cards attach to the nearest selected rank in your hand.</span>}
       {error && <span className="multi-meld-error">{error}</span>}
