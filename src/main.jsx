@@ -18,6 +18,13 @@ import "./bootstrapError.css";
 
 const rootElement = document.getElementById("root");
 
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
 function showStartupError(error) {
   const detail = error?.stack || error?.message || String(error || "Unknown startup error");
   rootElement.innerHTML = `
@@ -25,7 +32,7 @@ function showStartupError(error) {
       <section class="startup-card">
         <h1>Family Canasta could not start</h1>
         <p>The application files loaded, but JavaScript stopped during startup. Copy the error below so it can be fixed directly.</p>
-        <pre>${detail.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")}</pre>
+        <pre>${escapeHtml(detail)}</pre>
         <button type="button" onclick="window.location.reload()">Reload</button>
       </section>
     </main>`;
