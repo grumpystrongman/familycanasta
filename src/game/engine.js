@@ -1,7 +1,9 @@
 const SUITS = ["S", "H", "D", "C"];
 const RANKS = ["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
+const SORT_RANKS = ["A","4","5","6","7","8","9","10","J","Q","K","3","2","JOKER"];
 
 export const TEAM_NAMES = ["North", "South", "West"];
+export const SUIT_SYMBOLS = { S: "♠", H: "♥", D: "♦", C: "♣", J: "★" };
 
 export const DEFAULT_RULES = {
   teamCount: 2,
@@ -27,13 +29,7 @@ export function createDeck(deckCount = 2) {
   for (let deck = 0; deck < deckCount; deck += 1) {
     for (const suit of SUITS) {
       for (const rank of RANKS) {
-        cards.push({
-          id: makeCardId(deck, suit, rank),
-          deck,
-          suit,
-          rank,
-          color: suit === "H" || suit === "D" ? "red" : "black",
-        });
+        cards.push({ id: makeCardId(deck, suit, rank), deck, suit, rank, color: suit === "H" || suit === "D" ? "red" : "black" });
       }
     }
     cards.push({ id: makeCardId(deck, "J", "JOKER", 0), deck, suit: "J", rank: "JOKER", color: "black" });
@@ -51,14 +47,21 @@ export function shuffle(cards, random = Math.random) {
   return output;
 }
 
+export function sortHand(cards) {
+  return [...cards].sort((a, b) => {
+    const rank = SORT_RANKS.indexOf(a.rank) - SORT_RANKS.indexOf(b.rank);
+    if (rank) return rank;
+    return SUITS.indexOf(a.suit) - SUITS.indexOf(b.suit);
+  });
+}
+
 export function randomDealer(playerIds, random = Math.random) {
   if (!playerIds.length) throw new Error("Cannot choose a dealer without players.");
   return Math.floor(random() * playerIds.length);
 }
 
 export function nextDealer(currentDealerIndex, playerCount) {
-  if (!playerCount) return 0;
-  return (currentDealerIndex + 1) % playerCount;
+  return playerCount ? (currentDealerIndex + 1) % playerCount : 0;
 }
 
 export function openingRequirement(score) {
@@ -69,6 +72,7 @@ export function openingRequirement(score) {
 }
 
 export function cardPoints(card) {
+  if (isRedThree(card)) return 100;
   if (card.rank === "JOKER") return 50;
   if (card.rank === "2" || card.rank === "A") return 20;
   if (["K","Q","J","10","9","8"].includes(card.rank)) return 10;
@@ -84,10 +88,27 @@ export function teamRecord(teamCount, valueFactory) {
   return Object.fromEntries(Array.from({ length: teamCount }, (_, team) => [team, valueFactory(team)]));
 }
 
+function replaceRedThrees(hand, stock, redThreePile) {
+  let working = [...hand];
+  let changed = true;
+  while (changed) {
+    changed = false;
+    const index = working.findIndex(isRedThree);
+    if (index >= 0) {
+      redThreePile.push(working[index]);
+      working.splice(index, 1);
+      if (stock.length) working.push(stock.pop());
+      changed = true;
+    }
+  }
+  return sortHand(working);
+}
+
 export function dealHand({ players, rules, dealerIndex, existingScores }) {
   const teamCount = Number(rules.teamCount || 2);
   const stock = shuffle(createDeck(Number(rules.deckCount || (teamCount === 3 ? 3 : 2))));
   const hands = Object.fromEntries(players.map((player) => [player.uid, []]));
+  const redThrees = Object.fromEntries(players.map((player) => [player.uid, []]));
   const order = [];
 
   for (let cardNumber = 0; cardNumber < Number(rules.cardsPerPlayer || 11); cardNumber += 1) {
@@ -100,7 +121,13 @@ export function dealHand({ players, rules, dealerIndex, existingScores }) {
     }
   }
 
-  const firstDiscard = stock.pop();
+  for (const player of players) hands[player.uid] = replaceRedThrees(hands[player.uid], stock, redThrees[player.uid]);
+
+  let firstDiscard = stock.pop();
+  while (firstDiscard && isRedThree(firstDiscard)) {
+    stock.unshift(firstDiscard);
+    firstDiscard = stock.pop();
+  }
   const scores = existingScores || Array.from({ length: teamCount }, () => 0);
 
   return {
@@ -110,12 +137,13 @@ export function dealHand({ players, rules, dealerIndex, existingScores }) {
       currentPlayerIndex: (dealerIndex + 1) % players.length,
       turnPhase: "draw",
       stockCount: stock.length,
-      discardPile: [firstDiscard],
+      discardPile: firstDiscard ? [firstDiscard] : [],
       teamMelds: teamRecord(teamCount, () => []),
       teamBoards: teamRecord(teamCount, () => []),
       teamScores: scores,
       opened: teamRecord(teamCount, () => false),
-      handCounts: Object.fromEntries(players.map((p) => [p.uid, Number(rules.cardsPerPlayer || 11)])),
+      redThrees,
+      handCounts: Object.fromEntries(players.map((p) => [p.uid, hands[p.uid].length])),
       dealOrder: order,
       dealAnimationIndex: 0,
       handNumber: 1,
