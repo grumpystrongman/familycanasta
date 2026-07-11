@@ -17,11 +17,13 @@ export const DEFAULT_RULES = {
   partnerPermission: true,
   allowWildCanasta: false,
   freezeOnWild: true,
-  freezeOnBlackThree: true,
+  freezeOnBlackThree: false,
+  unprotectedRedThreesPenalty: false,
   maxWildsPerMeld: 3,
   cleanCanastaBonus: 500,
   dirtyCanastaBonus: 300,
   redThreeBonus: 100,
+  unprotectedRedThreePenalty: 200,
   goingOutBonus: 100,
 };
 
@@ -87,10 +89,10 @@ export const isBlackThree = (card) => card?.rank === "3" && card?.color === "bla
 
 export function cardPoints(card) {
   if (isRedThree(card)) return 100;
-  if (card.rank === "JOKER") return 50;
-  if (card.rank === "2" || card.rank === "A") return 20;
-  if (["K","Q","J","10","9","8"].includes(card.rank)) return 10;
-  if (["7","6","5","4"].includes(card.rank)) return 5;
+  if (card?.rank === "JOKER") return 50;
+  if (card?.rank === "2" || card?.rank === "A") return 20;
+  if (["K","Q","J","10","9","8"].includes(card?.rank)) return 10;
+  if (["7","6","5","4"].includes(card?.rank)) return 5;
   return 0;
 }
 
@@ -116,7 +118,13 @@ export function scoreTeamBoard(room, team, wentOutTeam = null) {
   const redThreeCards = Object.entries(room.publicState?.redThrees || {})
     .filter(([uid]) => Number(room.members?.[uid]?.team) === Number(team))
     .flatMap(([, cards]) => cards || []);
-  const redThreePoints = redThreeCards.length * Number(rules.redThreeBonus || 100);
+  const redThreeCount = redThreeCards.length;
+  const hasCanasta = cleanCanastas + dirtyCanastas > 0;
+  const redThreesUnprotected = Boolean(rules.unprotectedRedThreesPenalty && redThreeCount > 0 && !hasCanasta);
+  const redThreePoints = redThreesUnprotected
+    ? -(redThreeCount * Number(rules.unprotectedRedThreePenalty || 200))
+    : redThreeCount * Number(rules.redThreeBonus || 100);
+
   const canastaBonus = cleanCanastas * Number(rules.cleanCanastaBonus || 500)
     + dirtyCanastas * Number(rules.dirtyCanastaBonus || 300);
   const goingOutPoints = Number(wentOutTeam) === Number(team) ? Number(rules.goingOutBonus || 100) : 0;
@@ -130,8 +138,9 @@ export function scoreTeamBoard(room, team, wentOutTeam = null) {
     cleanCanastas,
     dirtyCanastas,
     canastaBonus,
-    redThreeCount: redThreeCards.length,
+    redThreeCount,
     redThreePoints,
+    redThreesUnprotected,
     goingOutPoints,
     handPenalty,
     bonusPoints: canastaBonus + redThreePoints + goingOutPoints,
@@ -191,11 +200,7 @@ export function dealHand({ players, rules, dealerIndex, existingScores }) {
     }
   }
 
-  // Red threes dealt into a hand stay there until that player's turn. The player
-  // must lay them down, then receives one replacement card for each red three.
-  for (const player of players) {
-    hands[player.uid] = sortHand(hands[player.uid]);
-  }
+  for (const player of players) hands[player.uid] = sortHand(hands[player.uid]);
 
   let firstDiscard = stock.pop();
   while (firstDiscard && isRedThree(firstDiscard)) {
