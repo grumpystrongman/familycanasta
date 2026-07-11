@@ -6,6 +6,7 @@ import GameCelebration from "./GameCelebration";
 import MultiMeldEnhancer from "./MultiMeldEnhancer";
 import RedThreeBoard from "./RedThreeBoard";
 import RedThreeTurnControl from "./RedThreeTurnControl";
+import BlackThreeRuleFix from "./BlackThreeRuleFix";
 import "./styles.css";
 import "./team.css";
 import "./teamStyles.css";
@@ -29,5 +30,6 @@ ReactDOM.createRoot(document.getElementById("root")).render(
     <MultiMeldEnhancer />
     <RedThreeBoard />
     <RedThreeTurnControl />
+    <BlackThreeRuleFix />
   </React.StrictMode>
 );
