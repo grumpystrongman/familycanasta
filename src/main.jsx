@@ -1,23 +1,11 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import App from "./App";
-import GameStateEnhancer from "./GameStateEnhancer";
-import GameCelebration from "./GameCelebration";
-import MultiMeldEnhancer from "./MultiMeldEnhancer";
-import RedThreeBoard from "./RedThreeBoard";
-import RedThreeTurnControl from "./RedThreeTurnControl";
-import BlackThreeRuleFix from "./BlackThreeRuleFix";
-import SafeDiscardRule from "./SafeDiscardRule";
-import HomeRulesOptions from "./HomeRulesOptions";
-import ScoringDisplayFix from "./ScoringDisplayFix";
 import "./styles.css";
 import "./team.css";
 import "./teamStyles.css";
 import "./play.css";
 import "./scoring.css";
 import "./flexibleGame.css";
-import "./stateEnhancer.css";
-import "./gameCelebration.css";
 import "./wildTarget.css";
 import "./cardAccessibility.css";
 import "./boardAccessibility.css";
@@ -26,18 +14,44 @@ import "./redThreeBoard.css";
 import "./redThreeTurn.css";
 import "./safeDiscard.css";
 import "./homeRules.css";
+import "./bootstrapError.css";
 
-ReactDOM.createRoot(document.getElementById("root")).render(
-  <React.StrictMode>
-    <App />
-    <GameStateEnhancer />
-    <GameCelebration />
-    <MultiMeldEnhancer />
-    <RedThreeBoard />
-    <RedThreeTurnControl />
-    <BlackThreeRuleFix />
-    <SafeDiscardRule />
-    <HomeRulesOptions />
-    <ScoringDisplayFix />
-  </React.StrictMode>,
-);
+const rootElement = document.getElementById("root");
+
+function showStartupError(error) {
+  const detail = error?.stack || error?.message || String(error || "Unknown startup error");
+  rootElement.innerHTML = `
+    <main class="startup-status">
+      <section class="startup-card">
+        <h1>Family Canasta could not start</h1>
+        <p>The application files loaded, but JavaScript stopped during startup. Copy the error below so it can be fixed directly.</p>
+        <pre>${detail.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")}</pre>
+        <button type="button" onclick="window.location.reload()">Reload</button>
+      </section>
+    </main>`;
+}
+
+if (!rootElement) {
+  throw new Error("Missing #root element in index.html");
+}
+
+rootElement.innerHTML = `
+  <main class="startup-status">
+    <section class="startup-card">
+      <h1>Loading Family Canasta…</h1>
+      <p>Starting the game application.</p>
+    </section>
+  </main>`;
+
+window.addEventListener("error", (event) => showStartupError(event.error || event.message));
+window.addEventListener("unhandledrejection", (event) => showStartupError(event.reason));
+
+import("./App")
+  .then(({ default: App }) => {
+    ReactDOM.createRoot(rootElement).render(
+      <React.StrictMode>
+        <App />
+      </React.StrictMode>,
+    );
+  })
+  .catch(showStartupError);
