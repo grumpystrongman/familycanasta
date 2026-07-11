@@ -1,0 +1,68 @@
+/* High-contrast board cards for older players and low-vision use. */
+.board-meld .real-card,
+.shared-board .real-card.compact {
+  opacity: 1 !important;
+  filter: none !important;
+  -webkit-filter: none !important;
+  background: #ffffff !important;
+  border: 2px solid #252525 !important;
+  box-shadow: 0 3px 8px rgba(0,0,0,.48) !important;
+  width: 64px !important;
+  height: 92px !important;
+  color: #111111 !important;
+}
+
+.board-meld .real-card.red,
+.shared-board .real-card.compact.red {
+  color: #c00024 !important;
+}
+
+.board-meld .real-card.black,
+.shared-board .real-card.compact.black {
+  color: #070707 !important;
+}
+
+.board-meld .card-corner b,
+.board-meld .card-corner i,
+.board-meld .pip-field > span,
+.board-meld .court-art,
+.board-meld .court-art b,
+.board-meld .court-art span {
+  opacity: 1 !important;
+  filter: none !important;
+  font-weight: 900 !important;
+}
+
+.board-meld .compact .card-corner b { font-size: 14px !important; }
+.board-meld .compact .card-corner i { font-size: 14px !important; }
+.board-meld .compact .pip-field > span { font-size: 19px !important; }
+.board-meld .compact .court-art b { font-size: 30px !important; }
+.board-meld .compact .court-art span { font-size: 15px !important; }
+.board-meld .compact .joker-art span { font-size: 31px !important; }
+.board-meld .compact .joker-art b { font-size: 8px !important; }
+
+.board-meld > div {
+  height: 90px !important;
+  align-items: center;
+}
+
+.board-meld .real-card { margin-left: -20px !important; }
+.board-meld .real-card:first-child { margin-left: 0 !important; }
+
+/* Prevent inherited disabled/button styling from muting cards. */
+.board-meld button.real-card,
+.board-meld button.real-card:disabled {
+  cursor: default;
+  pointer-events: none;
+  -webkit-text-fill-color: currentColor !important;
+}
+
+@media (max-width: 850px) {
+  .board-meld .real-card,
+  .shared-board .real-card.compact {
+    width: 58px !important;
+    height: 84px !important;
+  }
+
+  .board-meld > div { height: 83px !important; }
+}
