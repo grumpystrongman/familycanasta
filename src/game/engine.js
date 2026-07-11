@@ -1,8 +1,11 @@
-
 const SUITS = ["S", "H", "D", "C"];
 const RANKS = ["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
 
+export const TEAM_NAMES = ["North", "South", "West"];
+
 export const DEFAULT_RULES = {
+  teamCount: 2,
+  playersPerTeam: 2,
   deckCount: 2,
   cardsPerPlayer: 11,
   targetScore: 5000,
@@ -33,7 +36,6 @@ export function createDeck(deckCount = 2) {
         });
       }
     }
-
     cards.push({ id: makeCardId(deck, "J", "JOKER", 0), deck, suit: "J", rank: "JOKER", color: "black" });
     cards.push({ id: makeCardId(deck, "J", "JOKER", 1), deck, suit: "J", rank: "JOKER", color: "red" });
   }
@@ -66,12 +68,29 @@ export function openingRequirement(score) {
   return 120;
 }
 
-export function dealHand({ players, rules, dealerIndex, existingScores = [0, 0] }) {
-  const stock = shuffle(createDeck(rules.deckCount));
+export function cardPoints(card) {
+  if (card.rank === "JOKER") return 50;
+  if (card.rank === "2" || card.rank === "A") return 20;
+  if (["K","Q","J","10","9","8"].includes(card.rank)) return 10;
+  if (["7","6","5","4"].includes(card.rank)) return 5;
+  return 0;
+}
+
+export const isWild = (card) => card?.rank === "2" || card?.rank === "JOKER";
+export const isRedThree = (card) => card?.rank === "3" && card?.color === "red";
+export const isBlackThree = (card) => card?.rank === "3" && card?.color === "black";
+
+export function teamRecord(teamCount, valueFactory) {
+  return Object.fromEntries(Array.from({ length: teamCount }, (_, team) => [team, valueFactory(team)]));
+}
+
+export function dealHand({ players, rules, dealerIndex, existingScores }) {
+  const teamCount = Number(rules.teamCount || 2);
+  const stock = shuffle(createDeck(Number(rules.deckCount || (teamCount === 3 ? 3 : 2))));
   const hands = Object.fromEntries(players.map((player) => [player.uid, []]));
   const order = [];
 
-  for (let cardNumber = 0; cardNumber < rules.cardsPerPlayer; cardNumber += 1) {
+  for (let cardNumber = 0; cardNumber < Number(rules.cardsPerPlayer || 11); cardNumber += 1) {
     for (let offset = 1; offset <= players.length; offset += 1) {
       const playerIndex = (dealerIndex + offset) % players.length;
       const player = players[playerIndex];
@@ -82,6 +101,7 @@ export function dealHand({ players, rules, dealerIndex, existingScores = [0, 0] 
   }
 
   const firstDiscard = stock.pop();
+  const scores = existingScores || Array.from({ length: teamCount }, () => 0);
 
   return {
     publicState: {
@@ -91,14 +111,16 @@ export function dealHand({ players, rules, dealerIndex, existingScores = [0, 0] 
       turnPhase: "draw",
       stockCount: stock.length,
       discardPile: [firstDiscard],
-      teamMelds: { 0: [], 1: [] },
-      teamScores: existingScores,
-      opened: { 0: false, 1: false },
-      handCounts: Object.fromEntries(players.map((p) => [p.uid, rules.cardsPerPlayer])),
+      teamMelds: teamRecord(teamCount, () => []),
+      teamBoards: teamRecord(teamCount, () => []),
+      teamScores: scores,
+      opened: teamRecord(teamCount, () => false),
+      handCounts: Object.fromEntries(players.map((p) => [p.uid, Number(rules.cardsPerPlayer || 11)])),
       dealOrder: order,
       dealAnimationIndex: 0,
       handNumber: 1,
       lastAction: "Cards are being dealt.",
+      botThinkingUid: null,
     },
     privateHands: hands,
     stock,
