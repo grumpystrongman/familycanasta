@@ -63,7 +63,7 @@ export default function MultiMeldEnhancer() {
 
     scan();
     const observer = new MutationObserver(scan);
-    observer.observe(document.body, { childList:true, subtree:true, attributes:true, attributeFilter:["class", "style"] });
+    observer.observe(document.body, { childList:true, subtree:true, attributes:true, attributeFilter:["class"] });
     window.addEventListener("resize", scan);
     return () => {
       observer.disconnect();
