@@ -15,7 +15,7 @@ function assertTurn(room, uid, phase) {
   if (!room || room.status !== "playing" || room.publicState?.phase !== "playing") throw new Error("The game is not ready for a move.");
   const { player } = activePlayer(room);
   if (player?.uid !== uid) throw new Error("It is not your turn.");
-  if (room.publicState?.turnPhase !== phase) throw new Error(phase === "draw" ? "You have already drawn. Meld or discard." : "Draw a card first.");
+  if (room.publicState?.turnPhase !== phase) throw new Error(phase === "draw" ? "You have already drawn. Meld or discard." : "Draw cards first.");
   return player;
 }
 
@@ -42,9 +42,16 @@ export async function drawFromStock(code, uid) {
   const result = await runTransaction(ref(db, `rooms/${code}`), (room) => {
     const player = assertTurn(room, uid, "draw");
     if (!room.stock?.length) return room;
-    drawOneReplacingRedThrees(room, uid);
+
+    const requested = Math.max(1, Number(room.rules?.drawCount || 2));
+    let drawn = 0;
+    for (let index = 0; index < requested && room.stock.length; index += 1) {
+      const card = drawOneReplacingRedThrees(room, uid);
+      if (card) drawn += 1;
+    }
+
     room.publicState.turnPhase = "play";
-    room.publicState.lastAction = `${player.nickname} drew from the stock.`;
+    room.publicState.lastAction = `${player.nickname} drew ${drawn} card${drawn === 1 ? "" : "s"} from the stock.`;
     return room;
   }, { applyLocally: false });
   if (!result.committed) throw new Error("The draw could not be completed.");
