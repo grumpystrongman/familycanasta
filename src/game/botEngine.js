@@ -97,7 +97,7 @@ function drawForRobot(state, player, rules) {
 
 function candidateMelds(hand, currentMelds, rules) {
   const naturals = groupNaturals(hand);
-  const wilds = hand.filter(isWild).sort((a, b) => cardPoints(a) - cardPoints(b));
+  const availableWilds = hand.filter(isWild).sort((a, b) => cardPoints(a) - cardPoints(b));
   const candidates = [];
 
   for (const meld of currentMelds) {
@@ -112,22 +112,39 @@ function candidateMelds(hand, currentMelds, rules) {
     }
   }
 
-  for (const [rank, cards] of Object.entries(naturals)) {
-    if (currentMelds.some((meld) => meld.rank === rank)) continue;
-    if (cards.length >= 3) {
-      const selected = [...cards];
-      const maxWilds = Math.min(Number(rules.maxWildsPerMeld || 3), selected.length - 1, wilds.length);
-      const usefulWilds = maxWilds > 0 && selected.length < 7
-        ? wilds.slice(0, Math.min(maxWilds, 7 - selected.length))
-        : [];
-      candidates.push({
-        rank,
-        cards: [...selected, ...usefulWilds],
-        existing: false,
-        score: selected.reduce((sum, card) => sum + cardPoints(card), 0)
-          + usefulWilds.reduce((sum, card) => sum + cardPoints(card), 0),
-      });
+  const newRanks = Object.entries(naturals)
+    .filter(([rank]) => !currentMelds.some((meld) => meld.rank === rank))
+    .sort(([, left], [, right]) => {
+      const leftPoints = left.reduce((sum, card) => sum + cardPoints(card), 0);
+      const rightPoints = right.reduce((sum, card) => sum + cardPoints(card), 0);
+      return rightPoints - leftPoints;
+    });
+
+  for (const [rank, cards] of newRanks) {
+    let usefulWilds = [];
+    if (cards.length === 2 && availableWilds.length) {
+      usefulWilds = availableWilds.splice(0, 1);
+    } else if (cards.length >= 3) {
+      const maxWilds = Math.min(
+        Number(rules.maxWildsPerMeld || 3),
+        cards.length - 1,
+        availableWilds.length,
+      );
+      if (maxWilds > 0 && cards.length < 7) {
+        usefulWilds = availableWilds.splice(0, Math.min(maxWilds, 7 - cards.length));
+      }
+    } else {
+      continue;
     }
+
+    const selected = [...cards, ...usefulWilds];
+    if (selected.length < 3) continue;
+    candidates.push({
+      rank,
+      cards: selected,
+      existing: false,
+      score: selected.reduce((sum, card) => sum + cardPoints(card), 0),
+    });
   }
 
   return candidates.sort((a, b) => b.score - a.score);
@@ -139,6 +156,20 @@ function candidateSatisfiesPending(candidate, pending) {
   if (!ids.has(pending.topCardId)) return false;
   const matches = (pending.matchingNaturalIds || []).filter((id) => ids.has(id)).length;
   return matches >= Number(pending.requiredNaturalCount || 2);
+}
+
+function uniqueSelectedCards(selected, hand) {
+  const handIds = new Set(hand.map((card) => card.id));
+  const used = new Set();
+  const cards = [];
+  for (const candidate of selected) {
+    for (const card of candidate.cards) {
+      if (!handIds.has(card.id) || used.has(card.id)) continue;
+      used.add(card.id);
+      cards.push(card);
+    }
+  }
+  return cards;
 }
 
 function applyMelds(state, player, rules) {
@@ -170,7 +201,9 @@ function applyMelds(state, player, rules) {
       selected.push(candidate);
       running += candidate.cards.reduce((sum, card) => sum + cardPoints(card), 0);
     }
-    if (running < requirement) selected = [];
+    const actualOpeningCards = uniqueSelectedCards(selected, hand);
+    const actualOpeningPoints = actualOpeningCards.reduce((sum, card) => sum + cardPoints(card), 0);
+    if (actualOpeningPoints < requirement) selected = [];
   }
 
   if (!selected.length) return { count: 0, ranks: [] };
