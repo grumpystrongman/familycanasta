@@ -1,9 +1,8 @@
-
 import React, { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Check, Copy, Crown, MessageCircle, Play, Plus, Send, Settings,
-  Shuffle, Users, Video, Wifi, WifiOff
+  Copy, Crown, MessageCircle, Play, Plus, Send, Settings,
+  Shuffle, Video, Wifi, WifiOff
 } from "lucide-react";
 import { ensureAnonymousAuth, firebaseMissing, firebaseReady } from "./firebase";
 import {
@@ -90,28 +89,36 @@ function App() {
 
   async function createGame() {
     if (!user) return;
-    setBusy(true); setError("");
+    setBusy(true);
+    setError("");
     try {
       localStorage.setItem("canastaNickname", nickname);
       localStorage.setItem("canastaAvatar", avatar);
       const code = await createRoom({ user, nickname, avatar, rules, meetLink });
       setRoomCode(code);
       setScreen("lobby");
-    } catch (e) { setError(e.message); }
-    finally { setBusy(false); }
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function joinGame() {
     if (!user) return;
-    setBusy(true); setError("");
+    setBusy(true);
+    setError("");
     try {
       localStorage.setItem("canastaNickname", nickname);
       localStorage.setItem("canastaAvatar", avatar);
       const code = await joinRoom({ code: joinCode, user, nickname, avatar });
       setRoomCode(code);
       setScreen("lobby");
-    } catch (e) { setError(e.message); }
-    finally { setBusy(false); }
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function submitMessage() {
@@ -156,21 +163,21 @@ function App() {
           <label>Nickname</label>
           <input value={nickname} onChange={(e) => setNickname(e.target.value)} />
           <label>Avatar</label>
-          <div className="avatars">{AVATARS.map((item) => <button className={avatar===item?"chosen":""} onClick={()=>setAvatar(item)} key={item}>{item}</button>)}</div>
+          <div className="avatars">{AVATARS.map((item) => <button className={avatar === item ? "chosen" : ""} onClick={() => setAvatar(item)} key={item}>{item}</button>)}</div>
 
           <details>
             <summary><Settings size={16}/> Game setup</summary>
             <div className="settings-grid">
-              <label>Decks<select value={rules.deckCount} onChange={(e)=>setRules({...rules,deckCount:Number(e.target.value)})}><option value={2}>2 decks</option><option value={3}>3 decks</option></select></label>
-              <label>Starting cards<select value={rules.cardsPerPlayer} onChange={(e)=>setRules({...rules,cardsPerPlayer:Number(e.target.value)})}><option value={11}>11</option><option value={13}>13</option><option value={15}>15</option></select></label>
-              <label>Card back<select value={rules.cardBack} onChange={(e)=>setRules({...rules,cardBack:e.target.value})}>{BACKS.map((b)=><option key={b}>{b}</option>)}</select></label>
-              <label>Meet link<input value={meetLink} onChange={(e)=>setMeetLink(e.target.value)} placeholder="abc-defg-hij"/></label>
+              <label>Decks<select value={rules.deckCount} onChange={(e) => setRules({ ...rules, deckCount: Number(e.target.value) })}><option value={2}>2 decks</option><option value={3}>3 decks</option></select></label>
+              <label>Starting cards<select value={rules.cardsPerPlayer} onChange={(e) => setRules({ ...rules, cardsPerPlayer: Number(e.target.value) })}><option value={11}>11</option><option value={13}>13</option><option value={15}>15</option></select></label>
+              <label>Card back<select value={rules.cardBack} onChange={(e) => setRules({ ...rules, cardBack: e.target.value })}>{BACKS.map((b) => <option key={b}>{b}</option>)}</select></label>
+              <label>Meet link<input value={meetLink} onChange={(e) => setMeetLink(e.target.value)} placeholder="abc-defg-hij"/></label>
             </div>
           </details>
 
-          <button className="primary" disabled={!user||busy} onClick={createGame}><Plus/> Create a room</button>
+          <button className="primary" disabled={!user || busy} onClick={createGame}><Plus/> Create a room</button>
           <div className="divider"><span/>or join<span/></div>
-          <div className="join-row"><input maxLength={6} value={joinCode} onChange={(e)=>setJoinCode(e.target.value.toUpperCase())} placeholder="ROOM CODE"/><button disabled={!user||busy} onClick={joinGame}>Join</button></div>
+          <div className="join-row"><input maxLength={6} value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} placeholder="ROOM CODE"/><button disabled={!user || busy} onClick={joinGame}>Join</button></div>
           {error && <p className="error">{error}</p>}
         </section>
       </main>
@@ -182,7 +189,7 @@ function App() {
   if (room.status === "lobby") {
     return (
       <main className="lobby-page">
-        <header><div className="brand"><span>FC</span><b>Family Canasta</b></div><div className="code"><small>ROOM</small><b>{roomCode}</b><button onClick={()=>navigator.clipboard.writeText(roomCode)}><Copy size={16}/></button></div></header>
+        <header><div className="brand"><span>FC</span><b>Family Canasta</b></div><div className="code"><small>ROOM</small><b>{roomCode}</b><button onClick={() => navigator.clipboard.writeText(roomCode)}><Copy size={16}/></button></div></header>
         <section className="lobby-grid">
           <div>
             <p className="eyebrow">PRIVATE TABLE</p>
@@ -191,9 +198,9 @@ function App() {
               {members.map((member) => (
                 <article key={member.uid}>
                   <span className="avatar">{member.avatar}</span>
-                  <div><b>{member.nickname}</b><small>{member.connected ? "Connected" : "Reconnecting"} · Team {member.team===0?"North":"South"}</small></div>
-                  {member.isHost && <Crown size={17}/>}
-                  {member.uid===user.uid && <select value={member.team} onChange={(e)=>updateMember(roomCode,user.uid,{team:Number(e.target.value)})}><option value={0}>North</option><option value={1}>South</option></select>}
+                  <div><b>{member.nickname}</b><small>{member.connected ? "Connected" : "Reconnecting"} · Team {member.team === 0 ? "North" : "South"}</small></div>
+                  {member.isHost && <Crown size={17}/>} 
+                  {member.uid === user.uid && <select value={member.team} onChange={(e) => updateMember(roomCode, user.uid, { team: Number(e.target.value) })}><option value={0}>North</option><option value={1}>South</option></select>}
                 </article>
               ))}
             </div>
@@ -206,9 +213,9 @@ function App() {
               <p><span>Target</span><b>{room.rules.targetScore.toLocaleString()}</b></p>
               <p><span>First dealer</span><b>Random</b></p>
             </div>
-            {room.meetLink && <a className="meet" href={room.meetLink.startsWith("http")?room.meetLink:`https://meet.google.com/${room.meetLink}`} target="_blank" rel="noreferrer"><Video size={17}/> Join Google Meet</a>}
-            {room.hostUid===user.uid
-              ? <button className="primary" onClick={()=>startOnlineGame(roomCode,user.uid)} disabled={members.length<2}><Play/> Choose dealer and deal</button>
+            {room.meetLink && <a className="meet" href={room.meetLink.startsWith("http") ? room.meetLink : `https://meet.google.com/${room.meetLink}`} target="_blank" rel="noreferrer"><Video size={17}/> Join Google Meet</a>}
+            {room.hostUid === user.uid
+              ? <button className="primary" onClick={() => startOnlineGame(roomCode, user.uid)} disabled={members.length < 2}><Play/> Choose dealer and deal</button>
               : <p className="waiting">Waiting for the host to begin…</p>}
           </aside>
         </section>
@@ -224,18 +231,22 @@ function App() {
     <main className="game-page">
       <header>
         <div className="brand"><span>FC</span><b>Family Canasta</b></div>
-        <div className="turn">{room.publicState?.phase==="dealing" ? "Dealing cards…" : `${active?.nickname || "Player"}'s turn }</div>
+        <div className="turn">
+          {room.publicState?.phase === "dealing"
+            ? "Dealing cards…"
+            : `${active?.nickname || "Player"}'s turn`}
+        </div>
         <div className="code"><small>ROOM</small><b>{roomCode}</b></div>
       </header>
 
       <section className="table">
         <div className="opponents">
-          {members.filter((m)=>m.uid!==user.uid).map((member)=>(
+          {members.filter((m) => m.uid !== user.uid).map((member) => (
             <article key={member.uid}>
               <span>{member.avatar}</span>
               <b>{member.nickname}</b>
               <small>{room.publicState?.handCounts?.[member.uid] || 0} cards</small>
-              {dealer?.uid===member.uid && <em><Crown size={12}/> Dealer</em>}
+              {dealer?.uid === member.uid && <em><Crown size={12}/> Dealer</em>}
             </article>
           ))}
         </div>
@@ -247,18 +258,18 @@ function App() {
         </div>
 
         <div className="hand">
-          <div className="identity"><span>{me?.avatar}</span><b>{me?.nickname}</b>{dealer?.uid===user.uid&&<em>Dealer</em>}</div>
+          <div className="identity"><span>{me?.avatar}</span><b>{me?.nickname}</b>{dealer?.uid === user.uid && <em>Dealer</em>}</div>
           <div className="cards">
             <AnimatePresence>
               {privateHand.map((card, index) => {
-                const wasDealt = room.publicState?.phase!=="dealing" || visibleDealCount > index * members.length;
+                const wasDealt = room.publicState?.phase !== "dealing" || visibleDealCount > index * members.length;
                 return wasDealt ? (
                   <motion.button
                     key={card.id}
                     initial={{ y: -320, x: 0, opacity: 0, rotate: 12 }}
-                    animate={{ y: 0, x: 0, opacity: 1, rotate: (index-privateHand.length/2)*0.8 }}
-                    transition={{ duration: .28, type: "spring" }}
-                    className={`playing-card ${card.color==="red"?"red":""}`}
+                    animate={{ y: 0, x: 0, opacity: 1, rotate: (index - privateHand.length / 2) * 0.8 }}
+                    transition={{ duration: 0.28, type: "spring" }}
+                    className={card.color === "red" ? "playing-card red" : "playing-card"}
                   >
                     <b>{card.rank}</b><span>{card.suit}</span>
                   </motion.button>
@@ -271,8 +282,8 @@ function App() {
 
       <aside className="chat">
         <h3><MessageCircle size={17}/> Table chat</h3>
-        <div className="messages">{messages.map((m)=><article key={m.id}><span>{m.avatar}</span><div><b>{m.nickname}</b><p>{m.text}</p></div></article>)}</div>
-        <div className="compose"><input value={message} onChange={(e)=>setMessage(e.target.value)} onKeyDown={(e)=>e.key==="Enter"&&submitMessage()} placeholder="Message the table"/><button onClick={submitMessage}><Send size={17}/></button></div>
+        <div className="messages">{messages.map((m) => <article key={m.id}><span>{m.avatar}</span><div><b>{m.nickname}</b><p>{m.text}</p></div></article>)}</div>
+        <div className="compose"><input value={message} onChange={(e) => setMessage(e.target.value)} onKeyDown={(e) => e.key === "Enter" && submitMessage()} placeholder="Message the table"/><button onClick={submitMessage}><Send size={17}/></button></div>
       </aside>
     </main>
   );
