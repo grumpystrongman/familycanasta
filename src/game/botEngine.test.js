@@ -23,6 +23,7 @@ test("robot completes a discard-pile opening atomically before discarding", () =
         card("a1", "A"),
         card("a2", "A", "D"),
         card("a3", "A", "H"),
+        card("spare", "6"),
       ],
       human: [card("h1", "4")],
     },
@@ -39,7 +40,7 @@ test("robot completes a discard-pile opening atomically before discarding", () =
       openingRequirements: { 0: 90, 1: 50 },
       teamScores: { 0: 1700, 1: 0 },
       redThrees: { robot: [], human: [] },
-      handCounts: { robot: 5, human: 1 },
+      handCounts: { robot: 6, human: 1 },
     },
   };
 
@@ -48,6 +49,7 @@ test("robot completes a discard-pile opening atomically before discarding", () =
   assert.equal(result.publicState.opened[0], true);
   assert.equal(result.publicState.pendingDiscardPickup, null);
   assert.deepEqual(result.publicState.teamBoards[0].map((meld) => meld.rank).sort(), ["A", "Q"]);
+  assert.equal(result.privateHands.robot.length, 1);
   assert.equal(result.publicState.currentPlayerIndex, 1);
   assert.equal(result.publicState.turnPhase, "draw");
 });
