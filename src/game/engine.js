@@ -12,7 +12,7 @@ export const DEFAULT_RULES = {
   cardsPerPlayer: 11,
   targetScore: 5000,
   canastasToGoOut: 1,
-  drawCount: 1,
+  drawCount: 2,
   partnerPermission: true,
   allowWildCanasta: false,
   freezeOnWild: true,
