@@ -46,7 +46,9 @@ export default function GameStateEnhancer() {
   const frozen = room?.publicState?.discardFrozen !== false;
   const indicator = discardTarget ? createPortal(
     <span className={`discard-state-badge ${frozen ? "frozen" : "open"}`}>
-      {frozen ? "❄ FROZEN — two natural matches required" : "✓ UNFROZEN — board meld may take top card"}
+      {frozen
+        ? "❄ FROZEN — two natural matches required"
+        : "✓ UNFROZEN — stays open until a wild or black three is discarded"}
     </span>,
     discardTarget,
   ) : null;
