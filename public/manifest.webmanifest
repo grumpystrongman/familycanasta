@@ -1,0 +1,9 @@
+{
+  "name": "Family Canasta",
+  "short_name": "Canasta",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#071c16",
+  "theme_color": "#0b3d2f",
+  "icons": []
+}

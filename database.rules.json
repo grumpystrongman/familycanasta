@@ -1,0 +1,36 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "rooms": {
+      "$roomCode": {
+        ".read": "auth != null && data.child('members').child(auth.uid).exists()",
+        ".write": "auth != null && (!data.exists() || data.child('members').child(auth.uid).exists())",
+        "members": {
+          "$uid": {
+            ".read": "auth != null && root.child('rooms').child($roomCode).child('members').child(auth.uid).exists()",
+            ".write": "auth != null && auth.uid === $uid"
+          }
+        },
+        "privateHands": {
+          "$uid": {
+            ".read": "auth != null && auth.uid === $uid",
+            ".write": "auth != null && root.child('rooms').child($roomCode).child('hostUid').val() === auth.uid"
+          }
+        },
+        "messages": {
+          "$messageId": {
+            ".write": "auth != null && root.child('rooms').child($roomCode).child('members').child(auth.uid).exists()",
+            ".validate": "newData.hasChildren(['uid','nickname','text','createdAt'])"
+          }
+        }
+      }
+    },
+    "roomDirectory": {
+      "$roomCode": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    }
+  }
+}
