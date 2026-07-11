@@ -47,10 +47,6 @@ export async function playGroupedMelds(code, uid, orderedCardIds) {
       if (!alreadyOpened && room.publicState.openingTurnUid && room.publicState.openingTurnUid !== uid) {
         throw new Error("Another player has an unfinished opening meld.");
       }
-      if (!alreadyOpened && stagedAfter < need) {
-        throw new Error(`The opening melds total ${stagedAfter} points; ${need} points are required.`);
-      }
-
       room.publicState.undoPlay = {
         uid,
         playerIndex: Number(room.publicState.currentPlayerIndex || 0),
@@ -70,10 +66,16 @@ export async function playGroupedMelds(code, uid, orderedCardIds) {
         else board.push({ rank: group.rank, cards: group.cards });
       }
 
+      let openingComplete = alreadyOpened;
       if (!alreadyOpened) {
-        room.publicState.opened[player.team] = true;
-        room.publicState.openingTurnUid = null;
-        room.publicState.openingTurnPoints = 0;
+        room.publicState.openingTurnUid = uid;
+        room.publicState.openingTurnPoints = stagedAfter;
+        if (stagedAfter >= need) {
+          room.publicState.opened[player.team] = true;
+          room.publicState.openingTurnUid = null;
+          room.publicState.openingTurnPoints = 0;
+          openingComplete = true;
+        }
       }
 
       const used = new Set(orderedCardIds);
@@ -81,9 +83,14 @@ export async function playGroupedMelds(code, uid, orderedCardIds) {
       room.publicState.handCounts[uid] = room.privateHands[uid].length;
       room.publicState.turnPhase = "play";
       const groupText = groups.map((group) => `${group.rank}s`).join(", ");
-      room.publicState.lastAction = `${player.nickname} played ${groups.length} meld${groups.length === 1 ? "" : "s"}: ${groupText} for ${selectedPoints} points.`;
+      room.publicState.lastAction = openingComplete
+        ? `${player.nickname} played ${groups.length} meld${groups.length === 1 ? "" : "s"}: ${groupText} for ${selectedPoints} points.`
+        : `${player.nickname} staged ${groupText}; opening total is now ${stagedAfter} of ${need} points.`;
 
-      if (room.privateHands[uid].length === 0) return finishRound(room, uid);
+      if (room.privateHands[uid].length === 0) {
+        if (!openingComplete) throw new Error("You cannot go out until the opening meld requirement is complete.");
+        return finishRound(room, uid);
+      }
       return room;
     } catch (error) {
       actionError = error.message;
