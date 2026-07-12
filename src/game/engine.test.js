@@ -22,6 +22,22 @@ test("captures each team's opening requirement at the start of the hand", () => 
   assert.deepEqual(dealt.publicState.openingRequirements, { 0: 120, 1: 50 });
 });
 
+test("publishes a newly dealt hand as immediately playable", () => {
+  const dealt = dealHand({
+    players,
+    rules: { ...DEFAULT_RULES, teamCount: 2, cardsPerPlayer: 15 },
+    dealerIndex: 0,
+    existingScores: [0, 0],
+  });
+
+  assert.equal(dealt.publicState.phase, "playing");
+  assert.equal(dealt.publicState.turnPhase, "draw");
+  assert.equal(dealt.publicState.dealAnimationIndex, dealt.publicState.dealOrder.length);
+  assert.equal(dealt.publicState.lastAction, "The first turn is ready.");
+  assert.equal(dealt.privateHands.north.length, 15);
+  assert.equal(dealt.privateHands.south.length, 15);
+});
+
 test("uses the hand-start opening requirement even if live score fields change", () => {
   const room = {
     publicState: {
