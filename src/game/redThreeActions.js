@@ -1,6 +1,6 @@
 import { ref, runTransaction } from "firebase/database";
 import { db } from "../firebase";
-import { isRedThree, sortHand } from "./engine";
+import { resolveRedThreesInHand } from "./redThreeRules.js";
 
 function orderedPlayers(room) {
   return Object.values(room.members || {}).sort((a, b) => a.seat - b.seat);
@@ -17,43 +17,21 @@ export async function layDownRedThrees(code, uid) {
 
       const players = orderedPlayers(room);
       const player = players[Number(room.publicState?.currentPlayerIndex || 0)];
-      if (player?.uid !== uid) throw new Error("Red threes can only be laid down on your turn.");
+      if (player?.uid !== uid) throw new Error("Red threes can only be recovered on your turn.");
 
-      room.privateHands ||= {};
-      room.privateHands[uid] ||= [];
-      room.stock ||= [];
-      room.publicState.redThrees ||= {};
-      room.publicState.redThrees[uid] ||= [];
-      room.publicState.handCounts ||= {};
-
-      let hand = [...room.privateHands[uid]];
-      let laidDown = 0;
-      let replacements = 0;
-      let changed = true;
-
-      // Every red three in the hand is laid down. Each one earns one replacement.
-      // If a replacement is another red three, it is also laid down and replaced.
-      while (changed) {
-        changed = false;
-        const redIndex = hand.findIndex(isRedThree);
-        if (redIndex >= 0) {
-          const [redThree] = hand.splice(redIndex, 1);
-          room.publicState.redThrees[uid].push(redThree);
-          laidDown += 1;
-          if (room.stock.length) {
-            hand.push(room.stock.pop());
-            replacements += 1;
-          }
-          changed = true;
-        }
-      }
-
+      const result = resolveRedThreesInHand(room, uid);
+      const laidDown = result.exposed.length;
       if (!laidDown) throw new Error("You do not have a red three to lay down.");
 
-      room.privateHands[uid] = sortHand(hand);
-      room.publicState.handCounts[uid] = hand.length;
-      room.publicState.stockCount = room.stock.length;
-      room.publicState.lastAction = `${player.nickname} laid down ${laidDown} red three${laidDown === 1 ? "" : "s"} and drew ${replacements} replacement card${replacements === 1 ? "" : "s"}.`;
+      if (result.exhaustedOnRedThree) {
+        room.publicState.stockExhausted = true;
+        room.publicState.endRoundCheckRequested = true;
+        room.publicState.currentPlayerIndex = (Number(room.publicState.currentPlayerIndex || 0) + 1) % players.length;
+        room.publicState.turnPhase = "draw";
+        room.publicState.lastAction = `${player.nickname} exposed ${laidDown} red three${laidDown === 1 ? "" : "s"}. The stock ended on a red three, so the turn ended without a discard.`;
+      } else {
+        room.publicState.lastAction = `${player.nickname} recovered ${laidDown} red three${laidDown === 1 ? "" : "s"} and drew ${result.replacements} replacement card${result.replacements === 1 ? "" : "s"}.`;
+      }
       return room;
     } catch (error) {
       actionError = error.message;
