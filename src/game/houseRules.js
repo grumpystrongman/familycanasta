@@ -14,6 +14,7 @@ export const DEFAULT_HOUSE_RULES = Object.freeze({
     pureAcesRule: false,
   },
   winConditions: {
+    totalCanastasRequired: 1,
     canastasRequiredToGoOut: { clean: 0, dirty: 0, wild: 0 },
     allowFinalDiscardToGoOut: true,
   },
@@ -46,6 +47,7 @@ export function normalizeHouseRules(value = {}) {
       pureAcesRule: Boolean(meld.pureAcesRule),
     },
     winConditions: {
+      totalCanastasRequired: integer(win.totalCanastasRequired, 1, 1, 10),
       canastasRequiredToGoOut: {
         clean: integer(required.clean, 0),
         dirty: integer(required.dirty, 0),
@@ -65,6 +67,27 @@ export function variantProfile(variant) {
     return { deckCount: 6, handSize: 11, footSize: 11, kneeSize: 11, sequence: ["hand", "foot", "knee"] };
   }
   return { deckCount: null, handSize: null, footSize: 0, kneeSize: 0, sequence: ["hand"] };
+}
+
+export function buildHouseRuleRoomUpdates(value = DEFAULT_HOUSE_RULES, options = {}) {
+  const normalized = normalizeHouseRules(value);
+  const profile = variantProfile(normalized.deckVariation.variant);
+  const updates = {
+    houseRules: normalized,
+    "rules/drawCount": normalized.drawAndDiscard.drawCount,
+    "rules/canastasToGoOut": normalized.winConditions.totalCanastasRequired,
+    ...(profile.deckCount ? { "rules/deckCount": profile.deckCount } : {}),
+    ...(profile.handSize ? { "rules/cardsPerPlayer": profile.handSize } : {}),
+  };
+
+  if (options.lock) {
+    updates.activeRules = normalized;
+    updates.rulesLockedAt = Number.isFinite(Number(options.lockedAt))
+      ? Number(options.lockedAt)
+      : Date.now();
+  }
+
+  return updates;
 }
 
 export function activeHouseRules(room) {
@@ -135,6 +158,14 @@ export function countCanastas(board = []) {
   }, { clean: 0, dirty: 0, wild: 0 });
 }
 
+function totalCanastaRequirement(room, normalizedWinRules) {
+  const sourceRules = room?.activeRules || room?.houseRules || room?.rules?.houseRules;
+  const configured = sourceRules?.winConditions?.totalCanastasRequired
+    ?? room?.rules?.canastasToGoOut
+    ?? normalizedWinRules.totalCanastasRequired;
+  return integer(configured, 1, 1, 10);
+}
+
 export function goOutRequirementStatus(room, team) {
   const rules = activeHouseRules(room).winConditions;
   const board = room?.publicState?.teamBoards?.[team] || [];
@@ -144,7 +175,7 @@ export function goOutRequirementStatus(room, team) {
     ["clean", "dirty", "wild"].map((type) => [type, Math.max(0, required[type] - actual[type])]),
   );
   const totalActual = actual.clean + actual.dirty + actual.wild;
-  const totalRequired = Math.max(1, Number(room?.rules?.canastasToGoOut || 1));
+  const totalRequired = totalCanastaRequirement(room, rules);
   const totalMissing = Math.max(0, totalRequired - totalActual);
   const typedMissing = Object.values(missing).reduce((sum, value) => sum + value, 0);
   const missingParts = Object.entries(missing)
