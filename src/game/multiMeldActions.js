@@ -3,6 +3,7 @@ import { db } from "../firebase";
 import { finishRound, openingRequirementForTeam, sortHand } from "./engine";
 import { planGroupedMelds } from "./multiMeldPlanner";
 import { validatePendingPickupSelection } from "./discardPickupPlanner";
+import { validateGoOutAction, validateMeldAction } from "./houseRules";
 
 function orderedPlayers(room) {
   return Object.values(room.members || {}).sort((a, b) => a.seat - b.seat);
@@ -15,6 +16,25 @@ function assertPlayTurn(room, uid) {
   if (player?.uid !== uid) throw new Error("It is not your turn.");
   if (room.publicState?.turnPhase !== "play") throw new Error("Draw cards first.");
   return player;
+}
+
+function assertPartnerApproval(room, player) {
+  if (room.rules?.partnerPermission === false) return;
+  const humanPartners = orderedPlayers(room).filter(
+    (member) => member.uid !== player.uid
+      && !member.isRobot
+      && Number(member.team) === Number(player.team),
+  );
+  if (!humanPartners.length) return;
+  const request = room.publicState?.goOutRequest;
+  const approved = request?.uid === player.uid
+    && (request.approvedBy || []).some((uid) => humanPartners.some((partner) => partner.uid === uid));
+  if (!approved) throw new Error("Ask a teammate for permission to go out, then wait for approval.");
+}
+
+function assertGroupedGoOutAllowed(room, player) {
+  validateGoOutAction(room, player, "meld");
+  assertPartnerApproval(room, player);
 }
 
 export async function playGroupedMelds(code, uid, orderedCardIds) {
@@ -67,6 +87,7 @@ export async function playGroupedMelds(code, uid, orderedCardIds) {
 
       for (const group of groups) {
         const existing = board.find((meld) => meld.rank === group.rank);
+        validateMeldAction(room, existing, group.cards);
         if (existing) existing.cards = [...(existing.cards || []), ...group.cards];
         else board.push({ rank: group.rank, cards: group.cards });
       }
@@ -82,7 +103,10 @@ export async function playGroupedMelds(code, uid, orderedCardIds) {
       const groupText = groups.map((group) => `${group.rank}s`).join(", ");
       room.publicState.lastAction = `${player.nickname} played ${groups.length} meld${groups.length === 1 ? "" : "s"}: ${groupText} for ${selectedPoints} points.`;
 
-      if (room.privateHands[uid].length === 0) return finishRound(room, uid);
+      if (room.privateHands[uid].length === 0) {
+        assertGroupedGoOutAllowed(room, player);
+        return finishRound(room, uid);
+      }
       return room;
     } catch (error) {
       actionError = error.message;

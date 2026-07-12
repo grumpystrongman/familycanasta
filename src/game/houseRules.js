@@ -14,7 +14,7 @@ export const DEFAULT_HOUSE_RULES = Object.freeze({
     pureAcesRule: false,
   },
   winConditions: {
-    canastasRequiredToGoOut: { clean: 0, dirty: 1, wild: 0 },
+    canastasRequiredToGoOut: { clean: 0, dirty: 0, wild: 0 },
     allowFinalDiscardToGoOut: true,
   },
   deckVariation: { variant: "Classic" },
@@ -48,7 +48,7 @@ export function normalizeHouseRules(value = {}) {
     winConditions: {
       canastasRequiredToGoOut: {
         clean: integer(required.clean, 0),
-        dirty: integer(required.dirty, 1),
+        dirty: integer(required.dirty, 0),
         wild: integer(required.wild, 0),
       },
       allowFinalDiscardToGoOut: win.allowFinalDiscardToGoOut !== false,
@@ -135,21 +135,45 @@ export function countCanastas(board = []) {
   }, { clean: 0, dirty: 0, wild: 0 });
 }
 
-export function validateGoOutAction(room, player, method = "meld") {
+export function goOutRequirementStatus(room, team) {
   const rules = activeHouseRules(room).winConditions;
-  const board = room.publicState?.teamBoards?.[player.team] || [];
+  const board = room.publicState?.teamBoards?.[team] || [];
   const actual = countCanastas(board);
   const required = rules.canastasRequiredToGoOut;
   const missing = Object.fromEntries(
     ["clean", "dirty", "wild"].map((type) => [type, Math.max(0, required[type] - actual[type])]),
   );
-  if (Object.values(missing).some(Boolean)) {
-    const description = Object.entries(missing)
-      .filter(([, value]) => value)
-      .map(([type, value]) => `${value} ${type}`)
-      .join(", ");
-    throw new Error(`Your team still needs ${description} canasta${Object.values(missing).reduce((sum, value) => sum + value, 0) === 1 ? "" : "s"} to go out.`);
+  const totalActual = actual.clean + actual.dirty + actual.wild;
+  const totalRequired = Math.max(1, Number(room?.rules?.canastasToGoOut || 1));
+  const totalMissing = Math.max(0, totalRequired - totalActual);
+  const typedMissing = Object.values(missing).reduce((sum, value) => sum + value, 0);
+  const missingParts = Object.entries(missing)
+    .filter(([, value]) => value)
+    .map(([type, value]) => `${value} ${type}`);
+  if (totalMissing) missingParts.unshift(`${totalMissing} completed`);
+
+  let message = "Your team is eligible to go out.";
+  if (missingParts.length) {
+    const canastaLabel = Math.max(totalMissing, typedMissing) === 1 ? "canasta" : "canastas";
+    message = `Your team still needs ${missingParts.join(", ")} ${canastaLabel} to go out.`;
   }
+
+  return {
+    eligible: totalMissing === 0 && typedMissing === 0,
+    actual,
+    required,
+    missing,
+    totalActual,
+    totalRequired,
+    totalMissing,
+    message,
+  };
+}
+
+export function validateGoOutAction(room, player, method = "meld") {
+  const rules = activeHouseRules(room).winConditions;
+  const status = goOutRequirementStatus(room, player.team);
+  if (!status.eligible) throw new Error(status.message);
   if (method === "discard" && !rules.allowFinalDiscardToGoOut) {
     throw new Error("Going out with a final discard is disabled by the house rules.");
   }

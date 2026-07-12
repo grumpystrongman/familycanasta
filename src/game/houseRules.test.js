@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   DEFAULT_HOUSE_RULES,
   countCanastas,
+  goOutRequirementStatus,
   normalizeHouseRules,
   validateDrawAction,
   validateGoOutAction,
@@ -117,4 +118,24 @@ test("variant profiles define foot and knee piles", () => {
   assert.deepEqual(variantProfile("Classic").sequence, ["hand"]);
   assert.deepEqual(variantProfile("HandAndFoot").sequence, ["hand", "foot"]);
   assert.deepEqual(variantProfile("TriplePlay").sequence, ["hand", "foot", "knee"]);
+});
+
+
+test("default go-out rules accept any completed canasta and honor the total requirement", () => {
+  const clean = (prefix, rank) => ({
+    rank,
+    cards: Array.from({ length: 7 }, (_, index) => card(`${prefix}${index}`, rank)),
+  });
+  const room = roomWith(DEFAULT_HOUSE_RULES, {
+    rules: { canastasToGoOut: 2 },
+    publicState: {
+      discardPile: [],
+      teamBoards: { 0: [clean("a", "8"), clean("b", "9")] },
+    },
+  });
+
+  const status = goOutRequirementStatus(room, 0);
+  assert.equal(status.eligible, true);
+  assert.equal(status.totalActual, 2);
+  assert.equal(validateGoOutAction(room, player, "discard"), true);
 });

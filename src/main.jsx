@@ -6,6 +6,8 @@ import "./teamStyles.css";
 import "./play.css";
 import "./scoring.css";
 import "./flexibleGame.css";
+import "./stateEnhancer.css";
+import "./gameCelebration.css";
 import "./wildTarget.css";
 import "./cardAccessibility.css";
 import "./boardAccessibility.css";
@@ -15,8 +17,10 @@ import "./redThreeTurn.css";
 import "./safeDiscard.css";
 import "./homeRules.css";
 import "./bootstrapError.css";
+import "./responsiveBoard.css";
 import "./houseRulesLobby.css";
 
+// Responsive board behavior is implemented directly in the React application.
 const rootElement = document.getElementById("root");
 
 function escapeHtml(value) {

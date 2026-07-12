@@ -15,8 +15,9 @@ export const SUIT_SYMBOLS = { S: "♠", H: "♥", D: "♦", C: "♣", J: "★" }
 
 export const DEFAULT_RULES = {
   teamCount: 2,
+  totalPlayers: 2,
   playersPerTeam: 1,
-  playMode: "solo",
+  playMode: "flexible",
   deckCount: 2,
   cardsPerPlayer: 15,
   targetScore: 5000,
@@ -37,6 +38,14 @@ export const DEFAULT_RULES = {
   unprotectedRedThreePenalty: 200,
   goingOutBonus: 100,
 };
+
+export function teamSeatTargets(totalPlayers = 2, teamCount = 2) {
+  const players = Math.min(6, Math.max(2, Number(totalPlayers || 2)));
+  const teams = Math.min(3, Math.max(2, Math.min(players, Number(teamCount || 2))));
+  const base = Math.floor(players / teams);
+  const remainder = players % teams;
+  return Array.from({ length: teams }, (_, team) => base + (team < remainder ? 1 : 0));
+}
 
 export function makeCardId(deck, suit, rank, copy = 0) {
   return `${deck}-${suit}-${rank}-${copy}`;
@@ -166,6 +175,12 @@ export function scoreTeamBoard(room, team, wentOutTeam = null) {
   };
 }
 
+export function teamCanGoOut(room, team) {
+  const breakdown = scoreTeamBoard(room, team, null);
+  const required = Math.max(1, Number(room?.rules?.canastasToGoOut || 1));
+  return breakdown.cleanCanastas + breakdown.dirtyCanastas >= required;
+}
+
 export function finishRound(room, wentOutUid) {
   const state = structuredClone(room);
   const wentOutTeam = Number(state.members?.[wentOutUid]?.team);
@@ -179,6 +194,7 @@ export function finishRound(room, wentOutUid) {
   state.publicState.roundBreakdowns = breakdowns;
   state.publicState.wentOutUid = wentOutUid;
   state.publicState.wentOutTeam = wentOutTeam;
+  state.publicState.goOutRequest = null;
 
   const targetScore = Number(state.rules?.targetScore || 5000);
   const winningScore = Math.max(...state.publicState.teamScores);
@@ -233,6 +249,8 @@ export function dealHand({ players, rules, dealerIndex, existingScores }) {
       dealerIndex,
       currentPlayerIndex: (dealerIndex + 1) % players.length,
       turnPhase: "draw",
+      turnDrawnUid: null,
+      lastDiscardedUid: null,
       stockCount: stock.length,
       discardPile: [],
       discardFrozen: false,
@@ -248,6 +266,7 @@ export function dealHand({ players, rules, dealerIndex, existingScores }) {
       handNumber: 1,
       lastAction: "Cards are being dealt.",
       botThinkingUid: null,
+      goOutRequest: null,
     },
     privateHands: hands,
     stock,
