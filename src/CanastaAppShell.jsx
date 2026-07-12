@@ -1,6 +1,7 @@
 import React from "react";
 import App from "./App";
 import BlackThreeRuleFix from "./BlackThreeRuleFix";
+import DealRecoveryController from "./DealRecoveryController";
 import GameCelebration from "./GameCelebration";
 import GameStateEnhancer from "./GameStateEnhancer";
 import HomeRulesOptions from "./HomeRulesOptions";
@@ -15,6 +16,7 @@ export default function CanastaAppShell() {
   return (
     <>
       <App />
+      <DealRecoveryController />
       <GameStateEnhancer />
       <GameCelebration />
       <MultiMeldEnhancer />
