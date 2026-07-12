@@ -558,7 +558,7 @@ export default function App() {
   const goOutRequest = room?.publicState?.goOutRequest;
   const goOutRequester = goOutRequest ? members.find((member) => member.uid === goOutRequest.uid) : null;
   const canApproveGoOut = Boolean(goOutRequest && me && goOutRequest.uid !== me.uid && Number(goOutRequest.team) === Number(me.team));
-  const myGoOutApproved = Boolean(goOutRequest?.uid === me?.uid && (goOutRequest.approvedBy || []).length);
+  const myGoOutApproved = Boolean(goOutRequest && goOutRequest.uid === me?.uid && (goOutRequest.approvedBy || []).length);
   const myTeamCanGoOut = Boolean(me && goOutRequirementStatus(room, me.team).eligible);
   const teammates = members.filter((member) => member.uid !== me?.uid && Number(member.team) === Number(me?.team));
 
