@@ -10,7 +10,11 @@ import RedThreeBoard from "./RedThreeBoard";
 import RedThreeTurnControl from "./RedThreeTurnControl";
 import SafeDiscardRule from "./SafeDiscardRule";
 import ScoringDisplayFix from "./ScoringDisplayFix";
-import HouseRulesLobbyController from "./components/HouseRulesLobbyController";
+import { resetIncompatibleSession } from "./sessionCompatibility";
+
+if (typeof window !== "undefined") {
+  resetIncompatibleSession(window.localStorage);
+}
 
 export default function CanastaAppShell() {
   return (
@@ -26,7 +30,6 @@ export default function CanastaAppShell() {
       <SafeDiscardRule />
       <HomeRulesOptions />
       <ScoringDisplayFix />
-      <HouseRulesLobbyController />
     </>
   );
 }
