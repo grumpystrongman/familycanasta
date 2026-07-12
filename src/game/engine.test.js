@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   DEFAULT_RULES,
+  cardPoints,
   dealHand,
   finishRound,
   openingRequirementForTeam,
@@ -62,6 +63,10 @@ test("uses the hand-start opening requirement even if live score fields change",
 test("falls back to the cumulative score for legacy rooms", () => {
   const room = { publicState: { teamScores: { 0: 1700 } } };
   assert.equal(openingRequirementForTeam(room, 0), 90);
+});
+
+test("scores a black three as a five-point hand penalty", () => {
+  assert.equal(cardPoints(card("black-three", "3", "S")), 5);
 });
 
 test("does not award a going-out bonus when the stock ends the round", () => {
