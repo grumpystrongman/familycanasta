@@ -15,6 +15,7 @@ import "./redThreeTurn.css";
 import "./safeDiscard.css";
 import "./homeRules.css";
 import "./bootstrapError.css";
+import "./houseRulesLobby.css";
 
 const rootElement = document.getElementById("root");
 
@@ -53,11 +54,11 @@ rootElement.innerHTML = `
 window.addEventListener("error", (event) => showStartupError(event.error || event.message));
 window.addEventListener("unhandledrejection", (event) => showStartupError(event.reason));
 
-import("./App")
-  .then(({ default: App }) => {
+import("./CanastaAppShell")
+  .then(({ default: CanastaAppShell }) => {
     ReactDOM.createRoot(rootElement).render(
       <React.StrictMode>
-        <App />
+        <CanastaAppShell />
       </React.StrictMode>,
     );
   })
