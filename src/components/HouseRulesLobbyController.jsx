@@ -1,13 +1,24 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { onValue, ref, update } from "firebase/database";
 import { auth, db } from "../firebase";
+import { startOnlineGame } from "../services/roomService.js";
 import HouseRulesPanel from "./HouseRulesPanel";
 import {
   DEFAULT_HOUSE_RULES,
+  buildHouseRuleRoomUpdates,
   normalizeHouseRules,
-  variantProfile,
 } from "../game/houseRules.js";
+
+const OPERATION_TIMEOUT_MS = 15000;
+
+function withTimeout(promise, message) {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = window.setTimeout(() => reject(new Error(message)), OPERATION_TIMEOUT_MS);
+  });
+  return Promise.race([promise, timeout]).finally(() => window.clearTimeout(timer));
+}
 
 function findLobbyElements() {
   const lobby = document.querySelector(".lobby-page");
@@ -25,8 +36,10 @@ function findLobbyElements() {
 export default function HouseRulesLobbyController() {
   const [elements, setElements] = useState(() => findLobbyElements());
   const [room, setRoom] = useState(null);
-  const [saving, setSaving] = useState(false);
+  const [savingRules, setSavingRules] = useState(false);
+  const [starting, setStarting] = useState(false);
   const [error, setError] = useState("");
+  const saveRequest = useRef(0);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -51,9 +64,11 @@ export default function HouseRulesLobbyController() {
       setRoom(null);
       return undefined;
     }
-    return onValue(ref(db, `rooms/${elements.roomCode}`), (snapshot) => {
-      setRoom(snapshot.val());
-    });
+    return onValue(
+      ref(db, `rooms/${elements.roomCode}`),
+      (snapshot) => setRoom(snapshot.val()),
+      (event) => setError(event.message),
+    );
   }, [elements.roomCode]);
 
   const host = Boolean(room && auth?.currentUser?.uid === room.hostUid);
@@ -61,7 +76,13 @@ export default function HouseRulesLobbyController() {
 
   useEffect(() => {
     if (!room || !host || room.status !== "lobby" || room.houseRules) return;
-    update(ref(db, `rooms/${elements.roomCode}`), { houseRules: rules }).catch((event) => setError(event.message));
+    withTimeout(
+      update(
+        ref(db, `rooms/${elements.roomCode}`),
+        buildHouseRuleRoomUpdates(DEFAULT_HOUSE_RULES),
+      ),
+      "The default house rules could not be saved. Check the connection and retry.",
+    ).catch((event) => setError(event.message));
   }, [room, host, elements.roomCode]);
 
   useEffect(() => {
@@ -72,39 +93,48 @@ export default function HouseRulesLobbyController() {
 
   async function saveRules(nextValue) {
     if (!host || room?.status !== "lobby") return;
-    const normalized = normalizeHouseRules(nextValue);
-    const profile = variantProfile(normalized.deckVariation.variant);
-    setSaving(true);
+    const requestId = saveRequest.current + 1;
+    saveRequest.current = requestId;
+    setSavingRules(true);
     setError("");
+
     try {
-      await update(ref(db, `rooms/${elements.roomCode}`), {
-        houseRules: normalized,
-        "rules/drawCount": normalized.drawAndDiscard.drawCount,
-        ...(profile.deckCount ? { "rules/deckCount": profile.deckCount } : {}),
-        ...(profile.handSize ? { "rules/cardsPerPlayer": profile.handSize } : {}),
-      });
+      await withTimeout(
+        update(
+          ref(db, `rooms/${elements.roomCode}`),
+          buildHouseRuleRoomUpdates(nextValue),
+        ),
+        "Saving the house rules took too long. Check the connection and retry.",
+      );
     } catch (event) {
-      setError(event.message);
+      if (requestId === saveRequest.current) setError(event.message);
     } finally {
-      setSaving(false);
+      if (requestId === saveRequest.current) setSavingRules(false);
     }
   }
 
   async function startGame() {
-    if (!host || !elements.originalStart || elements.startDisabled) return;
-    setSaving(true);
+    const uid = auth?.currentUser?.uid;
+    if (!host || !uid || !elements.originalStart || elements.startDisabled || starting) return;
+
+    setStarting(true);
     setError("");
     try {
-      const lockedRules = normalizeHouseRules(room?.houseRules || DEFAULT_HOUSE_RULES);
-      await update(ref(db, `rooms/${elements.roomCode}`), {
-        activeRules: lockedRules,
-        rulesLockedAt: Date.now(),
-      });
-      elements.originalStart.click();
+      await withTimeout(
+        update(
+          ref(db, `rooms/${elements.roomCode}`),
+          buildHouseRuleRoomUpdates(rules, { lock: true }),
+        ),
+        "The rules could not be locked for the game. Check the connection and retry.",
+      );
+      await withTimeout(
+        startOnlineGame(elements.roomCode, uid),
+        "Starting the game took too long. Check the connection before retrying.",
+      );
     } catch (event) {
       setError(event.message);
     } finally {
-      setSaving(false);
+      setStarting(false);
     }
   }
 
@@ -115,17 +145,20 @@ export default function HouseRulesLobbyController() {
       <HouseRulesPanel
         value={rules}
         onChange={saveRules}
-        disabled={!host || saving}
+        disabled={!host || starting}
       />
       {!host && <p className="house-rules-readonly">Only the host can change house rules.</p>}
+      {host && savingRules && !starting && (
+        <p className="house-rules-save-status" role="status">Saving changes…</p>
+      )}
       {host && (
         <button
           type="button"
           className="primary house-rules-start"
-          disabled={saving || elements.startDisabled}
+          disabled={starting || elements.startDisabled}
           onClick={startGame}
         >
-          {saving ? "Saving rules…" : "Start game"}
+          {starting ? "Starting game…" : "Start game"}
         </button>
       )}
       {error && <p className="error">{error}</p>}
