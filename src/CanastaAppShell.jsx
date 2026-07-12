@@ -13,7 +13,11 @@ import ScoringDisplayFix from "./ScoringDisplayFix";
 import { resetIncompatibleSession } from "./sessionCompatibility";
 
 if (typeof window !== "undefined") {
-  resetIncompatibleSession(window.localStorage);
+  try {
+    resetIncompatibleSession(window.localStorage);
+  } catch {
+    // Storage access must never prevent the game from starting.
+  }
 }
 
 export default function CanastaAppShell() {
