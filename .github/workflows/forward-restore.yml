@@ -4,17 +4,20 @@ on:
   push:
     branches:
       - fix/forward-restore-playable
+  pull_request:
+    branches:
+      - backup/broken-before-stabilization-220bf
 
 permissions:
   contents: write
 
 jobs:
   restore:
-    if: github.event.head_commit.message == 'chore: trigger forward playable restore'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: fix/forward-restore-playable
           fetch-depth: 0
       - name: Restore exact known-playable tree as a forward commit
         run: |
