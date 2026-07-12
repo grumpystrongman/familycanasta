@@ -1,0 +1,176 @@
+.canasta-emote-dock {
+  position: fixed;
+  left: 50%;
+  bottom: 10px;
+  z-index: 9500;
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  max-width: calc(100vw - 32px);
+  padding: 7px;
+  transform: translateX(-50%);
+  border: 1px solid rgba(229, 184, 91, 0.58);
+  border-radius: 16px;
+  background: rgba(12, 24, 20, 0.94);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.42), inset 0 1px rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+}
+
+.canasta-emote-dock.collapsed {
+  left: 18px;
+  transform: none;
+  padding: 4px;
+}
+
+.emote-dock-toggle,
+.canasta-emote-button {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #fff7df;
+  background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+  cursor: pointer;
+}
+
+.emote-dock-toggle {
+  width: 30px;
+  min-width: 30px;
+  border-radius: 10px;
+  font-size: 18px;
+}
+
+.canasta-emote-button {
+  position: relative;
+  min-width: 78px;
+  min-height: 64px;
+  padding: 5px 8px;
+  border-radius: 11px;
+  overflow: hidden;
+  transition: transform 140ms ease, border-color 140ms ease, background 140ms ease;
+}
+
+.canasta-emote-button:hover,
+.canasta-emote-button:focus-visible {
+  transform: translateY(-4px) scale(1.03);
+  border-color: rgba(255, 215, 125, 0.78);
+  background: linear-gradient(180deg, rgba(255,209,111,0.18), rgba(255,255,255,0.04));
+  outline: none;
+}
+
+.canasta-emote-button:active { transform: translateY(0) scale(0.96); }
+.canasta-emote-button.legendary { border-color: #d6a949; box-shadow: inset 0 0 16px rgba(214,169,73,0.16); }
+.canasta-emote-button > span:last-child { display: block; margin-top: 2px; font: 700 10px/1.05 system-ui, sans-serif; }
+
+.emote-art {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 58px;
+  height: 40px;
+  font-style: normal;
+  line-height: 1;
+}
+
+.emote-art b,
+.emote-art i,
+.emote-art em,
+.emote-art strong { position: absolute; font-style: normal; }
+.emote-art b { font-size: 29px; }
+.emote-art.compact { width: 36px; height: 34px; transform: scale(0.9); }
+
+.emote-art.dirty-bird b { animation: dirtyBirdDance 720ms ease-in-out infinite; }
+.emote-art.dirty-bird i { color: #d8aaff; font-size: 13px; animation: musicFloat 900ms ease-in-out infinite; }
+.emote-art.dirty-bird i:first-child { left: 2px; top: 4px; }
+.emote-art.dirty-bird i:last-child { right: 1px; bottom: 3px; animation-delay: -430ms; }
+
+.emote-art.impressive b { transform-origin: 50% 85%; animation: impressiveClap 620ms ease-in-out infinite; }
+.emote-art.impressive i { font-size: 12px; animation: sparklePop 900ms ease-in-out infinite; }
+.emote-art.impressive i:first-child { left: 3px; top: 3px; }
+.emote-art.impressive i:last-child { right: 2px; bottom: 4px; animation-delay: -450ms; }
+
+.emote-art.dang b { animation: dangShock 1.15s ease-in-out infinite; }
+.emote-art.dang i { right: 6px; top: 3px; font-size: 13px; animation: sweatDrop 1.15s ease-in infinite; }
+
+.emote-art.good-play b { left: 5px; font-size: 25px; animation: fingerPoint 850ms ease-in-out infinite; }
+.emote-art.good-play i { right: 0; top: 7px; color: #ffd66b; font: 900 10px/1 system-ui, sans-serif; transform: rotate(-5deg); animation: goodPlayPop 850ms ease-out infinite; }
+.emote-art.good-play em { right: 1px; bottom: 2px; font-size: 10px; animation: sparklePop 850ms ease-in-out infinite; }
+
+.emote-art.table-flip .evelyn { left: 2px; bottom: 1px; z-index: 3; font-size: 28px; animation: evelynBrace 1.8s ease-in-out infinite; }
+.emote-art.table-flip .flip-table { right: 5px; bottom: 2px; z-index: 2; width: 28px; height: 17px; display: grid; place-items: center; border: 3px solid #8a552d; border-radius: 3px; color: transparent; background: #a66a37; transform-origin: left bottom; animation: tableFlip 1.8s cubic-bezier(.2,.8,.2,1) infinite; }
+.emote-art.table-flip .flying-dishes { right: -4px; top: -2px; width: 45px; font-size: 11px; opacity: 0; animation: dishesFly 1.8s ease-out infinite; }
+.emote-art.table-flip strong { right: -5px; top: 1px; color: #ffcf63; font: 1000 9px/1 system-ui, sans-serif; text-shadow: 0 1px 2px #000; opacity: 0; animation: whamPop 1.8s ease-out infinite; }
+
+.canasta-emote-stage {
+  position: fixed;
+  left: 50%;
+  top: 39%;
+  z-index: 10000;
+  display: grid;
+  place-items: center;
+  min-width: 230px;
+  padding: 13px 18px 16px;
+  transform: translate(-50%, -50%);
+  border: 1px solid rgba(255, 221, 144, 0.7);
+  border-radius: 22px;
+  color: #fff7df;
+  background: radial-gradient(circle at 50% 35%, rgba(66,103,77,0.96), rgba(10,22,18,0.96) 70%);
+  box-shadow: 0 25px 80px rgba(0,0,0,0.6), 0 0 40px rgba(255,200,92,0.16);
+  pointer-events: none;
+  animation: emoteStageIn 3.55s ease both;
+}
+
+.canasta-emote-stage .emote-art { width: 160px; height: 112px; transform: scale(2.15); }
+.canasta-emote-stage .emote-sender { margin-bottom: 5px; font: 800 13px/1.2 system-ui, sans-serif; opacity: 0.88; }
+.canasta-emote-stage .emote-caption { margin-top: 7px; color: #ffe5a2; font: 900 18px/1.1 system-ui, sans-serif; text-align: center; text-transform: uppercase; letter-spacing: .04em; }
+.canasta-emote-stage.emote-table-flip { animation: emoteStageIn 3.55s ease both, wholeTableShake 520ms ease 1.05s 1; }
+
+.canasta-chat-emotes {
+  position: fixed;
+  right: 18px;
+  bottom: 92px;
+  z-index: 9400;
+  width: min(360px, calc(100vw - 36px));
+  padding: 8px;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 14px;
+  color: #fff5da;
+  background: rgba(10,22,18,0.96);
+  box-shadow: 0 14px 34px rgba(0,0,0,0.38);
+}
+
+.canasta-chat-emotes > span { display: block; margin: 0 0 6px 4px; font: 800 11px/1 system-ui, sans-serif; text-transform: uppercase; letter-spacing: .08em; opacity: .72; }
+.canasta-chat-emotes > div { display: flex; gap: 5px; }
+.canasta-chat-emotes .canasta-emote-button { min-width: 0; width: 58px; min-height: 45px; padding: 2px; }
+
+.chat-emote-message { display: inline-flex !important; align-items: center; gap: 8px; min-width: 130px; margin-top: 4px !important; padding: 7px 10px; border: 1px solid rgba(255,214,119,.22); border-radius: 12px; background: rgba(255,255,255,.06); }
+.chat-emote-icon { display: inline-block; font-size: 25px; animation: chatEmoteBounce 1.1s ease-in-out infinite; }
+.chat-emote-message strong { color: #ffe2a0; font-size: 12px; }
+.chat-emote-message.emote-table-flip { border-color: rgba(214,169,73,.58); background: rgba(214,169,73,.1); }
+
+@keyframes dirtyBirdDance { 0%,100%{transform:translateX(-4px) rotate(-8deg)} 50%{transform:translateX(4px) rotate(8deg) scaleY(.94)} }
+@keyframes musicFloat { 0%,100%{transform:translateY(4px);opacity:.25} 50%{transform:translateY(-4px);opacity:1} }
+@keyframes impressiveClap { 0%,100%{transform:scale(.84) rotate(-5deg)} 45%{transform:scale(1.12) rotate(4deg)} }
+@keyframes sparklePop { 0%,100%{transform:scale(.2) rotate(0);opacity:.2} 50%{transform:scale(1.25) rotate(100deg);opacity:1} }
+@keyframes dangShock { 0%,100%{transform:scale(.92)} 15%{transform:scale(1.22) rotate(-3deg)} 28%{transform:scale(1.12) rotate(3deg)} 44%{transform:scale(1.06)} }
+@keyframes sweatDrop { 0%,28%{transform:translateY(-5px);opacity:0} 45%{opacity:1} 85%,100%{transform:translateY(17px);opacity:0} }
+@keyframes fingerPoint { 0%,100%{transform:translateX(-3px) rotate(-8deg)} 45%{transform:translateX(5px) rotate(3deg)} }
+@keyframes goodPlayPop { 0%,25%{transform:scale(.3) rotate(-8deg);opacity:0} 48%{transform:scale(1.2) rotate(-5deg);opacity:1} 100%{transform:scale(1) rotate(-5deg);opacity:.8} }
+@keyframes evelynBrace { 0%,30%,100%{transform:translateX(0) rotate(0)} 42%{transform:translateX(7px) rotate(8deg)} 53%{transform:translateX(4px) rotate(-5deg)} }
+@keyframes tableFlip { 0%,32%{transform:rotate(0) translate(0,0)} 47%{transform:rotate(-18deg) translate(-4px,-2px)} 61%{transform:rotate(-150deg) translate(18px,-26px)} 78%,100%{transform:rotate(-195deg) translate(32px,-38px);opacity:0} }
+@keyframes dishesFly { 0%,45%{transform:translate(0,0) rotate(0);opacity:0} 55%{opacity:1} 83%,100%{transform:translate(28px,-35px) rotate(35deg);opacity:0} }
+@keyframes whamPop { 0%,49%{transform:scale(.2) rotate(-8deg);opacity:0} 58%{transform:scale(1.45) rotate(-8deg);opacity:1} 76%,100%{transform:scale(1) rotate(-8deg);opacity:0} }
+@keyframes emoteStageIn { 0%{opacity:0;transform:translate(-50%,-43%) scale(.65)} 8%,78%{opacity:1;transform:translate(-50%,-50%) scale(1)} 100%{opacity:0;transform:translate(-50%,-57%) scale(.92)} }
+@keyframes wholeTableShake { 0%,100%{margin-left:0} 20%{margin-left:-9px} 40%{margin-left:8px} 60%{margin-left:-5px} 80%{margin-left:4px} }
+@keyframes chatEmoteBounce { 0%,100%{transform:translateY(0) rotate(-3deg)} 50%{transform:translateY(-3px) rotate(3deg)} }
+
+@media (max-width: 760px) {
+  .canasta-emote-dock { bottom: 6px; gap: 3px; padding: 5px; }
+  .canasta-emote-button { min-width: 51px; min-height: 52px; padding: 3px; }
+  .canasta-emote-button > span:last-child { display: none; }
+  .emote-art { transform: scale(.84); }
+  .canasta-chat-emotes { right: 8px; bottom: 70px; width: calc(100vw - 16px); }
+  .canasta-chat-emotes .canasta-emote-button { flex: 1; width: auto; }
+  .canasta-emote-stage { top: 34%; transform: translate(-50%,-50%) scale(.86); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .emote-art *, .chat-emote-icon, .canasta-emote-stage { animation-duration: 1ms !important; animation-iteration-count: 1 !important; }
+}
