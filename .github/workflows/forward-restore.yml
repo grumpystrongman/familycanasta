@@ -1,0 +1,36 @@
+name: Forward restore playable snapshot
+
+on:
+  push:
+    branches:
+      - fix/forward-restore-playable
+  pull_request:
+    branches:
+      - backup/broken-before-stabilization-220bf
+
+permissions:
+  contents: write
+
+jobs:
+  restore:
+    if: >-
+      (github.event_name == 'push' && startsWith(github.event.head_commit.message, 'chore: run forward playable restore')) ||
+      (github.event_name == 'pull_request' && github.actor != 'github-actions[bot]')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/forward-restore-playable
+          fetch-depth: 0
+      - name: Restore exact known-playable tree as a forward commit
+        run: |
+          set -euxo pipefail
+          cp .github/workflows/forward-restore.yml /tmp/forward-restore.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git read-tree --reset -u 577ac753da8e92577f7266bf1264dac12bcd8d24
+          mkdir -p .github/workflows
+          cp /tmp/forward-restore.yml .github/workflows/forward-restore.yml
+          git add -A
+          git commit -m "Restore last known playable snapshot as a forward commit"
+          git push origin HEAD:fix/forward-restore-playable
