@@ -23,14 +23,32 @@ jobs:
           ref: fix/forward-restore-playable
           fetch-depth: 0
       - name: Restore exact known-playable tree as a forward commit
+        id: restore
+        shell: bash
         run: |
-          set -euxo pipefail
+          set +e
+          exec > >(tee restore-debug.log) 2>&1
+          set -x
           cp .github/workflows/forward-restore.yml /tmp/forward-restore.yml
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git cat-file -t 577ac753da8e92577f7266bf1264dac12bcd8d24
           git read-tree --reset -u 577ac753da8e92577f7266bf1264dac12bcd8d24
           mkdir -p .github/workflows
           cp /tmp/forward-restore.yml .github/workflows/forward-restore.yml
           git add -A
+          git status --short
           git commit -m "Restore last known playable snapshot as a forward commit"
+          commit_status=$?
+          echo "commit_status=$commit_status"
+          if [ "$commit_status" -ne 0 ]; then exit "$commit_status"; fi
           git push origin HEAD:fix/forward-restore-playable
+          push_status=$?
+          echo "push_status=$push_status"
+          exit "$push_status"
+      - name: Upload restore diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: forward-restore-debug
+          path: restore-debug.log
