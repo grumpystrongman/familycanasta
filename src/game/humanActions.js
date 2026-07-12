@@ -15,7 +15,6 @@ import {
   extractRedThreesFromClaimedPile,
 } from "./redThreeRules.js";
 import {
-  activeHouseRules,
   validateDrawAction,
   validateGoOutAction,
   validateMeldAction,
@@ -42,10 +41,32 @@ function assertTurn(room, uid, phase) {
   return player;
 }
 
+function teammates(room, player) {
+  return orderedPlayers(room).filter(
+    (member) => member.uid !== player.uid && Number(member.team) === Number(player.team),
+  );
+}
+
+function assertPartnerApproval(room, player) {
+  const humanPartners = teammates(room, player).filter((member) => !member.isRobot);
+  if (room.rules?.partnerPermission === false || !humanPartners.length) return;
+  const request = room.publicState?.goOutRequest;
+  const approved = request?.uid === player.uid
+    && (request.approvedBy || []).some((uid) => humanPartners.some((partner) => partner.uid === uid));
+  if (!approved) throw new Error("Ask a teammate for permission to go out, then wait for approval.");
+}
+
+function assertGoingOutAllowed(room, player, method) {
+  validateGoOutAction(room, player, method);
+  assertPartnerApproval(room, player);
+}
+
 function advanceTurnWithoutDiscard(room) {
   const { players } = activePlayer(room);
   room.publicState.currentPlayerIndex = (Number(room.publicState.currentPlayerIndex || 0) + 1) % players.length;
   room.publicState.turnPhase = "draw";
+  room.publicState.turnDrawnUid = null;
+  room.publicState.goOutRequest = null;
   room.publicState.stockExhausted = true;
   room.publicState.endRoundCheckRequested = true;
 }
@@ -82,6 +103,8 @@ export async function drawFromStock(code, uid) {
     }
 
     room.publicState.turnPhase = "play";
+    room.publicState.turnDrawnUid = uid;
+    room.publicState.goOutRequest = null;
     room.publicState.stockExhausted = room.stock.length === 0;
     room.publicState.lastAction = `${player.nickname} drew ${drawn} card${drawn === 1 ? "" : "s"} from the stock${exposed ? ` and exposed ${exposed} red three${exposed === 1 ? "" : "s"}` : ""}.`;
     return room;
@@ -153,6 +176,8 @@ export async function takeDiscardPile(code, uid) {
       room.publicState.discardPileHasBeenTaken = true;
       room.publicState.handCounts[uid] = room.privateHands[uid].length;
       room.publicState.turnPhase = "play";
+      room.publicState.turnDrawnUid = uid;
+      room.publicState.goOutRequest = null;
       return room;
     } catch (error) {
       actionError = error.message;
@@ -160,6 +185,64 @@ export async function takeDiscardPile(code, uid) {
     }
   }, { applyLocally: false });
   if (!result.committed) throw new Error(actionError);
+}
+
+export async function requestGoOut(code, uid) {
+  let actionError = "The request could not be sent.";
+  const result = await runTransaction(ref(db, `rooms/${code}`), (room) => {
+    try {
+      const player = assertTurn(room, uid, "play");
+      validateGoOutAction(room, player, "meld");
+      const humanPartners = teammates(room, player).filter((member) => !member.isRobot);
+      room.publicState.goOutRequest = {
+        uid,
+        team: Number(player.team),
+        requestedAt: Date.now(),
+        approvedBy: humanPartners.length ? [] : ["automatic"],
+      };
+      room.publicState.lastAction = humanPartners.length
+        ? `${player.nickname} asked their team for permission to go out.`
+        : `${player.nickname} is cleared to go out.`;
+      return room;
+    } catch (error) {
+      actionError = error.message;
+      return;
+    }
+  }, { applyLocally: false });
+  if (!result.committed) throw new Error(actionError);
+}
+
+export async function approveGoOut(code, uid) {
+  let actionError = "The approval could not be recorded.";
+  const result = await runTransaction(ref(db, `rooms/${code}`), (room) => {
+    try {
+      const request = room?.publicState?.goOutRequest;
+      const approver = room?.members?.[uid];
+      const requester = request ? room?.members?.[request.uid] : null;
+      if (!request || !requester) throw new Error("There is no active go-out request.");
+      if (!approver || approver.uid === requester.uid || Number(approver.team) !== Number(request.team)) {
+        throw new Error("Only a teammate can approve this request.");
+      }
+      request.approvedBy = [...new Set([...(request.approvedBy || []), uid])];
+      room.publicState.lastAction = `${approver.nickname} approved ${requester.nickname} to go out.`;
+      return room;
+    } catch (error) {
+      actionError = error.message;
+      return;
+    }
+  }, { applyLocally: false });
+  if (!result.committed) throw new Error(actionError);
+}
+
+export async function cancelGoOutRequest(code, uid) {
+  const result = await runTransaction(ref(db, `rooms/${code}`), (room) => {
+    const request = room?.publicState?.goOutRequest;
+    if (!request || request.uid !== uid) return room;
+    room.publicState.goOutRequest = null;
+    room.publicState.lastAction = `${room.members?.[uid]?.nickname || "A player"} canceled the go-out request.`;
+    return room;
+  }, { applyLocally: false });
+  if (!result.committed) throw new Error("The request could not be canceled.");
 }
 
 export async function meldSelectedCards(code, uid, cardIds, targetRank = null) {
@@ -218,7 +301,7 @@ export async function meldSelectedCards(code, uid, cardIds, targetRank = null) {
       room.publicState.turnPhase = "play";
       room.publicState.lastAction = `${player.nickname} played ${selected.length} card${selected.length === 1 ? "" : "s"} on ${rank}s.`;
       if (room.privateHands[uid].length === 0) {
-        validateGoOutAction(room, player, "meld");
+        assertGoingOutAllowed(room, player, "meld");
         return finishRound(room, uid);
       }
       return room;
@@ -246,7 +329,7 @@ export async function discardSelectedCard(code, uid, cardId) {
       const card = hand.find((item) => item.id === cardId);
       if (!card) throw new Error("That card is no longer in your hand.");
       if (isRedThree(card)) throw new Error("Red threes cannot be discarded. They must be exposed face-up.");
-      if (hand.length === 1) validateGoOutAction(room, player, "discard");
+      if (hand.length === 1) assertGoingOutAllowed(room, player, "discard");
       room.privateHands[uid] = hand.filter((item) => item.id !== cardId);
       room.publicState.discardPile ||= [];
       room.publicState.discardPile.push(card);
@@ -255,10 +338,13 @@ export async function discardSelectedCard(code, uid, cardId) {
       if (freezesPile) room.publicState.discardFrozen = true;
       room.publicState.handCounts[uid] = room.privateHands[uid].length;
       room.publicState.lastAction = `${player.nickname} discarded ${card.rank}${card.suit}${freezesPile ? " and froze the discard pile" : ""}.`;
+      room.publicState.lastDiscardedUid = uid;
       if (room.privateHands[uid].length === 0) return finishRound(room, uid);
       const { players } = activePlayer(room);
       room.publicState.currentPlayerIndex = (Number(room.publicState.currentPlayerIndex || 0) + 1) % players.length;
       room.publicState.turnPhase = "draw";
+      room.publicState.turnDrawnUid = null;
+      room.publicState.goOutRequest = null;
       return room;
     } catch (error) {
       actionError = error.message;
