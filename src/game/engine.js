@@ -98,7 +98,7 @@ export function cardPoints(card) {
   if (card?.rank === "JOKER") return 50;
   if (card?.rank === "2" || card?.rank === "A") return 20;
   if (["K","Q","J","10","9","8"].includes(card?.rank)) return 10;
-  if (["7","6","5","4"].includes(card?.rank)) return 5;
+  if (isBlackThree(card) || ["7","6","5","4"].includes(card?.rank)) return 5;
   return 0;
 }
 
