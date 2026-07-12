@@ -14,6 +14,12 @@ import {
   drawOneWithRedThreeReplacement,
   extractRedThreesFromClaimedPile,
 } from "./redThreeRules.js";
+import {
+  activeHouseRules,
+  validateDrawAction,
+  validateGoOutAction,
+  validateMeldAction,
+} from "./houseRules.js";
 
 function orderedPlayers(room) {
   return Object.values(room.members || {}).sort((a, b) => a.seat - b.seat);
@@ -54,7 +60,7 @@ export async function drawFromStock(code, uid) {
       return room;
     }
 
-    const requested = Math.max(1, Number(room.rules?.drawCount || 2));
+    const requested = validateDrawAction(room, player, "stock").drawCount;
     let drawn = 0;
     let exposed = 0;
     let exhaustedOnRedThree = false;
@@ -99,7 +105,12 @@ export async function takeDiscardPile(code, uid) {
   const result = await runTransaction(ref(db, `rooms/${code}`), (room) => {
     try {
       const player = assertTurn(room, uid, "draw");
+      const houseValidation = validateDrawAction(room, player, "discardPile");
       const plan = planDiscardPickup(room, player);
+      const fullPile = room.publicState?.discardPile || [];
+      const takeCount = houseValidation.discardTakeCount;
+      const pile = fullPile.slice(-takeCount);
+      const lowerPile = pile.slice(0, -1);
       const hand = [...(room.privateHands?.[uid] || [])];
       room.publicState.teamBoards ||= {};
       room.publicState.teamBoards[player.team] ||= [];
@@ -107,7 +118,7 @@ export async function takeDiscardPile(code, uid) {
       const board = room.publicState.teamBoards[player.team];
 
       if (plan.mode === "pending-opening") {
-        const claimed = extractRedThreesFromClaimedPile(room, uid, plan.pile);
+        const claimed = extractRedThreesFromClaimedPile(room, uid, pile);
         room.privateHands[uid] = sortHand([...hand, ...claimed.handCards]);
         room.publicState.pendingDiscardPickup = {
           uid,
@@ -118,25 +129,27 @@ export async function takeDiscardPile(code, uid) {
           requiredNaturalCount: plan.requiredNaturalCount,
           requirement: plan.requirement,
         };
-        room.publicState.lastAction = `${player.nickname} took the discard pile. Their opening must include the picked-up ${plan.rank} and two natural ${plan.rank}s.${claimed.exposed.length ? ` ${claimed.exposed.length} buried red three${claimed.exposed.length === 1 ? " was" : "s were"} exposed without replacement.` : ""}`;
+        room.publicState.lastAction = `${player.nickname} took ${takeCount} discard card${takeCount === 1 ? "" : "s"}. Their opening must include the picked-up ${plan.rank} and two natural ${plan.rank}s.${claimed.exposed.length ? ` ${claimed.exposed.length} buried red three${claimed.exposed.length === 1 ? " was" : "s were"} exposed without replacement.` : ""}`;
       } else {
         if (plan.existing) {
+          validateMeldAction(room, plan.existing, plan.forcedCards);
           plan.existing.cards = [...(plan.existing.cards || []), ...plan.forcedCards];
         } else {
+          validateMeldAction(room, null, plan.forcedCards);
           board.push({ rank: plan.top.rank, cards: plan.forcedCards });
         }
         const used = new Set(plan.usedNaturalIds);
-        const claimed = extractRedThreesFromClaimedPile(room, uid, plan.lowerPile);
+        const claimed = extractRedThreesFromClaimedPile(room, uid, lowerPile);
         room.privateHands[uid] = sortHand([
           ...hand.filter((card) => !used.has(card.id)),
           ...claimed.handCards,
         ]);
         room.publicState.pendingDiscardPickup = null;
-        room.publicState.lastAction = `${player.nickname} took the discard pile, played the top ${plan.top.rank}, and kept the remaining cards in hand.${claimed.exposed.length ? ` ${claimed.exposed.length} buried red three${claimed.exposed.length === 1 ? " was" : "s were"} exposed without replacement.` : ""}`;
+        room.publicState.lastAction = `${player.nickname} took ${takeCount} discard card${takeCount === 1 ? "" : "s"}, played the top ${plan.top.rank}, and kept the remaining cards in hand.${claimed.exposed.length ? ` ${claimed.exposed.length} buried red three${claimed.exposed.length === 1 ? " was" : "s were"} exposed without replacement.` : ""}`;
       }
 
-      room.publicState.discardPile = [];
-      room.publicState.discardFrozen = false;
+      room.publicState.discardPile = fullPile.slice(0, Math.max(0, fullPile.length - takeCount));
+      room.publicState.discardFrozen = room.publicState.discardPile.length > 0 ? room.publicState.discardFrozen : false;
       room.publicState.discardPileHasBeenTaken = true;
       room.publicState.handCounts[uid] = room.privateHands[uid].length;
       room.publicState.turnPhase = "play";
@@ -173,10 +186,11 @@ export async function meldSelectedCards(code, uid, cardIds, targetRank = null) {
         rank = targetRank;
       }
 
-      if (existing) validateCombinedMeld([...(existing.cards || []), ...selected], room.rules);
+      validateMeldAction(room, existing, selected);
+      if (existing) validateCombinedMeld([...(existing.cards || []), ...selected], room.activeRules || room.rules);
       else {
         if (selected.length < 3) throw new Error("A new meld needs at least three cards. To add one or two cards, choose an existing board meld.");
-        rank = validateCombinedMeld(selected, room.rules);
+        rank = validateCombinedMeld(selected, room.activeRules || room.rules);
       }
 
       const alreadyOpened = Boolean(room.publicState.opened[player.team]);
@@ -203,7 +217,10 @@ export async function meldSelectedCards(code, uid, cardIds, targetRank = null) {
       room.publicState.handCounts[uid] = room.privateHands[uid].length;
       room.publicState.turnPhase = "play";
       room.publicState.lastAction = `${player.nickname} played ${selected.length} card${selected.length === 1 ? "" : "s"} on ${rank}s.`;
-      if (room.privateHands[uid].length === 0) return finishRound(room, uid);
+      if (room.privateHands[uid].length === 0) {
+        validateGoOutAction(room, player, "meld");
+        return finishRound(room, uid);
+      }
       return room;
     } catch (error) {
       actionError = error.message;
@@ -229,6 +246,7 @@ export async function discardSelectedCard(code, uid, cardId) {
       const card = hand.find((item) => item.id === cardId);
       if (!card) throw new Error("That card is no longer in your hand.");
       if (isRedThree(card)) throw new Error("Red threes cannot be discarded. They must be exposed face-up.");
+      if (hand.length === 1) validateGoOutAction(room, player, "discard");
       room.privateHands[uid] = hand.filter((item) => item.id !== cardId);
       room.publicState.discardPile ||= [];
       room.publicState.discardPile.push(card);
