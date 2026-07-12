@@ -1,4 +1,15 @@
-import { DEFAULT_RULES, isRedThree, isWild, sortHand } from "./engine.js";
+const SUITS = ["S", "H", "D", "C"];
+const SORT_RANKS = ["A", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "3", "2", "JOKER"];
+
+const isRedThree = (card) => card?.rank === "3" && (card?.suit === "H" || card?.suit === "D" || card?.color === "red");
+const isWild = (card) => card?.rank === "2" || card?.rank === "JOKER";
+
+function sortCards(cards) {
+  return [...cards].sort((a, b) => {
+    const rank = SORT_RANKS.indexOf(a.rank) - SORT_RANKS.indexOf(b.rank);
+    return rank || SUITS.indexOf(a.suit) - SUITS.indexOf(b.suit);
+  });
+}
 
 export function expectedRedThreeCount(deckCount) {
   const decks = Number(deckCount);
@@ -56,7 +67,7 @@ export function drawOneWithRedThreeReplacement(room, uid) {
     break;
   }
 
-  room.privateHands[uid] = sortHand(room.privateHands[uid]);
+  room.privateHands[uid] = sortCards(room.privateHands[uid]);
   room.publicState.handCounts[uid] = room.privateHands[uid].length;
   room.publicState.stockCount = room.stock.length;
 
@@ -97,7 +108,7 @@ export function resolveRedThreesInHand(room, uid) {
     }
   }
 
-  room.privateHands[uid] = sortHand(room.privateHands[uid]);
+  room.privateHands[uid] = sortCards(room.privateHands[uid]);
   room.publicState.handCounts[uid] = room.privateHands[uid].length;
   room.publicState.stockCount = room.stock.length;
 
@@ -122,16 +133,15 @@ export function extractRedThreesFromClaimedPile(room, uid, cards) {
 }
 
 export function initialDiscardIsFrozen(card, rules = {}) {
-  const merged = { ...DEFAULT_RULES, ...rules };
   return Boolean(
     isRedThree(card)
-    || (isWild(card) && merged.freezeOnWild !== false)
-    || card?.rank === "3"
+    || (isWild(card) && rules.freezeOnWild !== false)
+    || (card?.rank === "3" && rules.freezeOnBlackThree !== false)
   );
 }
 
 export function redThreeScoreForTeam(room, team) {
-  const rules = { ...DEFAULT_RULES, ...(room.rules || {}) };
+  const rules = room.rules || {};
   const cards = Object.entries(room.publicState?.redThrees || {})
     .filter(([uid]) => Number(room.members?.[uid]?.team) === Number(team))
     .flatMap(([, redThrees]) => redThrees || []);
@@ -156,7 +166,7 @@ export function redThreeScoreForTeam(room, team) {
 }
 
 export function hiddenRedThreePenalty(room, team) {
-  const rules = { ...DEFAULT_RULES, ...(room.rules || {}) };
+  const rules = room.rules || {};
   const penaltyPerCard = Math.abs(Number(rules.redThreeInHandPenalty || 200));
   const players = Object.values(room.members || {})
     .filter((member) => Number(member.team) === Number(team));
