@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   DEFAULT_HOUSE_RULES,
+  buildHouseRuleRoomUpdates,
   countCanastas,
   goOutRequirementStatus,
   normalizeHouseRules,
@@ -29,11 +30,25 @@ const player = { uid: "p1", team: 0 };
 test("normalizes invalid values to safe defaults", () => {
   const rules = normalizeHouseRules({
     drawAndDiscard: { drawCount: 99, discardTakeLimit: 12 },
+    winConditions: { totalCanastasRequired: 0 },
     deckVariation: { variant: "Unknown" },
   });
   assert.equal(rules.drawAndDiscard.drawCount, 2);
   assert.equal(rules.drawAndDiscard.discardTakeLimit, "entirePack");
+  assert.equal(rules.winConditions.totalCanastasRequired, 1);
   assert.equal(rules.deckVariation.variant, "Classic");
+});
+
+test("builds complete room updates and locks the active rules", () => {
+  const updates = buildHouseRuleRoomUpdates(DEFAULT_HOUSE_RULES, {
+    lock: true,
+    lockedAt: 1234,
+  });
+
+  assert.equal(updates["rules/drawCount"], 2);
+  assert.equal(updates["rules/canastasToGoOut"], 1);
+  assert.equal(updates.activeRules.winConditions.totalCanastasRequired, 1);
+  assert.equal(updates.rulesLockedAt, 1234);
 });
 
 test("draw validator enforces configured stock count", () => {
@@ -114,6 +129,7 @@ test("go out validator enforces canasta mix and final discard rule", () => {
   const rules = {
     ...DEFAULT_HOUSE_RULES,
     winConditions: {
+      totalCanastasRequired: 1,
       canastasRequiredToGoOut: { clean: 1, dirty: 0, wild: 0 },
       allowFinalDiscardToGoOut: false,
     },
@@ -132,14 +148,19 @@ test("variant profiles define foot and knee piles", () => {
   assert.deepEqual(variantProfile("TriplePlay").sequence, ["hand", "foot", "knee"]);
 });
 
-
 test("default go-out rules accept any completed canasta and honor the total requirement", () => {
   const clean = (prefix, rank) => ({
     rank,
     cards: Array.from({ length: 7 }, (_, index) => card(`${prefix}${index}`, rank)),
   });
-  const room = roomWith(DEFAULT_HOUSE_RULES, {
-    rules: { canastasToGoOut: 2 },
+  const rules = {
+    ...DEFAULT_HOUSE_RULES,
+    winConditions: {
+      ...DEFAULT_HOUSE_RULES.winConditions,
+      totalCanastasRequired: 2,
+    },
+  };
+  const room = roomWith(rules, {
     publicState: {
       discardPile: [],
       teamBoards: { 0: [clean("a", "8"), clean("b", "9")] },
@@ -149,5 +170,32 @@ test("default go-out rules accept any completed canasta and honor the total requ
   const status = goOutRequirementStatus(room, 0);
   assert.equal(status.eligible, true);
   assert.equal(status.totalActual, 2);
+  assert.equal(status.totalRequired, 2);
   assert.equal(validateGoOutAction(room, player, "discard"), true);
+});
+
+test("legacy rooms still honor rules.canastasToGoOut", () => {
+  const oldRules = {
+    drawAndDiscard: DEFAULT_HOUSE_RULES.drawAndDiscard,
+    meldConstraints: DEFAULT_HOUSE_RULES.meldConstraints,
+    winConditions: {
+      canastasRequiredToGoOut: { clean: 0, dirty: 0, wild: 0 },
+      allowFinalDiscardToGoOut: true,
+    },
+    deckVariation: DEFAULT_HOUSE_RULES.deckVariation,
+  };
+  const clean = Array.from({ length: 7 }, (_, index) => card(`legacy-${index}`, "8"));
+  const room = roomWith(DEFAULT_HOUSE_RULES, {
+    activeRules: oldRules,
+    rules: { canastasToGoOut: 2 },
+    publicState: {
+      discardPile: [],
+      teamBoards: { 0: [{ rank: "8", cards: clean }] },
+    },
+  });
+
+  const status = goOutRequirementStatus(room, 0);
+  assert.equal(status.totalRequired, 2);
+  assert.equal(status.totalMissing, 1);
+  assert.equal(status.eligible, false);
 });

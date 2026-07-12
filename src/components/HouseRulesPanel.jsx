@@ -64,8 +64,21 @@ export default function HouseRulesPanel({ value = DEFAULT_HOUSE_RULES, onChange,
 
       <section>
         <h4>Going out</h4>
+        <label className="total-canastas">
+          Total canastas
+          <input
+            type="number"
+            min="1"
+            max="10"
+            value={rules.winConditions.totalCanastasRequired}
+            onChange={(event) => update("winConditions", {
+              totalCanastasRequired: Math.max(1, Number(event.target.value) || 1),
+            })}
+          />
+          <small>Minimum completed canastas in any mix. Type-specific minimums below are additional.</small>
+        </label>
         <div className="canasta-requirements">
-          {['clean', 'dirty', 'wild'].map((type) => (
+          {["clean", "dirty", "wild"].map((type) => (
             <label key={type}>{type[0].toUpperCase() + type.slice(1)} canastas
               <input type="number" min="0" max="10" value={rules.winConditions.canastasRequiredToGoOut[type]} onChange={(event) => updateCanastas(type, event.target.value)} />
             </label>
