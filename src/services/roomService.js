@@ -11,14 +11,7 @@ import {
   update,
 } from "firebase/database";
 import { db } from "../firebase";
-import {
-  DEFAULT_RULES,
-  dealHand,
-  nextDealer,
-  randomDealer,
-  teamRecord,
-  teamSeatTargets,
-} from "../game/engine";
+import { DEFAULT_RULES, dealHand, nextDealer, randomDealer, teamRecord } from "../game/engine";
 import { executeRobotTurn } from "../game/botEngine";
 
 const avatars = ["🦊","🐻","🦉","🐙","🦁","🐼","🐯","🦄","🐸","🤠"];
@@ -30,43 +23,37 @@ function roomCode() {
 }
 
 function getTeamCount(room) {
-  const totalPlayers = getTotalPlayers(room);
-  return Math.min(3, Math.max(2, Math.min(totalPlayers, Number(room.rules?.teamCount || 2))));
+  const playersPerTeam = Number(room.rules?.playersPerTeam || 1);
+  const max = playersPerTeam === 2 ? 3 : 4;
+  return Math.min(max, Math.max(2, Number(room.rules?.teamCount || 2)));
 }
 
-function getTotalPlayers(room) {
-  const legacy = Number(room.rules?.teamCount || 2) * Number(room.rules?.playersPerTeam || 1);
-  return Math.min(6, Math.max(2, Number(room.rules?.totalPlayers || legacy || 2)));
+function getPlayersPerTeam(room) {
+  return Number(room.rules?.playersPerTeam || 1) === 2 ? 2 : 1;
 }
 
-function getTeamCapacities(room) {
-  return teamSeatTargets(getTotalPlayers(room), getTeamCount(room));
-}
-
-function chooseOpenTeam(members, capacities) {
-  const counts = capacities.map(
+function chooseOpenTeam(members, teamCount, playersPerTeam) {
+  const counts = Array.from(
+    { length: teamCount },
     (_, team) => members.filter((member) => Number(member.team) === team).length,
   );
-  const valid = counts
-    .map((count, team) => ({ count, team, capacity: capacities[team] }))
-    .filter(({ count, capacity }) => count < capacity);
+  const valid = counts.map((count, team) => ({ count, team })).filter(({ count }) => count < playersPerTeam);
   if (!valid.length) return 0;
-  valid.sort((a, b) => (a.count / a.capacity) - (b.count / b.capacity) || a.count - b.count || a.team - b.team);
+  valid.sort((a, b) => a.count - b.count || a.team - b.team);
   return valid[0].team;
 }
 
 function normalizeRules(rules) {
-  const legacyPlayers = Number(rules.teamCount || 2) * Number(rules.playersPerTeam || 1);
-  const totalPlayers = Math.min(6, Math.max(2, Number(rules.totalPlayers || legacyPlayers || 2)));
-  const teamCount = Math.min(3, Math.max(2, Math.min(totalPlayers, Number(rules.teamCount || 2))));
-  const capacities = teamSeatTargets(totalPlayers, teamCount);
+  const playersPerTeam = Number(rules.playersPerTeam || 1) === 2 ? 2 : 1;
+  const maxTeams = playersPerTeam === 2 ? 3 : 4;
+  const teamCount = Math.min(maxTeams, Math.max(2, Number(rules.teamCount || 2)));
+  const totalPlayers = teamCount * playersPerTeam;
   return {
     ...DEFAULT_RULES,
     ...rules,
-    playMode: "flexible",
-    totalPlayers,
+    playMode: playersPerTeam === 2 ? "partners" : "solo",
+    playersPerTeam,
     teamCount,
-    playersPerTeam: Math.max(...capacities),
     deckCount: totalPlayers > 4 ? Math.max(3, Number(rules.deckCount || 3)) : Number(rules.deckCount || 2),
     cardsPerPlayer: Number(rules.cardsPerPlayer || (totalPlayers === 2 ? 15 : 11)),
   };
@@ -125,12 +112,13 @@ export async function joinRoom({ code, user, nickname, avatar }) {
 
   const existingMembers = Object.values(room.members || {});
   const existing = room.members?.[user.uid];
-  const totalPlayers = getTotalPlayers(room);
-  const capacities = getTeamCapacities(room);
-  if (!existing && existingMembers.length >= totalPlayers) throw new Error("All seats are filled.");
+  const teamCount = getTeamCount(room);
+  const playersPerTeam = getPlayersPerTeam(room);
+  const maxPlayers = teamCount * playersPerTeam;
+  if (!existing && existingMembers.length >= maxPlayers) throw new Error("All seats are filled.");
 
   const seat = existing?.seat ?? existingMembers.length;
-  const team = existing?.team ?? chooseOpenTeam(existingMembers, capacities);
+  const team = existing?.team ?? chooseOpenTeam(existingMembers, teamCount, playersPerTeam);
   const member = {
     uid: user.uid,
     nickname: nickname || `Player ${seat + 1}`,
@@ -159,12 +147,11 @@ export async function addRobot(code, hostUid, team, difficulty = "standard") {
   if (room.status !== "lobby") throw new Error("Robots can only be changed before the game starts.");
 
   const teamCount = getTeamCount(room);
-  const capacities = getTeamCapacities(room);
-  const totalPlayers = getTotalPlayers(room);
+  const playersPerTeam = getPlayersPerTeam(room);
   if (team < 0 || team >= teamCount) throw new Error("That team does not exist.");
   const members = Object.values(room.members || {});
-  if (members.length >= totalPlayers) throw new Error("All seats are filled.");
-  if (members.filter((member) => Number(member.team) === Number(team)).length >= capacities[team]) {
+  if (members.length >= teamCount * playersPerTeam) throw new Error("All seats are filled.");
+  if (members.filter((member) => Number(member.team) === Number(team)).length >= playersPerTeam) {
     throw new Error("That team is already full.");
   }
 
@@ -197,7 +184,7 @@ export async function removeRobot(code, hostUid, robotUid) {
   const team = room.members[robotUid].team;
   const updates = { [`members/${robotUid}`]: null };
   if (room.teamBoardKeepers?.[team] === robotUid) {
-    const replacement = Object.values(room.members).find((member) => member.uid !== robotUid && Number(member.team) === Number(team));
+    const replacement = Object.values(room.members).find((member) => member.uid !== robotUid && member.team === team);
     updates[`teamBoardKeepers/${team}`] = replacement?.uid || "";
   }
   await update(ref(db, `rooms/${code}`), updates);
@@ -208,7 +195,7 @@ export async function setTeamBoardKeeper(code, hostUid, team, memberUid) {
   if (!snapshot.exists()) throw new Error("Room not found.");
   const room = snapshot.val();
   if (room.hostUid !== hostUid) throw new Error("Only the host can choose the board keeper.");
-  if (Number(room.members?.[memberUid]?.team) !== Number(team)) throw new Error("The board keeper must be on that team.");
+  if (room.members?.[memberUid]?.team !== team) throw new Error("The board keeper must be on that team.");
   await set(ref(db, `rooms/${code}/teamBoardKeepers/${team}`), memberUid);
 }
 
@@ -220,70 +207,33 @@ export function watchPrivateHand(code, uid, callback) {
   return onValue(ref(db, `rooms/${code}/privateHands/${uid}`), (snapshot) => callback(snapshot.val() || []));
 }
 
-export async function reconnectMember(code, uid) {
-  const memberRef = ref(db, `rooms/${code}/members/${uid}`);
-  const snapshot = await get(memberRef);
-  if (!snapshot.exists()) return false;
-  const member = snapshot.val();
-  if (member.connected === false) {
-    await update(memberRef, { connected: true, rejoinedAt: serverTimestamp() });
-    await set(push(ref(db, `rooms/${code}/messages`)), {
-      uid: "system",
-      nickname: "Game",
-      avatar: "↻",
-      text: `${member.nickname || "A player"} rejoined the table.`,
-      scope: "system",
-      createdAt: serverTimestamp(),
-    });
-  }
-  await onDisconnect(ref(db, `rooms/${code}/members/${uid}/connected`)).set(false);
-  return true;
-}
-
 export async function updateMember(code, uid, patch) {
   const snapshot = await get(ref(db, `rooms/${code}`));
   const room = snapshot.val();
   if (!room || room.status !== "lobby") throw new Error("Teams cannot be changed after the game starts.");
   if (patch.team !== undefined) {
     const team = Number(patch.team);
-    const teamCount = getTeamCount(room);
-    const capacities = getTeamCapacities(room);
-    if (team < 0 || team >= teamCount) throw new Error("That team does not exist.");
+    if (team < 0 || team >= getTeamCount(room)) throw new Error("That team does not exist.");
     const occupied = Object.values(room.members || {}).filter(
       (member) => member.uid !== uid && Number(member.team) === team,
     ).length;
-    if (occupied >= capacities[team]) throw new Error("That team is already full.");
+    if (occupied >= getPlayersPerTeam(room)) throw new Error("That team is already full.");
   }
   await update(ref(db, `rooms/${code}/members/${uid}`), patch);
 }
 
 export async function leaveRoom(code, uid) {
-  const snapshot = await get(ref(db, `rooms/${code}/members/${uid}`));
-  const member = snapshot.val();
-  if (member) {
-    await set(push(ref(db, `rooms/${code}/messages`)), {
-      uid: "system",
-      nickname: "Game",
-      avatar: "!",
-      text: `${member.nickname || "A player"} left the table.`,
-      scope: "system",
-      createdAt: serverTimestamp(),
-    });
-  }
   await remove(ref(db, `rooms/${code}/members/${uid}`));
 }
 
-export async function sendMessage(code, member, text, scope = "table") {
+export async function sendMessage(code, member, text) {
   const value = text.trim();
   if (!value) return;
-  const normalizedScope = scope === "team" ? "team" : "table";
   await set(push(ref(db, `rooms/${code}/messages`)), {
     uid: member.uid,
     nickname: member.nickname,
     avatar: member.avatar,
     text: value.slice(0, 500),
-    scope: normalizedScope,
-    team: normalizedScope === "team" ? Number(member.team) : null,
     createdAt: serverTimestamp(),
   });
 }
@@ -295,15 +245,15 @@ export async function startOnlineGame(code, uid) {
   if (room.hostUid !== uid) throw new Error("Only the host can start the game.");
 
   const teamCount = getTeamCount(room);
-  const capacities = getTeamCapacities(room);
+  const playersPerTeam = getPlayersPerTeam(room);
   const players = Object.values(room.members || {}).sort((a, b) => a.seat - b.seat);
-  const requiredPlayers = getTotalPlayers(room);
+  const requiredPlayers = teamCount * playersPerTeam;
   if (players.length !== requiredPlayers) {
     throw new Error(`This format needs exactly ${requiredPlayers} players. Add people or robots.`);
   }
   for (let team = 0; team < teamCount; team += 1) {
-    if (players.filter((player) => Number(player.team) === team).length !== capacities[team]) {
-      throw new Error(`Team ${team + 1} needs exactly ${capacities[team]} player${capacities[team] === 1 ? "" : "s"}.`);
+    if (players.filter((player) => Number(player.team) === team).length !== playersPerTeam) {
+      throw new Error(`Every team must have exactly ${playersPerTeam} player${playersPerTeam === 1 ? "" : "s"}.`);
     }
     if (!room.teamBoardKeepers?.[team]) throw new Error("Choose a board keeper for every team.");
   }
@@ -347,12 +297,7 @@ export async function runRobotTurn(code, hostUid) {
     const players = Object.values(room.members || {}).sort((a, b) => a.seat - b.seat);
     const active = players[Number(room.publicState.currentPlayerIndex || 0)];
     if (!active?.isRobot) return room;
-    const next = executeRobotTurn(room);
-    if (next?.publicState) {
-      next.publicState.turnDrawnUid = null;
-      next.publicState.lastDiscardedUid = active.uid;
-    }
-    return next;
+    return executeRobotTurn(room);
   }, { applyLocally: false });
   return result.committed;
 }

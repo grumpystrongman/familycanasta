@@ -10,15 +10,6 @@ import {
   sortHand,
 } from "./engine";
 import { planDiscardPickup, validatePendingPickupSelection } from "./discardPickupPlanner";
-import {
-  drawOneWithRedThreeReplacement,
-  extractRedThreesFromClaimedPile,
-} from "./redThreeRules.js";
-import {
-  validateDrawAction,
-  validateGoOutAction,
-  validateMeldAction,
-} from "./houseRules.js";
 
 function orderedPlayers(room) {
   return Object.values(room.members || {}).sort((a, b) => a.seat - b.seat);
@@ -41,72 +32,35 @@ function assertTurn(room, uid, phase) {
   return player;
 }
 
-function teammates(room, player) {
-  return orderedPlayers(room).filter(
-    (member) => member.uid !== player.uid && Number(member.team) === Number(player.team),
-  );
-}
-
-function assertPartnerApproval(room, player) {
-  const humanPartners = teammates(room, player).filter((member) => !member.isRobot);
-  if (room.rules?.partnerPermission === false || !humanPartners.length) return;
-  const request = room.publicState?.goOutRequest;
-  const approved = request?.uid === player.uid
-    && (request.approvedBy || []).some((uid) => humanPartners.some((partner) => partner.uid === uid));
-  if (!approved) throw new Error("Ask a teammate for permission to go out, then wait for approval.");
-}
-
-function assertGoingOutAllowed(room, player, method) {
-  validateGoOutAction(room, player, method);
-  assertPartnerApproval(room, player);
-}
-
-function advanceTurnWithoutDiscard(room) {
-  const { players } = activePlayer(room);
-  room.publicState.currentPlayerIndex = (Number(room.publicState.currentPlayerIndex || 0) + 1) % players.length;
-  room.publicState.turnPhase = "draw";
-  room.publicState.turnDrawnUid = null;
-  room.publicState.goOutRequest = null;
-  room.publicState.stockExhausted = true;
-  room.publicState.endRoundCheckRequested = true;
+function drawOneReplacingRedThrees(room, uid) {
+  room.privateHands ||= {};
+  room.privateHands[uid] ||= [];
+  room.stock ||= [];
+  room.publicState.redThrees ||= {};
+  room.publicState.redThrees[uid] ||= [];
+  let card = room.stock.pop();
+  while (card && isRedThree(card)) {
+    room.publicState.redThrees[uid].push(card);
+    card = room.stock.pop();
+  }
+  if (card) room.privateHands[uid].push(card);
+  room.privateHands[uid] = sortHand(room.privateHands[uid]);
+  room.publicState.handCounts[uid] = room.privateHands[uid].length;
+  room.publicState.stockCount = room.stock.length;
+  return card;
 }
 
 export async function drawFromStock(code, uid) {
   const result = await runTransaction(ref(db, `rooms/${code}`), (room) => {
     const player = assertTurn(room, uid, "draw");
-    if (!room.stock?.length) {
-      room.publicState.stockExhausted = true;
-      room.publicState.endRoundCheckRequested = true;
-      room.publicState.lastAction = "The stock is empty. Checking whether the round can continue.";
-      return room;
-    }
-
-    const requested = validateDrawAction(room, player, "stock").drawCount;
+    if (!room.stock?.length) return room;
+    const requested = Math.max(1, Number(room.rules?.drawCount || 2));
     let drawn = 0;
-    let exposed = 0;
-    let exhaustedOnRedThree = false;
-
     for (let index = 0; index < requested && room.stock.length; index += 1) {
-      const draw = drawOneWithRedThreeReplacement(room, uid);
-      if (draw.card) drawn += 1;
-      exposed += draw.exposed.length;
-      if (draw.exhaustedOnRedThree) {
-        exhaustedOnRedThree = true;
-        break;
-      }
+      if (drawOneReplacingRedThrees(room, uid)) drawn += 1;
     }
-
-    if (exhaustedOnRedThree) {
-      advanceTurnWithoutDiscard(room);
-      room.publicState.lastAction = `${player.nickname} exposed the final stock card as a red three. No replacement was available, so the turn ended without a discard.`;
-      return room;
-    }
-
     room.publicState.turnPhase = "play";
-    room.publicState.turnDrawnUid = uid;
-    room.publicState.goOutRequest = null;
-    room.publicState.stockExhausted = room.stock.length === 0;
-    room.publicState.lastAction = `${player.nickname} drew ${drawn} card${drawn === 1 ? "" : "s"} from the stock${exposed ? ` and exposed ${exposed} red three${exposed === 1 ? "" : "s"}` : ""}.`;
+    room.publicState.lastAction = `${player.nickname} drew ${drawn} card${drawn === 1 ? "" : "s"} from the stock.`;
     return room;
   }, { applyLocally: false });
   if (!result.committed) throw new Error("The draw could not be completed.");
@@ -128,12 +82,7 @@ export async function takeDiscardPile(code, uid) {
   const result = await runTransaction(ref(db, `rooms/${code}`), (room) => {
     try {
       const player = assertTurn(room, uid, "draw");
-      const houseValidation = validateDrawAction(room, player, "discardPile");
       const plan = planDiscardPickup(room, player);
-      const fullPile = room.publicState?.discardPile || [];
-      const takeCount = houseValidation.discardTakeCount;
-      const pile = fullPile.slice(-takeCount);
-      const lowerPile = pile.slice(0, -1);
       const hand = [...(room.privateHands?.[uid] || [])];
       room.publicState.teamBoards ||= {};
       room.publicState.teamBoards[player.team] ||= [];
@@ -141,8 +90,7 @@ export async function takeDiscardPile(code, uid) {
       const board = room.publicState.teamBoards[player.team];
 
       if (plan.mode === "pending-opening") {
-        const claimed = extractRedThreesFromClaimedPile(room, uid, pile);
-        room.privateHands[uid] = sortHand([...hand, ...claimed.handCards]);
+        room.privateHands[uid] = sortHand([...hand, ...plan.pile]);
         room.publicState.pendingDiscardPickup = {
           uid,
           team: player.team,
@@ -152,32 +100,27 @@ export async function takeDiscardPile(code, uid) {
           requiredNaturalCount: plan.requiredNaturalCount,
           requirement: plan.requirement,
         };
-        room.publicState.lastAction = `${player.nickname} took ${takeCount} discard card${takeCount === 1 ? "" : "s"}. Their opening must include the picked-up ${plan.rank} and two natural ${plan.rank}s.${claimed.exposed.length ? ` ${claimed.exposed.length} buried red three${claimed.exposed.length === 1 ? " was" : "s were"} exposed without replacement.` : ""}`;
+        room.publicState.lastAction = `${player.nickname} took the discard pile. Their opening must include the picked-up ${plan.rank} and two natural ${plan.rank}s.`;
       } else {
         if (plan.existing) {
-          validateMeldAction(room, plan.existing, plan.forcedCards);
           plan.existing.cards = [...(plan.existing.cards || []), ...plan.forcedCards];
         } else {
-          validateMeldAction(room, null, plan.forcedCards);
           board.push({ rank: plan.top.rank, cards: plan.forcedCards });
         }
         const used = new Set(plan.usedNaturalIds);
-        const claimed = extractRedThreesFromClaimedPile(room, uid, lowerPile);
         room.privateHands[uid] = sortHand([
           ...hand.filter((card) => !used.has(card.id)),
-          ...claimed.handCards,
+          ...plan.lowerPile,
         ]);
         room.publicState.pendingDiscardPickup = null;
-        room.publicState.lastAction = `${player.nickname} took ${takeCount} discard card${takeCount === 1 ? "" : "s"}, played the top ${plan.top.rank}, and kept the remaining cards in hand.${claimed.exposed.length ? ` ${claimed.exposed.length} buried red three${claimed.exposed.length === 1 ? " was" : "s were"} exposed without replacement.` : ""}`;
+        room.publicState.lastAction = `${player.nickname} took the discard pile, played the top ${plan.top.rank}, and kept the remaining cards in hand.`;
       }
 
-      room.publicState.discardPile = fullPile.slice(0, Math.max(0, fullPile.length - takeCount));
-      room.publicState.discardFrozen = room.publicState.discardPile.length > 0 ? room.publicState.discardFrozen : false;
+      room.publicState.discardPile = [];
+      room.publicState.discardFrozen = false;
       room.publicState.discardPileHasBeenTaken = true;
       room.publicState.handCounts[uid] = room.privateHands[uid].length;
       room.publicState.turnPhase = "play";
-      room.publicState.turnDrawnUid = uid;
-      room.publicState.goOutRequest = null;
       return room;
     } catch (error) {
       actionError = error.message;
@@ -185,64 +128,6 @@ export async function takeDiscardPile(code, uid) {
     }
   }, { applyLocally: false });
   if (!result.committed) throw new Error(actionError);
-}
-
-export async function requestGoOut(code, uid) {
-  let actionError = "The request could not be sent.";
-  const result = await runTransaction(ref(db, `rooms/${code}`), (room) => {
-    try {
-      const player = assertTurn(room, uid, "play");
-      validateGoOutAction(room, player, "meld");
-      const humanPartners = teammates(room, player).filter((member) => !member.isRobot);
-      room.publicState.goOutRequest = {
-        uid,
-        team: Number(player.team),
-        requestedAt: Date.now(),
-        approvedBy: humanPartners.length ? [] : ["automatic"],
-      };
-      room.publicState.lastAction = humanPartners.length
-        ? `${player.nickname} asked their team for permission to go out.`
-        : `${player.nickname} is cleared to go out.`;
-      return room;
-    } catch (error) {
-      actionError = error.message;
-      return;
-    }
-  }, { applyLocally: false });
-  if (!result.committed) throw new Error(actionError);
-}
-
-export async function approveGoOut(code, uid) {
-  let actionError = "The approval could not be recorded.";
-  const result = await runTransaction(ref(db, `rooms/${code}`), (room) => {
-    try {
-      const request = room?.publicState?.goOutRequest;
-      const approver = room?.members?.[uid];
-      const requester = request ? room?.members?.[request.uid] : null;
-      if (!request || !requester) throw new Error("There is no active go-out request.");
-      if (!approver || approver.uid === requester.uid || Number(approver.team) !== Number(request.team)) {
-        throw new Error("Only a teammate can approve this request.");
-      }
-      request.approvedBy = [...new Set([...(request.approvedBy || []), uid])];
-      room.publicState.lastAction = `${approver.nickname} approved ${requester.nickname} to go out.`;
-      return room;
-    } catch (error) {
-      actionError = error.message;
-      return;
-    }
-  }, { applyLocally: false });
-  if (!result.committed) throw new Error(actionError);
-}
-
-export async function cancelGoOutRequest(code, uid) {
-  const result = await runTransaction(ref(db, `rooms/${code}`), (room) => {
-    const request = room?.publicState?.goOutRequest;
-    if (!request || request.uid !== uid) return room;
-    room.publicState.goOutRequest = null;
-    room.publicState.lastAction = `${room.members?.[uid]?.nickname || "A player"} canceled the go-out request.`;
-    return room;
-  }, { applyLocally: false });
-  if (!result.committed) throw new Error("The request could not be canceled.");
 }
 
 export async function meldSelectedCards(code, uid, cardIds, targetRank = null) {
@@ -269,11 +154,10 @@ export async function meldSelectedCards(code, uid, cardIds, targetRank = null) {
         rank = targetRank;
       }
 
-      validateMeldAction(room, existing, selected);
-      if (existing) validateCombinedMeld([...(existing.cards || []), ...selected], room.activeRules || room.rules);
+      if (existing) validateCombinedMeld([...(existing.cards || []), ...selected], room.rules);
       else {
         if (selected.length < 3) throw new Error("A new meld needs at least three cards. To add one or two cards, choose an existing board meld.");
-        rank = validateCombinedMeld(selected, room.activeRules || room.rules);
+        rank = validateCombinedMeld(selected, room.rules);
       }
 
       const alreadyOpened = Boolean(room.publicState.opened[player.team]);
@@ -300,10 +184,7 @@ export async function meldSelectedCards(code, uid, cardIds, targetRank = null) {
       room.publicState.handCounts[uid] = room.privateHands[uid].length;
       room.publicState.turnPhase = "play";
       room.publicState.lastAction = `${player.nickname} played ${selected.length} card${selected.length === 1 ? "" : "s"} on ${rank}s.`;
-      if (room.privateHands[uid].length === 0) {
-        assertGoingOutAllowed(room, player, "meld");
-        return finishRound(room, uid);
-      }
+      if (room.privateHands[uid].length === 0) return finishRound(room, uid);
       return room;
     } catch (error) {
       actionError = error.message;
@@ -328,8 +209,7 @@ export async function discardSelectedCard(code, uid, cardId) {
       const hand = room.privateHands?.[uid] || [];
       const card = hand.find((item) => item.id === cardId);
       if (!card) throw new Error("That card is no longer in your hand.");
-      if (isRedThree(card)) throw new Error("Red threes cannot be discarded. They must be exposed face-up.");
-      if (hand.length === 1) assertGoingOutAllowed(room, player, "discard");
+      if (isRedThree(card)) throw new Error("Red threes are laid down automatically and replaced.");
       room.privateHands[uid] = hand.filter((item) => item.id !== cardId);
       room.publicState.discardPile ||= [];
       room.publicState.discardPile.push(card);
@@ -338,13 +218,10 @@ export async function discardSelectedCard(code, uid, cardId) {
       if (freezesPile) room.publicState.discardFrozen = true;
       room.publicState.handCounts[uid] = room.privateHands[uid].length;
       room.publicState.lastAction = `${player.nickname} discarded ${card.rank}${card.suit}${freezesPile ? " and froze the discard pile" : ""}.`;
-      room.publicState.lastDiscardedUid = uid;
       if (room.privateHands[uid].length === 0) return finishRound(room, uid);
       const { players } = activePlayer(room);
       room.publicState.currentPlayerIndex = (Number(room.publicState.currentPlayerIndex || 0) + 1) % players.length;
       room.publicState.turnPhase = "draw";
-      room.publicState.turnDrawnUid = null;
-      room.publicState.goOutRequest = null;
       return room;
     } catch (error) {
       actionError = error.message;

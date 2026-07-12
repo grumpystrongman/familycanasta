@@ -113,7 +113,7 @@ export default function MultiMeldEnhancer() {
     () => planGroupedMelds(selectedCards, board, room?.rules || {}),
     [selectedCards, board, room?.rules],
   );
-  const pendingPickup = room && uid && room.publicState?.pendingDiscardPickup?.uid === uid
+  const pendingPickup = room?.publicState?.pendingDiscardPickup?.uid === uid
     ? room.publicState.pendingDiscardPickup
     : null;
   const openingNeed = team >= 0 ? openingRequirementForTeam(room, team) : 0;

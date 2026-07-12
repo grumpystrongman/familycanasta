@@ -7,11 +7,6 @@ import {
   openingRequirementForTeam,
 } from "./engine.js";
 import { planDiscardPickup } from "./discardPickupPlanner.js";
-import {
-  drawOneWithRedThreeReplacement,
-  extractRedThreesFromClaimedPile,
-  resolveRedThreesInHand,
-} from "./redThreeRules.js";
 
 const rankOrder = ["4","5","6","7","8","9","10","J","Q","K","A","2","JOKER","3"];
 
@@ -47,12 +42,9 @@ function takePileForRobot(state, player, hand, plan) {
   state.publicState.teamBoards ||= {};
   state.publicState.teamMelds ||= {};
   state.publicState.opened ||= {};
-  let exposedCount = 0;
 
   if (plan.mode === "pending-opening") {
-    const claimed = extractRedThreesFromClaimedPile(state, player.uid, plan.pile);
-    exposedCount = claimed.exposed.length;
-    state.privateHands[player.uid] = [...hand, ...claimed.handCards];
+    state.privateHands[player.uid] = [...hand, ...plan.pile];
     state.publicState.pendingDiscardPickup = {
       uid: player.uid,
       team: player.team,
@@ -68,11 +60,9 @@ function takePileForRobot(state, player, hand, plan) {
     if (existing) existing.cards.push(...plan.forcedCards);
     else melds.push({ rank: plan.top.rank, cards: [...plan.forcedCards] });
     const used = new Set(plan.usedNaturalIds);
-    const claimed = extractRedThreesFromClaimedPile(state, player.uid, plan.lowerPile);
-    exposedCount = claimed.exposed.length;
     state.privateHands[player.uid] = [
       ...hand.filter((card) => !used.has(card.id)),
-      ...claimed.handCards,
+      ...plan.lowerPile,
     ];
     state.publicState.teamBoards[player.team] = melds;
     state.publicState.teamMelds[player.team] = melds;
@@ -82,35 +72,27 @@ function takePileForRobot(state, player, hand, plan) {
   state.publicState.discardPile = [];
   state.publicState.discardFrozen = false;
   state.publicState.discardPileHasBeenTaken = true;
-  return { hand: state.privateHands[player.uid], exposedCount };
+  return state.privateHands[player.uid];
 }
 
 function drawForRobot(state, player, rules) {
   let hand = [...(state.privateHands[player.uid] || [])];
+  const stock = [...(state.stock || [])];
   let source = "stock";
-  let exposedCount = 0;
-  let exhaustedOnRedThree = false;
   const pickupPlan = pickupPlanOrNull(state, player);
 
   if (pickupPlan && pileValue(state, player, hand) >= 18) {
-    const claimed = takePileForRobot(state, player, hand, pickupPlan);
-    hand = claimed.hand;
-    exposedCount = claimed.exposedCount;
+    hand = takePileForRobot(state, player, hand, pickupPlan);
     source = "discard pile";
   } else {
     const drawCount = Math.max(1, Number(rules.drawCount || 2));
-    for (let draw = 0; draw < drawCount && state.stock?.length; draw += 1) {
-      const result = drawOneWithRedThreeReplacement(state, player.uid);
-      exposedCount += result.exposed.length;
-      if (result.exhaustedOnRedThree) {
-        exhaustedOnRedThree = true;
-        break;
-      }
-    }
-    hand = state.privateHands[player.uid] || [];
+    for (let draw = 0; draw < drawCount && stock.length; draw += 1) hand.push(stock.pop());
+    state.stock = stock;
+    state.publicState.stockCount = stock.length;
+    state.privateHands[player.uid] = hand;
   }
 
-  return { source, exposedCount, exhaustedOnRedThree };
+  return source;
 }
 
 function candidateMelds(hand, currentMelds, rules) {
@@ -134,26 +116,46 @@ function candidateMelds(hand, currentMelds, rules) {
     .filter(([rank]) => !currentMelds.some((meld) => meld.rank === rank));
   const pairs = newRanks
     .filter(([, cards]) => cards.length === 2)
-    .sort(([, left], [, right]) => right.reduce((sum, card) => sum + cardPoints(card), 0)
-      - left.reduce((sum, card) => sum + cardPoints(card), 0));
+    .sort(([, left], [, right]) => {
+      const leftPoints = left.reduce((sum, card) => sum + cardPoints(card), 0);
+      const rightPoints = right.reduce((sum, card) => sum + cardPoints(card), 0);
+      return rightPoints - leftPoints;
+    });
   const naturalMelds = newRanks
     .filter(([, cards]) => cards.length >= 3)
-    .sort(([, left], [, right]) => right.reduce((sum, card) => sum + cardPoints(card), 0)
-      - left.reduce((sum, card) => sum + cardPoints(card), 0));
+    .sort(([, left], [, right]) => {
+      const leftPoints = left.reduce((sum, card) => sum + cardPoints(card), 0);
+      const rightPoints = right.reduce((sum, card) => sum + cardPoints(card), 0);
+      return rightPoints - leftPoints;
+    });
 
   for (const [rank, cards] of pairs) {
     if (!availableWilds.length) break;
     const selected = [...cards, ...availableWilds.splice(0, 1)];
-    candidates.push({ rank, cards: selected, existing: false, score: selected.reduce((sum, card) => sum + cardPoints(card), 0) });
+    candidates.push({
+      rank,
+      cards: selected,
+      existing: false,
+      score: selected.reduce((sum, card) => sum + cardPoints(card), 0),
+    });
   }
 
   for (const [rank, cards] of naturalMelds) {
-    const maxWilds = Math.min(Number(rules.maxWildsPerMeld || 3), cards.length - 1, availableWilds.length);
+    const maxWilds = Math.min(
+      Number(rules.maxWildsPerMeld || 3),
+      cards.length - 1,
+      availableWilds.length,
+    );
     const usefulWilds = maxWilds > 0 && cards.length < 7
       ? availableWilds.splice(0, Math.min(maxWilds, 7 - cards.length))
       : [];
     const selected = [...cards, ...usefulWilds];
-    candidates.push({ rank, cards: selected, existing: false, score: selected.reduce((sum, card) => sum + cardPoints(card), 0) });
+    candidates.push({
+      rank,
+      cards: selected,
+      existing: false,
+      score: selected.reduce((sum, card) => sum + cardPoints(card), 0),
+    });
   }
 
   return candidates.sort((a, b) => b.score - a.score);
@@ -193,8 +195,9 @@ function applyMelds(state, player, rules) {
     : null;
   let selected = [];
 
-  if (opened) selected = candidates;
-  else {
+  if (opened) {
+    selected = candidates;
+  } else {
     let running = 0;
     const remaining = [...candidates];
     if (pending) {
@@ -217,7 +220,9 @@ function applyMelds(state, player, rules) {
   if (!selected.length) return { count: 0, ranks: [] };
   const used = new Set();
   for (const candidate of selected) {
-    const availableCards = candidate.cards.filter((card) => !used.has(card.id) && hand.some((held) => held.id === card.id));
+    const availableCards = candidate.cards.filter(
+      (card) => !used.has(card.id) && hand.some((held) => held.id === card.id),
+    );
     if (!availableCards.length) continue;
     const existing = currentMelds.find((meld) => meld.rank === candidate.rank);
     if (existing) existing.cards.push(...availableCards);
@@ -243,7 +248,8 @@ function discardScore(card, hand, melds) {
   if (isBlackThree(card)) return 45;
   if (melds.some((meld) => meld.rank === card.rank)) return 400;
   const sameRank = hand.filter((held) => held.rank === card.rank).length;
-  return sameRank * 80 + cardPoints(card) * 3 + rankOrder.indexOf(card.rank);
+  const rankPenalty = rankOrder.indexOf(card.rank);
+  return sameRank * 80 + cardPoints(card) * 3 + rankPenalty;
 }
 
 function discardForRobot(state, player, rules) {
@@ -252,13 +258,33 @@ function discardForRobot(state, player, rules) {
   if (!hand.length) return null;
   const melds = getTeamMelds(state, player.team);
   const candidates = hand.filter((card) => !isRedThree(card));
-  if (!candidates.length) throw new Error("Robot cannot discard because only red threes remain in hand.");
-  const discard = candidates.sort((a, b) => discardScore(a, hand, melds) - discardScore(b, hand, melds))[0];
+  const discard = (candidates.length ? candidates : hand)
+    .sort((a, b) => discardScore(a, hand, melds) - discardScore(b, hand, melds))[0];
   state.privateHands[player.uid] = hand.filter((card) => card.id !== discard.id);
   state.publicState.discardPile ||= [];
   state.publicState.discardPile.push(discard);
   if (isWild(discard) && rules.freezeOnWild !== false) state.publicState.discardFrozen = true;
   return discard;
+}
+
+function replaceRedThrees(state, player) {
+  let hand = [...(state.privateHands[player.uid] || [])];
+  const stock = [...(state.stock || [])];
+  const redThrees = [];
+  let index = hand.findIndex(isRedThree);
+  while (index >= 0) {
+    redThrees.push(hand[index]);
+    hand.splice(index, 1);
+    if (stock.length) hand.push(stock.pop());
+    index = hand.findIndex(isRedThree);
+  }
+  state.privateHands[player.uid] = hand;
+  state.stock = stock;
+  state.publicState.stockCount = stock.length;
+  state.publicState.redThrees ||= {};
+  state.publicState.redThrees[player.uid] ||= [];
+  state.publicState.redThrees[player.uid].push(...redThrees);
+  return redThrees.length;
 }
 
 export function executeRobotTurn(room) {
@@ -269,22 +295,8 @@ export function executeRobotTurn(room) {
   if (!player?.isRobot || state.status !== "playing" || state.publicState?.phase !== "playing") return room;
 
   state.publicState.turnPhase = "draw";
-  const recovery = resolveRedThreesInHand(state, player.uid);
-  const drawResult = drawForRobot(state, player, state.rules || {});
-  const redCount = recovery.exposed.length + drawResult.exposedCount;
-
-  if (recovery.exhaustedOnRedThree || drawResult.exhaustedOnRedThree) {
-    state.publicState.handCounts ||= {};
-    state.publicState.handCounts[player.uid] = (state.privateHands[player.uid] || []).length;
-    state.publicState.botThinkingUid = null;
-    state.publicState.stockExhausted = true;
-    state.publicState.endRoundCheckRequested = true;
-    state.publicState.lastAction = `${player.nickname} exposed the final stock card as a red three. The turn ended without a discard.`;
-    state.publicState.currentPlayerIndex = (index + 1) % players.length;
-    state.publicState.turnPhase = "draw";
-    return state;
-  }
-
+  const source = drawForRobot(state, player, state.rules || {});
+  const redCount = replaceRedThrees(state, player);
   state.publicState.turnPhase = "play";
   const meldResult = applyMelds(state, player, state.rules || {});
   if (state.publicState?.pendingDiscardPickup?.uid === player.uid) return room;
@@ -295,7 +307,7 @@ export function executeRobotTurn(room) {
   state.publicState.handCounts ||= {};
   state.publicState.handCounts[player.uid] = hand.length;
   state.publicState.botThinkingUid = null;
-  state.publicState.lastAction = `${player.nickname} drew from the ${drawResult.source}${redCount ? `, laid down ${redCount} red three${redCount === 1 ? "" : "s"}` : ""}${meldResult.count ? `, played ${meldResult.count} card${meldResult.count === 1 ? "" : "s"}` : ""}${discarded ? `, and discarded ${discarded.rank}${discarded.suit}` : ""}.`;
+  state.publicState.lastAction = `${player.nickname} drew from the ${source}${redCount ? `, laid down ${redCount} red three${redCount === 1 ? "" : "s"}` : ""}${meldResult.count ? `, played ${meldResult.count} card${meldResult.count === 1 ? "" : "s"}` : ""}${discarded ? `, and discarded ${discarded.rank}${discarded.suit}` : ""}.`;
   if (!hand.length) return finishRound(state, player.uid);
   state.publicState.currentPlayerIndex = (index + 1) % players.length;
   state.publicState.turnPhase = "draw";

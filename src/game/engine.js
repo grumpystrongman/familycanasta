@@ -1,11 +1,3 @@
-import {
-  hiddenRedThreePenalty,
-  initialDiscardIsFrozen,
-  redThreeScoreForTeam,
-  resolveRedThreesInHand,
-  validateConfiguredRedThreeCount,
-} from "./redThreeRules.js";
-
 const SUITS = ["S", "H", "D", "C"];
 const RANKS = ["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
 const SORT_RANKS = ["A","4","5","6","7","8","9","10","J","Q","K","3","2","JOKER"];
@@ -15,9 +7,8 @@ export const SUIT_SYMBOLS = { S: "♠", H: "♥", D: "♦", C: "♣", J: "★" }
 
 export const DEFAULT_RULES = {
   teamCount: 2,
-  totalPlayers: 2,
   playersPerTeam: 1,
-  playMode: "flexible",
+  playMode: "solo",
   deckCount: 2,
   cardsPerPlayer: 15,
   targetScore: 5000,
@@ -32,20 +23,9 @@ export const DEFAULT_RULES = {
   cleanCanastaBonus: 500,
   dirtyCanastaBonus: 300,
   redThreeBonus: 100,
-  twoDeckAllRedThreesScore: 800,
-  threeDeckAllRedThreesScore: 1000,
-  redThreeInHandPenalty: 200,
   unprotectedRedThreePenalty: 200,
   goingOutBonus: 100,
 };
-
-export function teamSeatTargets(totalPlayers = 2, teamCount = 2) {
-  const players = Math.min(6, Math.max(2, Number(totalPlayers || 2)));
-  const teams = Math.min(3, Math.max(2, Math.min(players, Number(teamCount || 2))));
-  const base = Math.floor(players / teams);
-  const remainder = players % teams;
-  return Array.from({ length: teams }, (_, team) => base + (team < remainder ? 1 : 0));
-}
 
 export function makeCardId(deck, suit, rank, copy = 0) {
   return `${deck}-${suit}-${rank}-${copy}`;
@@ -68,7 +48,6 @@ export function createDeck(deckCount = 2) {
     cards.push({ id: makeCardId(deck, "J", "JOKER", 0), deck, suit: "J", rank: "JOKER", color: "black" });
     cards.push({ id: makeCardId(deck, "J", "JOKER", 1), deck, suit: "J", rank: "JOKER", color: "red" });
   }
-  validateConfiguredRedThreeCount(cards, deckCount);
   return cards;
 }
 
@@ -142,11 +121,15 @@ export function scoreTeamBoard(room, team, wentOutTeam = null) {
     else cleanCanastas += 1;
   }
 
-  const redThreeResult = redThreeScoreForTeam(room, team);
-  const redThreeCount = redThreeResult.count;
-  const redThreePoints = redThreeResult.points;
-  const redThreesUnprotected = !redThreeResult.opened && redThreeCount > 0;
-  const hiddenRedThrees = hiddenRedThreePenalty(room, team);
+  const redThreeCards = Object.entries(room.publicState?.redThrees || {})
+    .filter(([uid]) => Number(room.members?.[uid]?.team) === Number(team))
+    .flatMap(([, cards]) => cards || []);
+  const redThreeCount = redThreeCards.length;
+  const hasCanasta = cleanCanastas + dirtyCanastas > 0;
+  const redThreesUnprotected = Boolean(rules.unprotectedRedThreesPenalty && redThreeCount > 0 && !hasCanasta);
+  const redThreePoints = redThreesUnprotected
+    ? -(redThreeCount * Number(rules.unprotectedRedThreePenalty || 200))
+    : redThreeCount * Number(rules.redThreeBonus || 100);
 
   const canastaBonus = cleanCanastas * Number(rules.cleanCanastaBonus || 500)
     + dirtyCanastas * Number(rules.dirtyCanastaBonus || 300);
@@ -154,7 +137,6 @@ export function scoreTeamBoard(room, team, wentOutTeam = null) {
   const handPenalty = Object.values(room.members || {})
     .filter((member) => Number(member.team) === Number(team))
     .flatMap((member) => room.privateHands?.[member.uid] || [])
-    .filter((card) => !isRedThree(card))
     .reduce((sum, card) => sum + cardPoints(card), 0);
 
   return {
@@ -165,20 +147,11 @@ export function scoreTeamBoard(room, team, wentOutTeam = null) {
     redThreeCount,
     redThreePoints,
     redThreesUnprotected,
-    allRedThrees: redThreeResult.hasAll,
-    hiddenRedThreeCount: hiddenRedThrees.count,
-    hiddenRedThreePenalty: hiddenRedThrees.points,
     goingOutPoints,
     handPenalty,
-    bonusPoints: canastaBonus + redThreePoints + hiddenRedThrees.points + goingOutPoints,
-    roundTotal: boardCardPoints + canastaBonus + redThreePoints + hiddenRedThrees.points + goingOutPoints - handPenalty,
+    bonusPoints: canastaBonus + redThreePoints + goingOutPoints,
+    roundTotal: boardCardPoints + canastaBonus + redThreePoints + goingOutPoints - handPenalty,
   };
-}
-
-export function teamCanGoOut(room, team) {
-  const breakdown = scoreTeamBoard(room, team, null);
-  const required = Math.max(1, Number(room?.rules?.canastasToGoOut || 1));
-  return breakdown.cleanCanastas + breakdown.dirtyCanastas >= required;
 }
 
 export function finishRound(room, wentOutUid) {
@@ -194,7 +167,6 @@ export function finishRound(room, wentOutUid) {
   state.publicState.roundBreakdowns = breakdowns;
   state.publicState.wentOutUid = wentOutUid;
   state.publicState.wentOutTeam = wentOutTeam;
-  state.publicState.goOutRequest = null;
 
   const targetScore = Number(state.rules?.targetScore || 5000);
   const winningScore = Math.max(...state.publicState.teamScores);
@@ -218,23 +190,28 @@ export function finishRound(room, wentOutUid) {
 }
 
 export function dealHand({ players, rules, dealerIndex, existingScores }) {
-  const mergedRules = { ...DEFAULT_RULES, ...(rules || {}) };
-  const teamCount = Number(mergedRules.teamCount || 2);
-  const deckCount = Number(mergedRules.deckCount || (players.length > 4 ? 3 : 2));
-  const stock = shuffle(createDeck(deckCount));
+  const teamCount = Number(rules.teamCount || 2);
+  const stock = shuffle(createDeck(Number(rules.deckCount || (players.length > 4 ? 3 : 2))));
   const hands = Object.fromEntries(players.map((player) => [player.uid, []]));
   const redThrees = Object.fromEntries(players.map((player) => [player.uid, []]));
   const order = [];
 
-  for (let cardNumber = 0; cardNumber < Number(mergedRules.cardsPerPlayer || 11); cardNumber += 1) {
+  for (let cardNumber = 0; cardNumber < Number(rules.cardsPerPlayer || 11); cardNumber += 1) {
     for (let offset = 1; offset <= players.length; offset += 1) {
       const playerIndex = (dealerIndex + offset) % players.length;
       const player = players[playerIndex];
       const card = stock.pop();
-      if (!card) throw new Error("The stock was exhausted during the initial deal.");
       hands[player.uid].push(card);
       order.push({ playerUid: player.uid, cardId: card.id });
     }
+  }
+
+  for (const player of players) hands[player.uid] = sortHand(hands[player.uid]);
+
+  let firstDiscard = stock.pop();
+  while (firstDiscard && isRedThree(firstDiscard)) {
+    stock.unshift(firstDiscard);
+    firstDiscard = stock.pop();
   }
 
   const scores = existingScores || Array.from({ length: teamCount }, () => 0);
@@ -242,18 +219,15 @@ export function dealHand({ players, rules, dealerIndex, existingScores }) {
     teamCount,
     (team) => openingRequirement(Number(scores[team] || 0)),
   );
-
-  const state = {
+  return {
     publicState: {
       phase: "dealing",
       dealerIndex,
       currentPlayerIndex: (dealerIndex + 1) % players.length,
       turnPhase: "draw",
-      turnDrawnUid: null,
-      lastDiscardedUid: null,
       stockCount: stock.length,
-      discardPile: [],
-      discardFrozen: false,
+      discardPile: firstDiscard ? [firstDiscard] : [],
+      discardFrozen: true,
       teamMelds: teamRecord(teamCount, () => []),
       teamBoards: teamRecord(teamCount, () => []),
       teamScores: scores,
@@ -266,22 +240,8 @@ export function dealHand({ players, rules, dealerIndex, existingScores }) {
       handNumber: 1,
       lastAction: "Cards are being dealt.",
       botThinkingUid: null,
-      goOutRequest: null,
     },
     privateHands: hands,
     stock,
   };
-
-  for (const player of players) resolveRedThreesInHand(state, player.uid);
-
-  const firstDiscard = state.stock.pop() || null;
-  if (firstDiscard) state.publicState.discardPile = [firstDiscard];
-  state.publicState.discardFrozen = initialDiscardIsFrozen(firstDiscard, mergedRules);
-  state.publicState.stockCount = state.stock.length;
-  for (const player of players) {
-    state.privateHands[player.uid] = sortHand(state.privateHands[player.uid]);
-    state.publicState.handCounts[player.uid] = state.privateHands[player.uid].length;
-  }
-
-  return state;
 }
