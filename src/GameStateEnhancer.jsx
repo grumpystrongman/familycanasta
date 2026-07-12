@@ -55,7 +55,18 @@ export default function GameStateEnhancer() {
 
   const handOver = room?.publicState?.phase === "handOver";
   const breakdowns = room?.publicState?.roundBreakdowns || {};
+  const roundEndReason = room?.publicState?.roundEndReason || "went-out";
   const wentOutName = room?.members?.[room?.publicState?.wentOutUid]?.nickname || "A player";
+  const roundTitle = roundEndReason === "last-red-three"
+    ? "Stock ended on a red three"
+    : roundEndReason === "stock-exhausted"
+      ? "Stock exhausted"
+      : `${wentOutName} went out`;
+  const roundDescription = roundEndReason === "last-red-three"
+    ? "The final stock card was a red three with no replacement available. The hand ended immediately; no meld or discard was allowed."
+    : roundEndReason === "stock-exhausted"
+      ? "No legal continuation remained from the discard pile. Cards left in every hand were deducted, and no going-out bonus was awarded."
+      : "The hand ended immediately when the last card was played. Remaining cards have been deducted.";
   const isHost = auth?.currentUser?.uid && room?.hostUid === auth.currentUser.uid;
 
   return (
@@ -65,8 +76,8 @@ export default function GameStateEnhancer() {
         <div className="round-complete-overlay">
           <section className="round-complete-card">
             <span className="round-kicker">ROUND COMPLETE</span>
-            <h2>{wentOutName} went out</h2>
-            <p>The hand ended immediately when the last card was played. Remaining cards have been deducted.</p>
+            <h2>{roundTitle}</h2>
+            <p>{roundDescription}</p>
             <div className="round-team-results">
               {Object.entries(breakdowns).map(([team, score]) => (
                 <article key={team}>

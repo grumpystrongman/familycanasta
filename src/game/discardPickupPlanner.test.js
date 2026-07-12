@@ -1,6 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { planDiscardPickup, validatePendingPickupSelection } from "./discardPickupPlanner.js";
+import {
+  planDiscardPickup,
+  stockExhaustionPickupStatus,
+  validatePendingPickupSelection,
+} from "./discardPickupPlanner.js";
 
 const card = (id, rank, suit = "S") => ({
   id,
@@ -99,4 +103,44 @@ test("pending pickup validation requires the top card and two original matches",
     validatePendingPickupSelection(pending, [card("top", "Q"), card("q1", "Q"), card("q3", "Q")]),
     "",
   );
+});
+
+test("stock exhaustion makes an unfrozen matching board meld mandatory", () => {
+  const room = roomWith({
+    hand: [card("spare", "6"), card("other", "7")],
+    pile: [card("top", "Q", "H")],
+    board: [{ rank: "Q", cards: [card("q1", "Q"), card("q2", "Q"), card("q3", "Q")] }],
+    opened: true,
+    frozen: false,
+  });
+
+  const status = stockExhaustionPickupStatus(room, player);
+  assert.equal(status.canTake, true);
+  assert.equal(status.mustTake, true);
+});
+
+test("stock exhaustion permits but does not force a new meld pickup", () => {
+  const room = roomWith({
+    hand: [card("q1", "Q"), card("q2", "Q", "C"), card("spare", "6")],
+    pile: [card("top", "Q", "H")],
+    opened: true,
+    frozen: false,
+  });
+
+  const status = stockExhaustionPickupStatus(room, player);
+  assert.equal(status.canTake, true);
+  assert.equal(status.mustTake, false);
+});
+
+test("a black three cannot continue play after the stock is exhausted", () => {
+  const room = roomWith({
+    hand: [card("only", "6")],
+    pile: [card("top", "3", "C")],
+    opened: true,
+    frozen: false,
+  });
+
+  const status = stockExhaustionPickupStatus(room, player);
+  assert.equal(status.canTake, false);
+  assert.equal(status.mustTake, false);
 });

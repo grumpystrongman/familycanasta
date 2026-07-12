@@ -9,7 +9,11 @@ import {
   openingRequirementForTeam,
   sortHand,
 } from "./engine";
-import { planDiscardPickup, validatePendingPickupSelection } from "./discardPickupPlanner";
+import {
+  planDiscardPickup,
+  stockExhaustionPickupStatus,
+  validatePendingPickupSelection,
+} from "./discardPickupPlanner";
 
 function orderedPlayers(room) {
   return Object.values(room.members || {}).sort((a, b) => a.seat - b.seat);
@@ -38,32 +42,69 @@ function drawOneReplacingRedThrees(room, uid) {
   room.stock ||= [];
   room.publicState.redThrees ||= {};
   room.publicState.redThrees[uid] ||= [];
+
+  let redThreeCount = 0;
   let card = room.stock.pop();
   while (card && isRedThree(card)) {
     room.publicState.redThrees[uid].push(card);
+    redThreeCount += 1;
     card = room.stock.pop();
   }
+
   if (card) room.privateHands[uid].push(card);
   room.privateHands[uid] = sortHand(room.privateHands[uid]);
   room.publicState.handCounts[uid] = room.privateHands[uid].length;
   room.publicState.stockCount = room.stock.length;
-  return card;
+  return {
+    card,
+    redThreeCount,
+    missingReplacement: redThreeCount > 0 && !card,
+  };
+}
+
+function emptyStockMessage(room, player) {
+  const status = stockExhaustionPickupStatus(room, player);
+  if (!status.canTake) return "";
+  return status.mustTake
+    ? `The stock is exhausted. ${player.nickname} must take the discard pile.`
+    : `The stock is exhausted. ${player.nickname} may take the discard pile or end the round.`;
 }
 
 export async function drawFromStock(code, uid) {
+  let actionError = "The draw could not be completed.";
   const result = await runTransaction(ref(db, `rooms/${code}`), (room) => {
-    const player = assertTurn(room, uid, "draw");
-    if (!room.stock?.length) return room;
-    const requested = Math.max(1, Number(room.rules?.drawCount || 2));
-    let drawn = 0;
-    for (let index = 0; index < requested && room.stock.length; index += 1) {
-      if (drawOneReplacingRedThrees(room, uid)) drawn += 1;
+    try {
+      const player = assertTurn(room, uid, "draw");
+      if (!room.stock?.length) {
+        const status = stockExhaustionPickupStatus(room, player);
+        if (status.mustTake) {
+          throw new Error("The stock is exhausted. You must take the discard pile because its top card matches your team's open meld.");
+        }
+        return finishRound(room, null, {
+          reason: "stock-exhausted",
+          blockedUid: uid,
+          declinedPickup: status.canTake,
+        });
+      }
+
+      const requested = Math.max(1, Number(room.rules?.drawCount || 2));
+      let drawn = 0;
+      for (let index = 0; index < requested && room.stock.length; index += 1) {
+        const outcome = drawOneReplacingRedThrees(room, uid);
+        if (outcome.card) drawn += 1;
+        if (outcome.missingReplacement) {
+          return finishRound(room, null, { reason: "last-red-three", blockedUid: uid });
+        }
+      }
+      room.publicState.turnPhase = "play";
+      room.publicState.lastAction = `${player.nickname} drew ${drawn} card${drawn === 1 ? "" : "s"} from the stock.`;
+      return room;
+    } catch (error) {
+      actionError = error.message;
+      return;
     }
-    room.publicState.turnPhase = "play";
-    room.publicState.lastAction = `${player.nickname} drew ${drawn} card${drawn === 1 ? "" : "s"} from the stock.`;
-    return room;
   }, { applyLocally: false });
-  if (!result.committed) throw new Error("The draw could not be completed.");
+  if (!result.committed) throw new Error(actionError);
 }
 
 function validateCombinedMeld(cards, rules) {
@@ -219,9 +260,20 @@ export async function discardSelectedCard(code, uid, cardId) {
       room.publicState.handCounts[uid] = room.privateHands[uid].length;
       room.publicState.lastAction = `${player.nickname} discarded ${card.rank}${card.suit}${freezesPile ? " and froze the discard pile" : ""}.`;
       if (room.privateHands[uid].length === 0) return finishRound(room, uid);
+
       const { players } = activePlayer(room);
-      room.publicState.currentPlayerIndex = (Number(room.publicState.currentPlayerIndex || 0) + 1) % players.length;
+      const nextIndex = (Number(room.publicState.currentPlayerIndex || 0) + 1) % players.length;
+      const nextPlayer = players[nextIndex];
+      room.publicState.currentPlayerIndex = nextIndex;
       room.publicState.turnPhase = "draw";
+
+      if (!room.stock?.length) {
+        const status = stockExhaustionPickupStatus(room, nextPlayer);
+        if (!status.canTake) {
+          return finishRound(room, null, { reason: "stock-exhausted", blockedUid: nextPlayer.uid });
+        }
+        room.publicState.lastAction = `${room.publicState.lastAction} ${emptyStockMessage(room, nextPlayer)}`;
+      }
       return room;
     } catch (error) {
       actionError = error.message;

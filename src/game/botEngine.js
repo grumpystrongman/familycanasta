@@ -6,7 +6,10 @@ import {
   isWild,
   openingRequirementForTeam,
 } from "./engine.js";
-import { planDiscardPickup } from "./discardPickupPlanner.js";
+import {
+  planDiscardPickup,
+  stockExhaustionPickupStatus,
+} from "./discardPickupPlanner.js";
 
 const rankOrder = ["4","5","6","7","8","9","10","J","Q","K","A","2","JOKER","3"];
 
@@ -75,24 +78,79 @@ function takePileForRobot(state, player, hand, plan) {
   return state.privateHands[player.uid];
 }
 
+function drawOneReplacingRedThreesForRobot(state, player) {
+  state.stock ||= [];
+  state.privateHands[player.uid] ||= [];
+  state.publicState.redThrees ||= {};
+  state.publicState.redThrees[player.uid] ||= [];
+
+  let redThreeCount = 0;
+  let card = state.stock.pop();
+  while (card && isRedThree(card)) {
+    state.publicState.redThrees[player.uid].push(card);
+    redThreeCount += 1;
+    card = state.stock.pop();
+  }
+  if (card) state.privateHands[player.uid].push(card);
+  state.publicState.stockCount = state.stock.length;
+  return {
+    card,
+    redThreeCount,
+    missingReplacement: redThreeCount > 0 && !card,
+  };
+}
+
 function drawForRobot(state, player, rules) {
   let hand = [...(state.privateHands[player.uid] || [])];
-  const stock = [...(state.stock || [])];
-  let source = "stock";
-  const pickupPlan = pickupPlanOrNull(state, player);
+  const stockEmpty = !(state.stock || []).length;
+  const exhaustion = stockEmpty ? stockExhaustionPickupStatus(state, player) : null;
+  const pickupPlan = exhaustion?.plan || pickupPlanOrNull(state, player);
+  const shouldTakePile = pickupPlan && (
+    exhaustion?.mustTake
+    || (!stockEmpty && pileValue(state, player, hand) >= 18)
+    || (stockEmpty && pileValue(state, player, hand) >= 18)
+  );
 
-  if (pickupPlan && pileValue(state, player, hand) >= 18) {
+  if (shouldTakePile) {
     hand = takePileForRobot(state, player, hand, pickupPlan);
-    source = "discard pile";
-  } else {
-    const drawCount = Math.max(1, Number(rules.drawCount || 2));
-    for (let draw = 0; draw < drawCount && stock.length; draw += 1) hand.push(stock.pop());
-    state.stock = stock;
-    state.publicState.stockCount = stock.length;
-    state.privateHands[player.uid] = hand;
+    return {
+      source: "discard pile",
+      redCount: 0,
+      stockBlocked: false,
+      missingReplacement: false,
+      declinedPickup: false,
+    };
   }
 
-  return source;
+  if (stockEmpty) {
+    return {
+      source: null,
+      redCount: 0,
+      stockBlocked: true,
+      missingReplacement: false,
+      declinedPickup: Boolean(exhaustion?.canTake),
+    };
+  }
+
+  const drawCount = Math.max(1, Number(rules.drawCount || 2));
+  let redCount = 0;
+  let missingReplacement = false;
+  for (let draw = 0; draw < drawCount && state.stock.length; draw += 1) {
+    const outcome = drawOneReplacingRedThreesForRobot(state, player);
+    redCount += outcome.redThreeCount;
+    if (outcome.missingReplacement) {
+      missingReplacement = true;
+      break;
+    }
+  }
+
+  return {
+    source: "stock",
+    redCount,
+    stockBlocked: false,
+    missingReplacement,
+    declinedPickup: false,
+  };
 }
 
 function candidateMelds(hand, currentMelds, rules) {
@@ -264,6 +322,7 @@ function discardForRobot(state, player, rules) {
   state.publicState.discardPile ||= [];
   state.publicState.discardPile.push(discard);
   if (isWild(discard) && rules.freezeOnWild !== false) state.publicState.discardFrozen = true;
+  if (isBlackThree(discard) && rules.freezeOnBlackThree !== false) state.publicState.discardFrozen = true;
   return discard;
 }
 
@@ -287,6 +346,14 @@ function replaceRedThrees(state, player) {
   return redThrees.length;
 }
 
+function stockContinuationMessage(state, player) {
+  const status = stockExhaustionPickupStatus(state, player);
+  if (!status.canTake) return "";
+  return status.mustTake
+    ? `The stock is exhausted. ${player.nickname} must take the discard pile.`
+    : `The stock is exhausted. ${player.nickname} may take the discard pile or end the round.`;
+}
+
 export function executeRobotTurn(room) {
   const state = structuredClone(room);
   const players = Object.values(state.members || {}).sort((a, b) => a.seat - b.seat);
@@ -295,8 +362,20 @@ export function executeRobotTurn(room) {
   if (!player?.isRobot || state.status !== "playing" || state.publicState?.phase !== "playing") return room;
 
   state.publicState.turnPhase = "draw";
-  const source = drawForRobot(state, player, state.rules || {});
-  const redCount = replaceRedThrees(state, player);
+  const drawResult = drawForRobot(state, player, state.rules || {});
+  if (drawResult.stockBlocked) {
+    return finishRound(state, null, {
+      reason: "stock-exhausted",
+      blockedUid: player.uid,
+      declinedPickup: drawResult.declinedPickup,
+    });
+  }
+  if (drawResult.missingReplacement) {
+    return finishRound(state, null, { reason: "last-red-three", blockedUid: player.uid });
+  }
+
+  let redCount = drawResult.redCount;
+  if (drawResult.source === "discard pile") redCount += replaceRedThrees(state, player);
   state.publicState.turnPhase = "play";
   const meldResult = applyMelds(state, player, state.rules || {});
   if (state.publicState?.pendingDiscardPickup?.uid === player.uid) return room;
@@ -307,9 +386,20 @@ export function executeRobotTurn(room) {
   state.publicState.handCounts ||= {};
   state.publicState.handCounts[player.uid] = hand.length;
   state.publicState.botThinkingUid = null;
-  state.publicState.lastAction = `${player.nickname} drew from the ${source}${redCount ? `, laid down ${redCount} red three${redCount === 1 ? "" : "s"}` : ""}${meldResult.count ? `, played ${meldResult.count} card${meldResult.count === 1 ? "" : "s"}` : ""}${discarded ? `, and discarded ${discarded.rank}${discarded.suit}` : ""}.`;
+  state.publicState.lastAction = `${player.nickname} drew from the ${drawResult.source}${redCount ? `, laid down ${redCount} red three${redCount === 1 ? "" : "s"}` : ""}${meldResult.count ? `, played ${meldResult.count} card${meldResult.count === 1 ? "" : "s"}` : ""}${discarded ? `, and discarded ${discarded.rank}${discarded.suit}` : ""}.`;
   if (!hand.length) return finishRound(state, player.uid);
-  state.publicState.currentPlayerIndex = (index + 1) % players.length;
+
+  const nextIndex = (index + 1) % players.length;
+  const nextPlayer = players[nextIndex];
+  state.publicState.currentPlayerIndex = nextIndex;
   state.publicState.turnPhase = "draw";
+
+  if (!(state.stock || []).length) {
+    const status = stockExhaustionPickupStatus(state, nextPlayer);
+    if (!status.canTake) {
+      return finishRound(state, null, { reason: "stock-exhausted", blockedUid: nextPlayer.uid });
+    }
+    state.publicState.lastAction = `${state.publicState.lastAction} ${stockContinuationMessage(state, nextPlayer)}`;
+  }
   return state;
 }

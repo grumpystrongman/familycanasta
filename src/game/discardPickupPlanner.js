@@ -74,6 +74,10 @@ export function planDiscardPickup(room, player) {
   }
 
   const hand = room.privateHands?.[player.uid] || [];
+  if (hand.length === 1 && pile.length === 1) {
+    throw new Error("A one-card hand cannot take a one-card discard pile.");
+  }
+
   const board = room.publicState?.teamBoards?.[player.team] || [];
   const existing = board.find((meld) => meld.rank === top.rank);
   if ((existing?.cards?.length || 0) >= 7) {
@@ -121,4 +125,26 @@ export function planDiscardPickup(room, player) {
     forcedCards: [top, ...requiredNaturals],
     usedNaturalIds: requiredNaturals.map((card) => card.id),
   };
+}
+
+export function stockExhaustionPickupStatus(room, player) {
+  try {
+    const plan = planDiscardPickup(room, player);
+    const frozen = room.publicState?.discardFrozen !== false;
+    const board = room.publicState?.teamBoards?.[player.team] || [];
+    const existing = board.find((meld) => meld.rank === plan.top.rank);
+    return {
+      canTake: true,
+      mustTake: !frozen && Boolean(existing),
+      plan,
+      reason: "",
+    };
+  } catch (error) {
+    return {
+      canTake: false,
+      mustTake: false,
+      plan: null,
+      reason: error.message,
+    };
+  }
 }

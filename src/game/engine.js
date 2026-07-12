@@ -98,7 +98,7 @@ export function cardPoints(card) {
   if (card?.rank === "JOKER") return 50;
   if (card?.rank === "2" || card?.rank === "A") return 20;
   if (["K","Q","J","10","9","8"].includes(card?.rank)) return 10;
-  if (["7","6","5","4"].includes(card?.rank)) return 5;
+  if (isBlackThree(card) || ["7","6","5","4"].includes(card?.rank)) return 5;
   return 0;
 }
 
@@ -133,7 +133,9 @@ export function scoreTeamBoard(room, team, wentOutTeam = null) {
 
   const canastaBonus = cleanCanastas * Number(rules.cleanCanastaBonus || 500)
     + dirtyCanastas * Number(rules.dirtyCanastaBonus || 300);
-  const goingOutPoints = Number(wentOutTeam) === Number(team) ? Number(rules.goingOutBonus || 100) : 0;
+  const goingOutPoints = wentOutTeam !== null && Number(wentOutTeam) === Number(team)
+    ? Number(rules.goingOutBonus || 100)
+    : 0;
   const handPenalty = Object.values(room.members || {})
     .filter((member) => Number(member.team) === Number(team))
     .flatMap((member) => room.privateHands?.[member.uid] || [])
@@ -154,9 +156,11 @@ export function scoreTeamBoard(room, team, wentOutTeam = null) {
   };
 }
 
-export function finishRound(room, wentOutUid) {
+export function finishRound(room, wentOutUid = null, options = {}) {
   const state = structuredClone(room);
-  const wentOutTeam = Number(state.members?.[wentOutUid]?.team);
+  const reason = options.reason || (wentOutUid ? "went-out" : "stock-exhausted");
+  const wentOutMember = wentOutUid ? state.members?.[wentOutUid] : null;
+  const wentOutTeam = wentOutMember ? Number(wentOutMember.team) : null;
   const teamCount = Number(state.rules?.teamCount || 2);
   const breakdowns = teamRecord(teamCount, (team) => scoreTeamBoard(state, team, wentOutTeam));
   const currentScores = state.publicState?.teamScores || Array.from({ length: teamCount }, () => 0);
@@ -165,8 +169,29 @@ export function finishRound(room, wentOutUid) {
     (_, team) => Number(currentScores[team] || 0) + breakdowns[team].roundTotal,
   );
   state.publicState.roundBreakdowns = breakdowns;
-  state.publicState.wentOutUid = wentOutUid;
-  state.publicState.wentOutTeam = wentOutTeam;
+  state.publicState.roundEndReason = reason;
+  state.publicState.roundEndedAt = Date.now();
+
+  if (wentOutUid && wentOutTeam !== null) {
+    state.publicState.wentOutUid = wentOutUid;
+    state.publicState.wentOutTeam = wentOutTeam;
+  } else {
+    delete state.publicState.wentOutUid;
+    delete state.publicState.wentOutTeam;
+  }
+
+  if (options.blockedUid) state.publicState.stockBlockedUid = options.blockedUid;
+  else delete state.publicState.stockBlockedUid;
+
+  const blockedName = state.members?.[options.blockedUid]?.nickname || "The next player";
+  const roundEndSummary = reason === "last-red-three"
+    ? "The final stock card was a red three and no replacement card was available."
+    : reason === "stock-exhausted"
+      ? options.declinedPickup
+        ? `The stock is exhausted and ${blockedName} chose to end the round instead of taking the discard pile.`
+        : `The stock is exhausted and ${blockedName} cannot continue from the discard pile.`
+      : `${wentOutMember?.nickname || "A player"} went out.`;
+  state.publicState.roundEndSummary = roundEndSummary;
 
   const targetScore = Number(state.rules?.targetScore || 5000);
   const winningScore = Math.max(...state.publicState.teamScores);
@@ -180,11 +205,11 @@ export function finishRound(room, wentOutUid) {
     state.publicState.winnerTeam = winnerTeam;
     state.publicState.winningScore = winningScore;
     state.publicState.gameEndedAt = Date.now();
-    state.publicState.lastAction = `Team ${TEAM_NAMES[winnerTeam]} wins the game with ${winningScore.toLocaleString()} points!`;
+    state.publicState.lastAction = `${roundEndSummary} Team ${TEAM_NAMES[winnerTeam]} wins the game with ${winningScore.toLocaleString()} points!`;
   } else {
     state.publicState.phase = "handOver";
     state.publicState.turnPhase = "complete";
-    state.publicState.lastAction = `${state.members?.[wentOutUid]?.nickname || "A player"} went out. Round scoring is complete.`;
+    state.publicState.lastAction = `${roundEndSummary} Round scoring is complete.`;
   }
   return state;
 }
