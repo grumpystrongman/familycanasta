@@ -39,6 +39,12 @@ function calculateTeam(room, team) {
   };
 }
 
+function setTextIfChanged(node, value) {
+  if (!node) return;
+  const next = String(value);
+  if (node.textContent !== next) node.textContent = next;
+}
+
 export default function ScoringDisplayFix() {
   const [roomCode, setRoomCode] = useState("");
   const [room, setRoom] = useState(null);
@@ -82,35 +88,28 @@ export default function ScoringDisplayFix() {
         const score = calculateTeam(room, team);
         const rows = scoreCard.querySelectorAll(".score-lines > span");
         if (rows[0]) {
-          const label = rows[0].querySelector("i");
-          const value = rows[0].querySelector("b");
-          if (label) label.textContent = "Current board points";
-          if (value) value.textContent = String(score.currentBoard);
+          setTextIfChanged(rows[0].querySelector("i"), "Current board points");
+          setTextIfChanged(rows[0].querySelector("b"), score.currentBoard);
         }
         if (rows[1]) {
-          const label = rows[1].querySelector("i");
-          const value = rows[1].querySelector("b");
-          if (label) label.textContent = "Cards on board";
-          if (value) value.textContent = String(score.cardCount);
+          setTextIfChanged(rows[1].querySelector("i"), "Cards on board");
+          setTextIfChanged(rows[1].querySelector("b"), score.cardCount);
         }
         if (rows[4]) {
-          const label = rows[4].querySelector("i");
-          const value = rows[4].querySelector("b");
-          if (label) label.textContent = room.rules?.unprotectedRedThreesPenalty ? "Red threes" : "Red threes";
-          if (value) value.textContent = `${score.redThreeCount} · ${score.redThreePoints}`;
+          setTextIfChanged(rows[4].querySelector("i"), "Red threes");
+          setTextIfChanged(rows[4].querySelector("b"), `${score.redThreeCount} · ${score.redThreePoints}`);
         }
       });
 
       [...document.querySelectorAll(".shared-board")].forEach((board, team) => {
         const score = calculateTeam(room, team);
-        const total = board.querySelector(".board-title strong");
-        if (total) total.textContent = `${score.currentBoard} pts on board`;
+        setTextIfChanged(board.querySelector(".board-title strong"), `${score.currentBoard} pts on board`);
       });
     };
 
     apply();
     const observer = new MutationObserver(apply);
-    observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+    observer.observe(document.body, { childList: true, subtree: true });
     return () => observer.disconnect();
   }, [room]);
 
