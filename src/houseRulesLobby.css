@@ -36,6 +36,13 @@
   gap: 0.35rem;
 }
 
+.house-rules-panel label small,
+.house-rule-toggle small,
+.house-rules-readonly,
+.house-rules-save-status {
+  opacity: 0.72;
+}
+
 .house-rule-toggle {
   grid-template-columns: 1fr auto !important;
   align-items: center;
@@ -47,15 +54,15 @@
   gap: 0.2rem;
 }
 
-.house-rule-toggle small,
-.house-rules-readonly {
-  opacity: 0.72;
-}
-
 .canasta-requirements {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.65rem;
+}
+
+.house-rules-save-status {
+  margin: -0.35rem 0 0;
+  font-size: 0.9rem;
 }
 
 .house-rules-start {
