@@ -1,0 +1,25 @@
+name: Forward restore playable snapshot
+
+on:
+  push:
+    branches:
+      - fix/forward-restore-playable
+
+permissions:
+  contents: write
+
+jobs:
+  restore:
+    if: github.event.head_commit.message == 'chore: trigger forward playable restore'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Restore exact known-playable tree as a forward commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git read-tree --reset -u 577ac753da8e92577f7266bf1264dac12bcd8d24
+          git commit -m "Restore last known playable snapshot as a forward commit"
+          git push origin HEAD:fix/forward-restore-playable
