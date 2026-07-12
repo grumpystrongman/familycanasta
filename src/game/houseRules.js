@@ -137,7 +137,7 @@ export function countCanastas(board = []) {
 
 export function goOutRequirementStatus(room, team) {
   const rules = activeHouseRules(room).winConditions;
-  const board = room.publicState?.teamBoards?.[team] || [];
+  const board = room?.publicState?.teamBoards?.[team] || [];
   const actual = countCanastas(board);
   const required = rules.canastasRequiredToGoOut;
   const missing = Object.fromEntries(

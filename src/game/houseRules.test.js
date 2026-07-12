@@ -98,6 +98,18 @@ test("canasta counting distinguishes clean, dirty, and wild", () => {
   assert.deepEqual(counts, { clean: 1, dirty: 1, wild: 1 });
 });
 
+test("go-out status safely handles an unloaded room", () => {
+  const status = goOutRequirementStatus(null, 0);
+
+  assert.equal(status.eligible, false);
+  assert.deepEqual(status.actual, {
+    clean: 0,
+    dirty: 0,
+    wild: 0,
+  });
+  assert.equal(status.totalMissing, 1);
+});
+
 test("go out validator enforces canasta mix and final discard rule", () => {
   const rules = {
     ...DEFAULT_HOUSE_RULES,
