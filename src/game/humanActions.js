@@ -10,6 +10,10 @@ import {
   sortHand,
 } from "./engine";
 import { planDiscardPickup, validatePendingPickupSelection } from "./discardPickupPlanner";
+import {
+  drawOneWithRedThreeReplacement,
+  extractRedThreesFromClaimedPile,
+} from "./redThreeRules.js";
 
 function orderedPlayers(room) {
   return Object.values(room.members || {}).sort((a, b) => a.seat - b.seat);
@@ -32,35 +36,48 @@ function assertTurn(room, uid, phase) {
   return player;
 }
 
-function drawOneReplacingRedThrees(room, uid) {
-  room.privateHands ||= {};
-  room.privateHands[uid] ||= [];
-  room.stock ||= [];
-  room.publicState.redThrees ||= {};
-  room.publicState.redThrees[uid] ||= [];
-  let card = room.stock.pop();
-  while (card && isRedThree(card)) {
-    room.publicState.redThrees[uid].push(card);
-    card = room.stock.pop();
-  }
-  if (card) room.privateHands[uid].push(card);
-  room.privateHands[uid] = sortHand(room.privateHands[uid]);
-  room.publicState.handCounts[uid] = room.privateHands[uid].length;
-  room.publicState.stockCount = room.stock.length;
-  return card;
+function advanceTurnWithoutDiscard(room) {
+  const { players } = activePlayer(room);
+  room.publicState.currentPlayerIndex = (Number(room.publicState.currentPlayerIndex || 0) + 1) % players.length;
+  room.publicState.turnPhase = "draw";
+  room.publicState.stockExhausted = true;
+  room.publicState.endRoundCheckRequested = true;
 }
 
 export async function drawFromStock(code, uid) {
   const result = await runTransaction(ref(db, `rooms/${code}`), (room) => {
     const player = assertTurn(room, uid, "draw");
-    if (!room.stock?.length) return room;
+    if (!room.stock?.length) {
+      room.publicState.stockExhausted = true;
+      room.publicState.endRoundCheckRequested = true;
+      room.publicState.lastAction = "The stock is empty. Checking whether the round can continue.";
+      return room;
+    }
+
     const requested = Math.max(1, Number(room.rules?.drawCount || 2));
     let drawn = 0;
+    let exposed = 0;
+    let exhaustedOnRedThree = false;
+
     for (let index = 0; index < requested && room.stock.length; index += 1) {
-      if (drawOneReplacingRedThrees(room, uid)) drawn += 1;
+      const draw = drawOneWithRedThreeReplacement(room, uid);
+      if (draw.card) drawn += 1;
+      exposed += draw.exposed.length;
+      if (draw.exhaustedOnRedThree) {
+        exhaustedOnRedThree = true;
+        break;
+      }
     }
+
+    if (exhaustedOnRedThree) {
+      advanceTurnWithoutDiscard(room);
+      room.publicState.lastAction = `${player.nickname} exposed the final stock card as a red three. No replacement was available, so the turn ended without a discard.`;
+      return room;
+    }
+
     room.publicState.turnPhase = "play";
-    room.publicState.lastAction = `${player.nickname} drew ${drawn} card${drawn === 1 ? "" : "s"} from the stock.`;
+    room.publicState.stockExhausted = room.stock.length === 0;
+    room.publicState.lastAction = `${player.nickname} drew ${drawn} card${drawn === 1 ? "" : "s"} from the stock${exposed ? ` and exposed ${exposed} red three${exposed === 1 ? "" : "s"}` : ""}.`;
     return room;
   }, { applyLocally: false });
   if (!result.committed) throw new Error("The draw could not be completed.");
@@ -90,7 +107,8 @@ export async function takeDiscardPile(code, uid) {
       const board = room.publicState.teamBoards[player.team];
 
       if (plan.mode === "pending-opening") {
-        room.privateHands[uid] = sortHand([...hand, ...plan.pile]);
+        const claimed = extractRedThreesFromClaimedPile(room, uid, plan.pile);
+        room.privateHands[uid] = sortHand([...hand, ...claimed.handCards]);
         room.publicState.pendingDiscardPickup = {
           uid,
           team: player.team,
@@ -100,7 +118,7 @@ export async function takeDiscardPile(code, uid) {
           requiredNaturalCount: plan.requiredNaturalCount,
           requirement: plan.requirement,
         };
-        room.publicState.lastAction = `${player.nickname} took the discard pile. Their opening must include the picked-up ${plan.rank} and two natural ${plan.rank}s.`;
+        room.publicState.lastAction = `${player.nickname} took the discard pile. Their opening must include the picked-up ${plan.rank} and two natural ${plan.rank}s.${claimed.exposed.length ? ` ${claimed.exposed.length} buried red three${claimed.exposed.length === 1 ? " was" : "s were"} exposed without replacement.` : ""}`;
       } else {
         if (plan.existing) {
           plan.existing.cards = [...(plan.existing.cards || []), ...plan.forcedCards];
@@ -108,12 +126,13 @@ export async function takeDiscardPile(code, uid) {
           board.push({ rank: plan.top.rank, cards: plan.forcedCards });
         }
         const used = new Set(plan.usedNaturalIds);
+        const claimed = extractRedThreesFromClaimedPile(room, uid, plan.lowerPile);
         room.privateHands[uid] = sortHand([
           ...hand.filter((card) => !used.has(card.id)),
-          ...plan.lowerPile,
+          ...claimed.handCards,
         ]);
         room.publicState.pendingDiscardPickup = null;
-        room.publicState.lastAction = `${player.nickname} took the discard pile, played the top ${plan.top.rank}, and kept the remaining cards in hand.`;
+        room.publicState.lastAction = `${player.nickname} took the discard pile, played the top ${plan.top.rank}, and kept the remaining cards in hand.${claimed.exposed.length ? ` ${claimed.exposed.length} buried red three${claimed.exposed.length === 1 ? " was" : "s were"} exposed without replacement.` : ""}`;
       }
 
       room.publicState.discardPile = [];
@@ -209,7 +228,7 @@ export async function discardSelectedCard(code, uid, cardId) {
       const hand = room.privateHands?.[uid] || [];
       const card = hand.find((item) => item.id === cardId);
       if (!card) throw new Error("That card is no longer in your hand.");
-      if (isRedThree(card)) throw new Error("Red threes are laid down automatically and replaced.");
+      if (isRedThree(card)) throw new Error("Red threes cannot be discarded. They must be exposed face-up.");
       room.privateHands[uid] = hand.filter((item) => item.id !== cardId);
       room.publicState.discardPile ||= [];
       room.publicState.discardPile.push(card);
