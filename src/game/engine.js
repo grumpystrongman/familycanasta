@@ -221,7 +221,7 @@ export function dealHand({ players, rules, dealerIndex, existingScores }) {
   );
   return {
     publicState: {
-      phase: "dealing",
+      phase: "playing",
       dealerIndex,
       currentPlayerIndex: (dealerIndex + 1) % players.length,
       turnPhase: "draw",
@@ -236,9 +236,9 @@ export function dealHand({ players, rules, dealerIndex, existingScores }) {
       redThrees,
       handCounts: Object.fromEntries(players.map((player) => [player.uid, hands[player.uid].length])),
       dealOrder: order,
-      dealAnimationIndex: 0,
+      dealAnimationIndex: order.length,
       handNumber: 1,
-      lastAction: "Cards are being dealt.",
+      lastAction: "The first turn is ready.",
       botThinkingUid: null,
     },
     privateHands: hands,
