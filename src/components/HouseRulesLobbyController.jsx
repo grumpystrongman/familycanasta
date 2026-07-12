@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { onValue, ref, update } from "firebase/database";
 import { auth, db } from "../firebase";
@@ -14,22 +14,37 @@ function findLobbyElements() {
   const roomCode = lobby?.querySelector(".code b")?.textContent?.trim() || "";
   const actions = lobby?.querySelector(".lobby-actions") || null;
   const originalStart = actions?.querySelector(":scope > button.primary") || null;
-  return { lobby, roomCode, actions, originalStart };
+  return {
+    roomCode,
+    actions,
+    originalStart,
+    startDisabled: Boolean(originalStart?.disabled),
+  };
 }
 
 export default function HouseRulesLobbyController() {
-  const [domVersion, setDomVersion] = useState(0);
+  const [elements, setElements] = useState(() => findLobbyElements());
   const [room, setRoom] = useState(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const observer = new MutationObserver(() => setDomVersion((value) => value + 1));
-    observer.observe(document.body, { childList: true, subtree: true });
-    return () => observer.disconnect();
+    const timer = window.setInterval(() => {
+      const next = findLobbyElements();
+      setElements((current) => {
+        if (
+          current.roomCode === next.roomCode
+          && current.actions === next.actions
+          && current.originalStart === next.originalStart
+          && current.startDisabled === next.startDisabled
+        ) {
+          return current;
+        }
+        return next;
+      });
+    }, 250);
+    return () => window.clearInterval(timer);
   }, []);
-
-  const elements = useMemo(() => findLobbyElements(), [domVersion]);
 
   useEffect(() => {
     if (!elements.roomCode) {
@@ -76,7 +91,7 @@ export default function HouseRulesLobbyController() {
   }
 
   async function startGame() {
-    if (!host || !elements.originalStart || elements.originalStart.disabled) return;
+    if (!host || !elements.originalStart || elements.startDisabled) return;
     setSaving(true);
     setError("");
     try {
@@ -107,7 +122,7 @@ export default function HouseRulesLobbyController() {
         <button
           type="button"
           className="primary house-rules-start"
-          disabled={saving || Boolean(elements.originalStart?.disabled)}
+          disabled={saving || elements.startDisabled}
           onClick={startGame}
         >
           {saving ? "Saving rules…" : "Start game"}
