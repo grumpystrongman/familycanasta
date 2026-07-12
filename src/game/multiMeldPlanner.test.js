@@ -60,3 +60,21 @@ test("allows fewer than three selected cards when adding to an existing meld", (
   assert.equal(plan.valid, true);
   assert.equal(plan.groups[0].points, 10);
 });
+
+test("accepts sixes, nines, and jacks with a nearby wild as separate melds", () => {
+  const selection = [
+    card("6s", "6"), card("6d", "6", "D"), card("6h", "6", "H"),
+    card("9s", "9"), card("9d", "9", "D"), card("9h", "9", "H"),
+    card("js", "J"), card("jd", "J", "D"), card("2s", "2"),
+  ];
+
+  const plan = planGroupedMelds(selection);
+
+  assert.equal(plan.valid, true);
+  assert.equal(plan.totalPoints, 85);
+  assert.deepEqual(plan.groups.map((group) => [group.rank, group.points]), [
+    ["6", 15],
+    ["9", 30],
+    ["J", 40],
+  ]);
+});

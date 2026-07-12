@@ -8,6 +8,19 @@
   z-index: 220;
 }
 
+.selection-advisor > .multi-meld-tools {
+  display: flex;
+  flex: 0 1 auto;
+  flex-direction: row;
+  align-items: center;
+}
+
+.selection-advisor.grouped-meld-mode > .multi-meld-tools {
+  flex: 1 1 100%;
+  width: 100%;
+  margin-left: 0;
+}
+
 .multi-meld-preview {
   flex-basis: 100%;
   display: grid;
@@ -116,17 +129,21 @@
 .undo-play-button {
   border: 0;
   border-radius: 10px;
+  min-height: 42px;
   padding: 9px 12px;
   font-weight: 900;
 }
 
 .multi-meld-button {
+  flex: 1 1 280px;
   background: #4fc58e;
   color: #08281d;
   box-shadow: 0 0 0 3px #4fc58e33;
+  justify-content: center;
 }
 
 .undo-play-button {
+  flex: 0 0 auto;
   background: #e7eef0;
   color: #173027;
 }
@@ -142,6 +159,7 @@
   color: #d7e7e1 !important;
   font-size: 11px !important;
   font-weight: 700;
+  line-height: 1.4;
 }
 
 .multi-meld-error {
@@ -155,6 +173,10 @@
 
 .selection-advisor {
   flex-wrap: wrap;
+}
+
+.selection-advisor.grouped-meld-mode {
+  align-items: flex-start;
 }
 
 .board-meld .real-card,
@@ -184,14 +206,15 @@
 }
 
 @media (max-width: 850px) {
-  .multi-meld-tools {
+  .multi-meld-tools,
+  .selection-advisor > .multi-meld-tools {
     width: 100%;
     margin-left: 0;
   }
 
   .multi-meld-button,
   .undo-play-button {
-    flex: 1;
+    flex: 1 1 100%;
     justify-content: center;
   }
 
