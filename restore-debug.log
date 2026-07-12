@@ -1,0 +1,9 @@
++ cp .github/workflows/forward-restore.yml /tmp/forward-restore.yml
++ git config user.name 'github-actions[bot]'
++ git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
++ git cat-file -t 577ac753da8e92577f7266bf1264dac12bcd8d24
+commit
++ git read-tree --reset -u 577ac753da8e92577f7266bf1264dac12bcd8d24
++ mkdir -p .github/workflows
++ cp /tmp/forward-restore.yml .github/workflows/forward-restore.yml
++ git add -A
