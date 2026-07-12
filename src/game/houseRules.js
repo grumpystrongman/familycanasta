@@ -152,6 +152,12 @@ export function goOutRequirementStatus(room, team) {
     .map(([type, value]) => `${value} ${type}`);
   if (totalMissing) missingParts.unshift(`${totalMissing} completed`);
 
+  let message = "Your team is eligible to go out.";
+  if (missingParts.length) {
+    const canastaLabel = Math.max(totalMissing, typedMissing) === 1 ? "canasta" : "canastas";
+    message = `Your team still needs ${missingParts.join(", ")} ${canastaLabel} to go out.`;
+  }
+
   return {
     eligible: totalMissing === 0 && typedMissing === 0,
     actual,
@@ -160,9 +166,7 @@ export function goOutRequirementStatus(room, team) {
     totalActual,
     totalRequired,
     totalMissing,
-    message: missingParts.length
-      ? `Your team still needs ${missingParts.join(", ")} canasta${Math.max(totalMissing, typedMissing) === 1 ? "" : "s"} to go out.`
-      : "Your team is eligible to go out.",
+    message,
   };
 }
 
