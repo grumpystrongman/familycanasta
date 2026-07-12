@@ -14,16 +14,10 @@ export const DEFAULT_HOUSE_RULES = Object.freeze({
     pureAcesRule: false,
   },
   winConditions: {
-    canastasRequiredToGoOut: {
-      clean: 0,
-      dirty: 1,
-      wild: 0,
-    },
+    canastasRequiredToGoOut: { clean: 0, dirty: 1, wild: 0 },
     allowFinalDiscardToGoOut: true,
   },
-  deckVariation: {
-    variant: "Classic",
-  },
+  deckVariation: { variant: "Classic" },
 });
 
 function integer(value, fallback, minimum = 0, maximum = 20) {
@@ -74,7 +68,12 @@ export function variantProfile(variant) {
 }
 
 export function activeHouseRules(room) {
-  return normalizeHouseRules(room?.activeRules || room?.houseRules || DEFAULT_HOUSE_RULES);
+  return normalizeHouseRules(
+    room?.activeRules
+      || room?.houseRules
+      || room?.rules?.houseRules
+      || DEFAULT_HOUSE_RULES,
+  );
 }
 
 export function validateDrawAction(room, player, source = "stock") {
@@ -145,7 +144,11 @@ export function validateGoOutAction(room, player, method = "meld") {
     ["clean", "dirty", "wild"].map((type) => [type, Math.max(0, required[type] - actual[type])]),
   );
   if (Object.values(missing).some(Boolean)) {
-    throw new Error(`Your team still needs ${Object.entries(missing).filter(([, value]) => value).map(([type, value]) => `${value} ${type}`).join(", ")} canasta${Object.values(missing).reduce((sum, value) => sum + value, 0) === 1 ? "" : "s"} to go out.`);
+    const description = Object.entries(missing)
+      .filter(([, value]) => value)
+      .map(([type, value]) => `${value} ${type}`)
+      .join(", ");
+    throw new Error(`Your team still needs ${description} canasta${Object.values(missing).reduce((sum, value) => sum + value, 0) === 1 ? "" : "s"} to go out.`);
   }
   if (method === "discard" && !rules.allowFinalDiscardToGoOut) {
     throw new Error("Going out with a final discard is disabled by the house rules.");
