@@ -16,6 +16,7 @@ import "./redThreeBoard.css";
 import "./redThreeTurn.css";
 import "./safeDiscard.css";
 import "./homeRules.css";
+import "./topActionBar.css";
 
 const rootElement = document.getElementById("root");
 
