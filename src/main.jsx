@@ -18,6 +18,7 @@ import "./safeDiscard.css";
 import "./homeRules.css";
 import "./topActionBar.css";
 import "./emotes.css";
+import "./autoSort.css";
 
 const rootElement = document.getElementById("root");
 
@@ -113,6 +114,7 @@ const enhancementLoaders = [
   ["HomeRulesOptions", () => import("./HomeRulesOptions")],
   ["ScoringDisplayFix", () => import("./ScoringDisplayFix")],
   ["EmoteEnhancer", () => import("./EmoteEnhancer")],
+  ["AutoSortEnhancer", () => import("./AutoSortEnhancer")],
 ];
 
 async function mountEnhancement(name, load) {
