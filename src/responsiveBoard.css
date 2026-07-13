@@ -93,11 +93,20 @@
   position: sticky;
   top: 0;
   z-index: 3;
+  display: grid !important;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 5px 8px;
   cursor: pointer;
   border-radius: 10px;
   padding: 4px;
   background: #06372ff2;
   outline: none;
+}
+
+.responsive-board-ready .board-title > small,
+.responsive-board-ready .board-title > strong {
+  grid-column: 2;
 }
 
 .responsive-board-ready .board-title::after {
