@@ -1,0 +1,22 @@
+name: Sonar diagnostic
+
+on:
+  push:
+    branches:
+      - agent/black-threes-compact-board
+
+jobs:
+  report-sonar-issues:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch Sonar issues for PR 27
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --get \
+            --data-urlencode 'componentKeys=grumpystrongman_familycanasta' \
+            --data-urlencode 'pullRequest=27' \
+            --data-urlencode 'issueStatuses=OPEN,CONFIRMED' \
+            --data-urlencode 'ps=100' \
+            'https://sonarcloud.io/api/issues/search' \
+            | jq '{total, issues: [.issues[] | {rule, severity, type, message, component, line, textRange}]}'
