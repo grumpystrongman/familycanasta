@@ -57,6 +57,14 @@ function isLegacyBlackThreeFreeze(room) {
   return room?.publicState?.discardFrozen && isBlackThree(top);
 }
 
+function goOutStatus(plan) {
+  if (!plan.ok) return plan.reason;
+  if (plan.finalDiscard) {
+    return `Ready to go out. ${plan.finalDiscard.rank}${plan.finalDiscard.suit} will be discarded automatically after the black-three meld.`;
+  }
+  return "Ready to go out. The black-three meld will empty your hand.";
+}
+
 export default function BlackThreeRuleFix() {
   const [uid, setUid] = useState(() => auth?.currentUser?.uid || "");
   const [roomCode, setRoomCode] = useState("");
@@ -165,8 +173,8 @@ export default function BlackThreeRuleFix() {
     setError("");
     try {
       await goOutWithBlackThrees(roomCode, uid, selectedIds);
-    } catch (event) {
-      setError(event.message);
+    } catch (error_) {
+      setError(error_.message);
     } finally {
       setBusy(false);
     }
@@ -174,11 +182,7 @@ export default function BlackThreeRuleFix() {
 
   if (!advisor || !blackThreeSelection) return null;
 
-  const status = plan.ok
-    ? plan.finalDiscard
-      ? `Ready to go out. ${plan.finalDiscard.rank}${plan.finalDiscard.suit} will be discarded automatically after the black-three meld.`
-      : "Ready to go out. The black-three meld will empty your hand."
-    : plan.reason;
+  const status = goOutStatus(plan);
 
   return createPortal(
     <div className={`black-three-go-out-tools ${plan.ok ? "ready" : "blocked"}`}>
