@@ -1,9 +1,9 @@
 name: Sonar diagnostic
 
 on:
-  push:
+  pull_request:
     branches:
-      - agent/add-hand-autosort
+      - main
 
 jobs:
   report-sonar-issues:
