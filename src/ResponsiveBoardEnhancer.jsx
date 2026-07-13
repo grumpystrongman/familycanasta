@@ -1,161 +1,149 @@
-import { useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
+import { TEAM_NAMES } from "./game/engine";
 
-const MOBILE_QUERY = "(max-width: 760px)";
+const VIEW_KEY = "canastaBoardView";
+const CUSTOM_KEY = "canastaExpandedTeams";
+const VALID_VIEWS = new Set(["focus", "compact", "full", "custom"]);
 
-function makeButton(label, className, onClick) {
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = className;
-  button.textContent = label;
-  button.addEventListener("click", onClick);
-  return button;
+function readStoredView() {
+  const stored = localStorage.getItem(VIEW_KEY) || "focus";
+  return VALID_VIEWS.has(stored) ? stored : "focus";
 }
 
-function listenForMediaChange(media, listener) {
-  if (typeof media.addEventListener === "function") {
-    media.addEventListener("change", listener);
-    return () => media.removeEventListener("change", listener);
+function readStoredTeams() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(CUSTOM_KEY) || "[]");
+    return Array.isArray(parsed) ? parsed.filter(Number.isInteger) : [];
+  } catch {
+    return [];
   }
+}
 
-  if (typeof media.addListener === "function") {
-    media.addListener(listener);
-    return () => media.removeListener(listener);
-  }
+function currentTeamIndex(game) {
+  const label = game?.querySelector(".identity small")?.textContent || "";
+  return TEAM_NAMES.findIndex((name) => label.includes(name));
+}
 
-  return () => {};
+function expandedForView(view, teamIndex, boardCount, customTeams) {
+  if (view === "full") return Array.from({ length: boardCount }, (_, index) => index);
+  if (view === "compact") return [];
+  if (view === "custom") return customTeams.filter((index) => index >= 0 && index < boardCount);
+  return teamIndex >= 0 ? [teamIndex] : boardCount ? [0] : [];
+}
+
+function applyBoardState(game, view, customTeams) {
+  if (!game) return;
+  const boards = [...game.querySelectorAll(".shared-board")];
+  const teamIndex = currentTeamIndex(game);
+  const expanded = new Set(expandedForView(view, teamIndex, boards.length, customTeams));
+
+  game.classList.add("responsive-board-ready");
+  game.dataset.boardView = view;
+  boards.forEach((board, index) => {
+    const isExpanded = expanded.has(index);
+    board.classList.toggle("board-collapsed", !isExpanded);
+    board.classList.toggle("board-expanded", isExpanded);
+    const title = board.querySelector(".board-title");
+    if (title) {
+      title.tabIndex = 0;
+      title.setAttribute("role", "button");
+      title.setAttribute("aria-expanded", String(isExpanded));
+      title.setAttribute("aria-label", `${isExpanded ? "Collapse" : "Expand"} Team ${TEAM_NAMES[index] || index + 1} board`);
+      title.title = isExpanded ? "Collapse this team board" : "Expand this team board";
+    }
+  });
 }
 
 export default function ResponsiveBoardEnhancer() {
+  const [game, setGame] = useState(null);
+  const [view, setView] = useState(readStoredView);
+  const [customTeams, setCustomTeams] = useState(readStoredTeams);
+
   useEffect(() => {
-    let cleanup = () => {};
-    let pendingEnhance = 0;
-
-    function enhance() {
-      const candidate = document.querySelector(".game-page.enhanced-game");
-      if (candidate?.classList.contains("responsive-board-ready")) return;
-
-      cleanup();
-      const game = candidate;
-      const table = game?.querySelector(".table");
-      const boards = [...(game?.querySelectorAll(".shared-board") || [])];
-      const sidebar = game?.querySelector(".score-chat-sidebar");
-      const hand = game?.querySelector(".hand");
-      const center = game?.querySelector(".center");
-      if (!game || !table || !sidebar || !hand || !center || !boards.length) return;
-
-      try {
-        game.classList.add("responsive-board-ready");
-        const disposers = [];
-        const compactByDefault = boards.length >= 3 || window.innerWidth < 1180;
-
-        boards.forEach((board, index) => {
-          board.classList.toggle("board-collapsed", compactByDefault);
-          const title = board.querySelector(".board-title");
-          if (!title || title.querySelector(".board-view-toggle")) return;
-          const toggle = makeButton(compactByDefault ? "Expand" : "Collapse", "board-view-toggle", () => {
-            const collapsed = board.classList.toggle("board-collapsed");
-            toggle.textContent = collapsed ? "Expand" : "Collapse";
-            try {
-              board.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
-            } catch {
-              board.scrollIntoView();
-            }
-          });
-          toggle.setAttribute("aria-label", `Toggle team ${index + 1} board detail`);
-          title.append(toggle);
-          disposers.push(() => toggle.remove());
-        });
-
-        const viewBar = document.createElement("nav");
-        viewBar.className = "board-view-bar";
-        viewBar.setAttribute("aria-label", "Board view controls");
-        const collapseAll = makeButton("Compact board", "compact-all", () => {
-          boards.forEach((board) => board.classList.add("board-collapsed"));
-          boards.forEach((board) => {
-            const toggle = board.querySelector(".board-view-toggle");
-            if (toggle) toggle.textContent = "Expand";
-          });
-        });
-        const expandAll = makeButton("Full board", "expand-all", () => {
-          boards.forEach((board) => board.classList.remove("board-collapsed"));
-          boards.forEach((board) => {
-            const toggle = board.querySelector(".board-view-toggle");
-            if (toggle) toggle.textContent = "Collapse";
-          });
-        });
-        viewBar.append(collapseAll, expandAll);
-        table.prepend(viewBar);
-
-        const mobileNav = document.createElement("nav");
-        mobileNav.className = "mobile-game-nav";
-        mobileNav.setAttribute("aria-label", "Mobile game navigation");
-        const views = [
-          ["hand", "Hand"],
-          ["board", "Board"],
-          ["score", "Score"],
-          ["chat", "Chat"],
-        ];
-
-        function setMobileView(view) {
-          game.dataset.mobileView = view;
-          [...mobileNav.querySelectorAll("button")].forEach((button) => {
-            const active = button.dataset.view === view;
-            button.classList.toggle("active", active);
-            button.setAttribute("aria-current", active ? "page" : "false");
-          });
-          if (view === "score" || view === "chat") {
-            const tabIndex = view === "score" ? 1 : 2;
-            sidebar.querySelector(`.sidebar-tabs button:nth-child(${tabIndex})`)?.click();
-          }
-        }
-
-        views.forEach(([view, label]) => {
-          const button = makeButton(label, "", () => setMobileView(view));
-          button.dataset.view = view;
-          mobileNav.append(button);
-        });
-        game.append(mobileNav);
-        setMobileView("hand");
-
-        const media = window.matchMedia(MOBILE_QUERY);
-        const syncMode = () => {
-          game.classList.toggle("phone-layout", media.matches);
-          if (!media.matches) delete game.dataset.mobileView;
-          else if (!game.dataset.mobileView) setMobileView("hand");
-        };
-        syncMode();
-        const stopListening = listenForMediaChange(media, syncMode);
-
-        cleanup = () => {
-          stopListening();
-          viewBar.remove();
-          mobileNav.remove();
-          disposers.forEach((dispose) => dispose());
-          game.classList.remove("responsive-board-ready", "phone-layout");
-          delete game.dataset.mobileView;
-        };
-      } catch (error) {
-        console.error("Responsive board enhancement failed", error);
-        game.classList.remove("responsive-board-ready", "phone-layout");
-        delete game.dataset.mobileView;
-      }
-    }
-
-    const observer = new MutationObserver(() => {
-      const game = document.querySelector(".game-page.enhanced-game");
-      if (!game || game.classList.contains("responsive-board-ready")) return;
-      window.clearTimeout(pendingEnhance);
-      pendingEnhance = window.setTimeout(enhance, 30);
-    });
+    const locate = () => setGame(document.querySelector(".game-page.enhanced-game"));
+    locate();
+    const observer = new MutationObserver(locate);
     observer.observe(document.body, { childList: true, subtree: true });
-    enhance();
-
-    return () => {
-      observer.disconnect();
-      window.clearTimeout(pendingEnhance);
-      cleanup();
-    };
+    return () => observer.disconnect();
   }, []);
 
-  return null;
+  useEffect(() => {
+    if (!game) return undefined;
+    const refresh = () => applyBoardState(game, view, customTeams);
+    refresh();
+
+    const observer = new MutationObserver(refresh);
+    observer.observe(game, { childList: true, subtree: true });
+    window.addEventListener("resize", refresh);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", refresh);
+    };
+  }, [game, view, customTeams]);
+
+  useEffect(() => {
+    if (!game) return undefined;
+    const toggleBoard = (event) => {
+      const title = event.target.closest?.(".board-title");
+      if (!title || !game.contains(title)) return;
+      if (event.type === "keydown" && event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      const board = title.closest(".shared-board");
+      const boards = [...game.querySelectorAll(".shared-board")];
+      const index = boards.indexOf(board);
+      if (index < 0) return;
+
+      const currentlyExpanded = !board.classList.contains("board-collapsed");
+      const next = new Set(view === "custom"
+        ? customTeams
+        : expandedForView(view, currentTeamIndex(game), boards.length, customTeams));
+      if (currentlyExpanded) next.delete(index);
+      else next.add(index);
+      const values = [...next].sort((a, b) => a - b);
+      setCustomTeams(values);
+      setView("custom");
+      localStorage.setItem(CUSTOM_KEY, JSON.stringify(values));
+      localStorage.setItem(VIEW_KEY, "custom");
+    };
+
+    game.addEventListener("click", toggleBoard);
+    game.addEventListener("keydown", toggleBoard);
+    return () => {
+      game.removeEventListener("click", toggleBoard);
+      game.removeEventListener("keydown", toggleBoard);
+    };
+  }, [game, view, customTeams]);
+
+  const controls = useMemo(() => [
+    ["focus", "My board", "Keep your team expanded and summarize the other teams"],
+    ["compact", "Compact all", "Summarize every team board"],
+    ["full", "Full boards", "Show every card on every team board"],
+  ], []);
+
+  function chooseView(nextView) {
+    setView(nextView);
+    localStorage.setItem(VIEW_KEY, nextView);
+  }
+
+  if (!game) return null;
+
+  return createPortal(
+    <nav className="board-view-bar" aria-label="Board view controls">
+      <span>Board view</span>
+      {controls.map(([value, label, title]) => (
+        <button
+          type="button"
+          className={view === value ? "active" : ""}
+          aria-pressed={view === value}
+          title={title}
+          onClick={() => chooseView(value)}
+          key={value}
+        >
+          {label}
+        </button>
+      ))}
+    </nav>,
+    document.body,
+  );
 }
