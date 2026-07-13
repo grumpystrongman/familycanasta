@@ -29,7 +29,8 @@ function expandedForView(view, teamIndex, boardCount, customTeams) {
   if (view === "full") return Array.from({ length: boardCount }, (_, index) => index);
   if (view === "compact") return [];
   if (view === "custom") return customTeams.filter((index) => index >= 0 && index < boardCount);
-  return teamIndex >= 0 ? [teamIndex] : boardCount ? [0] : [];
+  if (teamIndex >= 0) return [teamIndex];
+  return boardCount ? [0] : [];
 }
 
 function applyBoardState(game, view, customTeams) {
