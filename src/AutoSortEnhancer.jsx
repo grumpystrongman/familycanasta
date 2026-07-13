@@ -6,25 +6,36 @@ const CARD_ID_TYPE = "text/card-id";
 
 function createDataTransfer(initialCardId = "") {
   const values = new Map();
-  if (initialCardId) values.set(CARD_ID_TYPE, initialCardId);
+  const types = [];
+
+  const setData = (type, value) => {
+    values.set(type, String(value));
+    if (!types.includes(type)) types.push(type);
+  };
+
+  if (initialCardId) setData(CARD_ID_TYPE, initialCardId);
 
   return {
     dropEffect: "move",
     effectAllowed: "move",
     files: [],
     items: [],
-    types: initialCardId ? [CARD_ID_TYPE] : [],
+    types,
     clearData(type) {
-      if (type) values.delete(type);
-      else values.clear();
+      if (type) {
+        values.delete(type);
+        const typeIndex = types.indexOf(type);
+        if (typeIndex >= 0) types.splice(typeIndex, 1);
+        return;
+      }
+
+      values.clear();
+      types.splice(0, types.length);
     },
     getData(type) {
       return values.get(type) || "";
     },
-    setData(type, value) {
-      values.set(type, String(value));
-      if (!this.types.includes(type)) this.types.push(type);
-    },
+    setData,
   };
 }
 
@@ -76,7 +87,7 @@ export function autoSortVisibleHand() {
 
   desiredEntries.forEach((desired, targetIndex) => {
     const sourceIndex = currentIds.indexOf(desired.id);
-    if (sourceIndex === targetIndex) return;
+    if (sourceIndex < 0 || sourceIndex === targetIndex) return;
 
     const targetId = currentIds[targetIndex];
     const targetWrapper = wrappersById.get(targetId);
@@ -91,21 +102,38 @@ export function autoSortVisibleHand() {
   return { cardCount: wrappers.length, moved };
 }
 
+function appendButtonLabel(button) {
+  const icon = document.createElement("span");
+  icon.setAttribute("aria-hidden", "true");
+  icon.textContent = "⇅";
+
+  const label = document.createElement("span");
+  label.textContent = "Auto-sort hand";
+  button.append(icon, label);
+}
+
+function errorMessage(error) {
+  return error instanceof Error ? error.message : "The hand could not be sorted.";
+}
+
 export default function AutoSortEnhancer() {
   useEffect(() => {
+    const body = document.body;
+    if (!body) return undefined;
+
     const button = document.createElement("button");
     button.type = "button";
     button.className = "autosort-hand-button";
     button.title = "Group matching ranks, face cards, and wild cards";
     button.setAttribute("aria-label", "Auto-sort hand by rank and card type");
-    button.innerHTML = '<span aria-hidden="true">⇅</span><span>Auto-sort hand</span>';
+    appendButtonLabel(button);
 
     const status = document.createElement("span");
     status.className = "autosort-hand-status";
     status.setAttribute("role", "status");
     status.setAttribute("aria-live", "polite");
 
-    let statusTimer = null;
+    let statusTimer;
 
     const refresh = () => {
       const advisor = document.querySelector(".game-page .selection-advisor");
@@ -119,7 +147,7 @@ export default function AutoSortEnhancer() {
 
     const announce = (message) => {
       status.textContent = message;
-      window.clearTimeout(statusTimer);
+      if (statusTimer !== undefined) window.clearTimeout(statusTimer);
       statusTimer = window.setTimeout(() => {
         status.textContent = "";
       }, 2500);
@@ -132,7 +160,7 @@ export default function AutoSortEnhancer() {
           ? `Sorted ${result.cardCount} cards into matching rank groups, with wild cards together.`
           : "Your hand is already sorted.");
       } catch (error) {
-        announce(error.message || "The hand could not be sorted.");
+        announce(errorMessage(error));
       }
     };
 
@@ -140,13 +168,11 @@ export default function AutoSortEnhancer() {
     refresh();
 
     const observer = new MutationObserver(refresh);
-    observer.observe(document.body, { childList: true, subtree: true });
-    const timer = window.setInterval(refresh, 750);
+    observer.observe(body, { childList: true, subtree: true });
 
     return () => {
       observer.disconnect();
-      window.clearInterval(timer);
-      window.clearTimeout(statusTimer);
+      if (statusTimer !== undefined) window.clearTimeout(statusTimer);
       button.removeEventListener("click", handleClick);
       button.remove();
       status.remove();
