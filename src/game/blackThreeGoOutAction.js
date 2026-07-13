@@ -13,7 +13,7 @@ function activePlayer(room) {
 }
 
 function assertPlayTurn(room, uid) {
-  if (!room || room.status !== "playing" || room.publicState?.phase !== "playing") {
+  if (room?.status !== "playing" || room.publicState?.phase !== "playing") {
     throw new Error("The game is not ready for a move.");
   }
   const player = activePlayer(room);
