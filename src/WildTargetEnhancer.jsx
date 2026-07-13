@@ -24,6 +24,7 @@ export default function WildTargetEnhancer() {
   const [selectElement, setSelectElement] = useState(null);
   const [selectedWildCount, setSelectedWildCount] = useState(0);
   const [selectedRank, setSelectedRank] = useState("");
+  const [domRevision, setDomRevision] = useState(0);
 
   useEffect(() => {
     if (!auth) return undefined;
@@ -31,7 +32,7 @@ export default function WildTargetEnhancer() {
   }, []);
 
   useEffect(() => {
-    const scan = () => {
+    const scan = (mutations = []) => {
       const code = document.querySelector(".code b")?.textContent?.trim() || "";
       if (/^[A-Z0-9]{6}$/.test(code)) setRoomCode((current) => current === code ? current : code);
 
@@ -45,6 +46,10 @@ export default function WildTargetEnhancer() {
       const selectedButtons = [...document.querySelectorAll(".cards .real-card.selected")];
       const nextWildCount = selectedButtons.filter(isRenderedWildCard).length;
       setSelectedWildCount((current) => current === nextWildCount ? current : nextWildCount);
+
+      if (mutations.some((mutation) => mutation.type === "childList")) {
+        setDomRevision((current) => current + 1);
+      }
     };
 
     scan();
@@ -83,7 +88,7 @@ export default function WildTargetEnhancer() {
   const selectedStatus = selectedRank ? optionByRank.get(selectedRank) : null;
 
   useEffect(() => {
-    if (!selectElement) return;
+    if (!selectElement) return undefined;
 
     for (const option of selectElement.options) {
       if (!option.value) continue;
@@ -101,12 +106,20 @@ export default function WildTargetEnhancer() {
     const playButton = advisor
       ? [...advisor.children].find((child) => child.matches?.("button:not(.discard-button)"))
       : null;
+    const reason = selectedStatus && !selectedStatus.legal ? selectedStatus.reason : "";
     if (playButton) {
-      const reason = selectedStatus && !selectedStatus.legal ? selectedStatus.reason : "";
-      playButton.title = reason;
+      if (reason) playButton.title = reason;
+      else playButton.removeAttribute("title");
       playButton.setAttribute("aria-describedby", "wild-target-guidance");
     }
-  }, [selectElement, optionByRank, selectedStatus]);
+
+    return () => {
+      if (playButton?.getAttribute("aria-describedby") === "wild-target-guidance") {
+        playButton.removeAttribute("aria-describedby");
+      }
+      if (reason && playButton?.title === reason) playButton.removeAttribute("title");
+    };
+  }, [selectElement, optionByRank, selectedStatus, domRevision]);
 
   if (!selectElement?.parentElement) return null;
 
