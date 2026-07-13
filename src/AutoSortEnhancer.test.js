@@ -18,3 +18,10 @@ test("sorts through the existing drag handlers so React hand order stays authori
   assert.match(source, /dispatchDragEvent\(targetWrapper, "drop", createDataTransfer\(desired\.id\)\)/);
   assert.match(source, /Auto-sort hand/);
 });
+
+test("guards invalid card positions and non-Error throws", async () => {
+  const source = await readFile(enhancerUrl, "utf8");
+  assert.match(source, /sourceIndex < 0 \|\| sourceIndex === targetIndex/);
+  assert.match(source, /error instanceof Error \? error\.message/);
+  assert.doesNotMatch(source, /this\.types/);
+});
