@@ -1,9 +1,7 @@
 name: Sonar diagnostic
 
 on:
-  push:
-    branches:
-      - agent/black-threes-compact-board
+  pull_request:
 
 jobs:
   report-sonar-issues:
