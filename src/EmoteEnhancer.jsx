@@ -19,15 +19,31 @@ function findRoomCode() {
   return code && /^[A-Z0-9]{6}$/.test(code) ? code : "";
 }
 
+function createNonce() {
+  if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
+  const bytes = new Uint32Array(4);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (value) => value.toString(36)).join("-");
+}
+
 function enhanceChatMessages() {
   document.querySelectorAll(".score-chat-sidebar .messages article p").forEach((node) => {
     const match = node.textContent?.match(/^\[\[EMOTE:([a-z-]+)\]\]$/);
     if (!match || node.dataset.emoteEnhanced === "true") return;
     const emote = EMOTES.find((item) => item.id === match[1]);
     if (!emote) return;
+
+    const icon = document.createElement("span");
+    icon.className = "chat-emote-icon";
+    icon.setAttribute("aria-hidden", "true");
+    icon.textContent = emote.icon;
+
+    const caption = document.createElement("strong");
+    caption.textContent = emote.caption;
+
     node.dataset.emoteEnhanced = "true";
     node.classList.add("chat-emote-message", `emote-${emote.id}`);
-    node.innerHTML = `<span class="chat-emote-icon" aria-hidden="true">${emote.icon}</span><strong>${emote.caption}</strong>`;
+    node.replaceChildren(icon, caption);
   });
 }
 
@@ -123,7 +139,7 @@ export default function EmoteEnhancer() {
       uid: me.uid,
       nickname: me.nickname,
       avatar: me.avatar,
-      nonce: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      nonce: createNonce(),
       createdAt: Date.now(),
     };
     await Promise.all([
