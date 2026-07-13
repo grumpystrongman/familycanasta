@@ -19,6 +19,7 @@ import "./homeRules.css";
 import "./topActionBar.css";
 import "./emotes.css";
 import "./autoSort.css";
+import "./responsiveBoard.css";
 
 const rootElement = document.getElementById("root");
 
@@ -115,6 +116,7 @@ const enhancementLoaders = [
   ["ScoringDisplayFix", () => import("./ScoringDisplayFix")],
   ["EmoteEnhancer", () => import("./EmoteEnhancer")],
   ["AutoSortEnhancer", () => import("./AutoSortEnhancer")],
+  ["ResponsiveBoardEnhancer", () => import("./ResponsiveBoardEnhancer")],
 ];
 
 async function mountEnhancement(name, load) {
