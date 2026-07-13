@@ -17,6 +17,7 @@ import "./redThreeTurn.css";
 import "./safeDiscard.css";
 import "./homeRules.css";
 import "./topActionBar.css";
+import "./emotes.css";
 
 const rootElement = document.getElementById("root");
 
@@ -111,6 +112,7 @@ const enhancementLoaders = [
   ["SafeDiscardRule", () => import("./SafeDiscardRule")],
   ["HomeRulesOptions", () => import("./HomeRulesOptions")],
   ["ScoringDisplayFix", () => import("./ScoringDisplayFix")],
+  ["EmoteEnhancer", () => import("./EmoteEnhancer")],
 ];
 
 async function mountEnhancement(name, load) {
