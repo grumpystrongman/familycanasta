@@ -1,7 +1,7 @@
 import { isWild } from "./engine.js";
 
 function normalizedWildLimit(rules = {}) {
-  const configured = Number(rules?.maxWildsPerMeld);
+  const configured = Number(rules?.maxWildsPerMeld || 3);
   return Number.isFinite(configured) && configured >= 0 ? configured : 3;
 }
 
