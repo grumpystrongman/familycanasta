@@ -75,7 +75,7 @@ export function autoSortVisibleHand() {
   const wrappers = Array.from(document.querySelectorAll(".game-page .hand .cards > .hand-card-wrap"));
   if (wrappers.length < 2) return { cardCount: wrappers.length, moved: 0 };
 
-  const currentEntries = wrappers.map(cardSortEntry);
+  const currentEntries = wrappers.map((wrapper, index) => cardSortEntry(wrapper, index));
   if (currentEntries.some((entry) => !entry.id)) {
     throw new Error("The hand could not be sorted because a card identifier was unavailable.");
   }
