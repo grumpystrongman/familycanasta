@@ -1,8 +1,52 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { applyDiscardFreezeState, discardFreezesPile } from "./discardFreezeRules.js";
+import {
+  applyDiscardFreezeState,
+  discardFreezesPile,
+  shouldRepairBlackThreeFreeze,
+} from "./discardFreezeRules.js";
 
 const card = (rank, color = "black") => ({ id: `${rank}-${color}`, rank, suit: "S", color });
+
+test("the opening discard pile stays frozen even when a black three is on top", () => {
+  const room = {
+    publicState: {
+      discardPile: [card("3", "black")],
+      discardFrozen: true,
+      discardFreezeReason: "opening",
+      discardPileHasBeenTaken: false,
+    },
+  };
+
+  assert.equal(shouldRepairBlackThreeFreeze(room), false);
+  assert.equal(room.publicState.discardFrozen, true);
+});
+
+test("an old black-three freeze is repaired only after the pile has been picked up", () => {
+  const room = {
+    publicState: {
+      discardPile: [card("3", "black")],
+      discardFrozen: true,
+      discardFreezeReason: null,
+      discardPileHasBeenTaken: true,
+    },
+  };
+
+  assert.equal(shouldRepairBlackThreeFreeze(room), true);
+});
+
+test("a valid wild-card freeze is never repaired", () => {
+  const room = {
+    publicState: {
+      discardPile: [card("3", "black")],
+      discardFrozen: true,
+      discardFreezeReason: "wild",
+      discardPileHasBeenTaken: true,
+    },
+  };
+
+  assert.equal(shouldRepairBlackThreeFreeze(room), false);
+});
 
 test("a picked-up pile stays unfrozen after an ordinary discard", () => {
   const state = {
