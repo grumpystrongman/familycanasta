@@ -5,6 +5,7 @@ import { auth, db } from "./firebase";
 import { normalizeRoomSetup, roomSetupMatches } from "./game/roomSetup";
 
 const STORAGE_KEY = "canastaUnprotectedRedThreesPenalty";
+const PICKUP_RULE_KEY = "canastaDiscardPickupRule";
 const PENDING_SETUP_KEY = "canastaPendingRoomSetup";
 const PENDING_SETUP_TTL = 5 * 60 * 1000;
 const ROOM_OPTIONS = [
@@ -14,6 +15,10 @@ const ROOM_OPTIONS = [
   { value: "partners:2", label: "4 partners", seats: 4 },
   { value: "partners:3", label: "6 partners", seats: 6 },
 ];
+
+function storedPickupRule() {
+  return localStorage.getItem(PICKUP_RULE_KEY) === "modern" ? "modern" : "classic";
+}
 
 function findSettingsControl(settings, labelText) {
   if (!settings) return null;
@@ -34,6 +39,7 @@ function readSelectedSetup() {
     deckCount: findSettingsControl(settings, "Decks")?.value,
     cardsPerPlayer: findSettingsControl(settings, "Starting cards")?.value,
     cardBack: findSettingsControl(settings, "Card back")?.value,
+    discardPickupRule: findSettingsControl(settings, "Discard pickup")?.value || storedPickupRule(),
   });
 }
 
@@ -69,6 +75,7 @@ function readPendingSetup() {
 
 export default function HomeRulesOptions() {
   const [enabled, setEnabled] = useState(() => localStorage.getItem(STORAGE_KEY) === "true");
+  const [pickupRule, setPickupRule] = useState(storedPickupRule);
   const [settingsTarget, setSettingsTarget] = useState(null);
   const [lobbySummaryTarget, setLobbySummaryTarget] = useState(null);
   const [roomCode, setRoomCode] = useState("");
@@ -116,6 +123,10 @@ export default function HomeRulesOptions() {
   }, [enabled]);
 
   useEffect(() => {
+    localStorage.setItem(PICKUP_RULE_KEY, pickupRule);
+  }, [pickupRule]);
+
+  useEffect(() => {
     if (!roomCode || !db) {
       setRoom(null);
       return undefined;
@@ -148,7 +159,7 @@ export default function HomeRulesOptions() {
     setupSyncing.current = true;
     update(ref(db, `rooms/${roomCode}/rules`), requestedSetup)
       .then(() => clearPendingSetup())
-      .catch((error) => setSetupError(error.message || "Could not apply the selected room capacity."))
+      .catch((error) => setSetupError(error.message || "Could not apply the selected room setup."))
       .finally(() => {
         setupSyncing.current = false;
       });
@@ -161,6 +172,7 @@ export default function HomeRulesOptions() {
       playMode,
       teamCount: Number(teamCountValue),
       cardBack: room.rules?.cardBack,
+      discardPickupRule: room.rules?.discardPickupRule,
     });
 
     clearPendingSetup();
@@ -175,6 +187,21 @@ export default function HomeRulesOptions() {
     }
   }
 
+  async function changeLobbyPickupRule(value) {
+    if (!roomCode || !room || room.status !== "lobby") return;
+    const nextRule = value === "modern" ? "modern" : "classic";
+    setPickupRule(nextRule);
+    setSavingSetup(true);
+    setSetupError("");
+    try {
+      await update(ref(db, `rooms/${roomCode}/rules`), { discardPickupRule: nextRule });
+    } catch (error) {
+      setSetupError(error.message || "Could not update the discard pickup rule.");
+    } finally {
+      setSavingSetup(false);
+    }
+  }
+
   const uid = auth?.currentUser?.uid;
   const isLobbyHost = Boolean(uid && room && room.hostUid === uid && room.status === "lobby");
   const currentSetup = normalizeRoomSetup(room?.rules || {});
@@ -184,17 +211,26 @@ export default function HomeRulesOptions() {
   return (
     <>
       {settingsTarget && createPortal(
-        <label className="home-rule-toggle wide-setting">
-          <input
-            type="checkbox"
-            checked={enabled}
-            onChange={(event) => setEnabled(event.target.checked)}
-          />
-          <span>
-            <b>Unprotected red threes count against you</b>
-            <small>When selected, a team with red threes but no clean or dirty canasta scores −200 per red three at the end of the hand.</small>
-          </span>
-        </label>,
+        <>
+          <label className="wide-setting">Discard pickup
+            <select value={pickupRule} onChange={(event) => setPickupRule(event.target.value)}>
+              <option value="classic">Classic Canasta</option>
+              <option value="modern">Modern American</option>
+            </select>
+            <small>Classic allows an unfrozen pickup with two naturals, one natural plus one wild, or an existing meld. Modern always requires two naturals.</small>
+          </label>
+          <label className="home-rule-toggle wide-setting">
+            <input
+              type="checkbox"
+              checked={enabled}
+              onChange={(event) => setEnabled(event.target.checked)}
+            />
+            <span>
+              <b>Unprotected red threes count against you</b>
+              <small>When selected, a team with red threes but no clean or dirty canasta scores −200 per red three at the end of the hand.</small>
+            </span>
+          </label>
+        </>,
         settingsTarget,
       )}
 
@@ -214,6 +250,19 @@ export default function HomeRulesOptions() {
                   {option.label}
                 </option>
               ))}
+            </select>
+          </p>
+          <p>
+            <span>Pickup</span>
+            <select
+              aria-label="Discard pickup rule"
+              value={currentSetup.discardPickupRule}
+              disabled={savingSetup}
+              onChange={(event) => changeLobbyPickupRule(event.target.value)}
+              style={{ maxWidth: "136px" }}
+            >
+              <option value="classic">Classic</option>
+              <option value="modern">Modern American</option>
             </select>
           </p>
           {setupError && <small className="error">{setupError}</small>}
