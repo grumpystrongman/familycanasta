@@ -32,7 +32,7 @@ test("captures each team's opening requirement at the start of the hand", () => 
   assert.deepEqual(dealt.publicState.openingRequirements, { 0: 120, 1: 50 });
 });
 
-test("publishes a newly dealt hand as immediately playable with a frozen discard pile", () => {
+test("publishes a newly dealt hand as immediately playable with a frozen opening discard pile", () => {
   const dealt = dealHand({
     players,
     rules: { ...DEFAULT_RULES, teamCount: 2, cardsPerPlayer: 15 },
@@ -43,6 +43,8 @@ test("publishes a newly dealt hand as immediately playable with a frozen discard
   assert.equal(dealt.publicState.phase, "playing");
   assert.equal(dealt.publicState.turnPhase, "draw");
   assert.equal(dealt.publicState.discardFrozen, true);
+  assert.equal(dealt.publicState.discardFreezeReason, "opening");
+  assert.equal(dealt.publicState.discardPileHasBeenTaken, false);
   assert.equal(dealt.publicState.discardPile.length, 1);
   assert.equal(dealt.publicState.dealAnimationIndex, dealt.publicState.dealOrder.length);
   assert.equal(dealt.publicState.lastAction, "The first turn is ready.");
