@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   BarChart3,
-  Bot,
   ChevronDown,
   Clock3,
   Download,
@@ -10,7 +9,6 @@ import {
   Lightbulb,
   MessageCircle,
   Settings,
-  ShieldAlert,
   Sparkles,
   Target,
   Trash2,
