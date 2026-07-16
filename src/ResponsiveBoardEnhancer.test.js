@@ -30,6 +30,13 @@ test("detects multi-player individual games and annotates meld counts", async ()
   assert.match(source, /dirty-canasta/);
 });
 
+test("removes the oversized opponent circles and gives the boards the flexible row", async () => {
+  const compactCss = await readFile(compactCssUrl, "utf8");
+  assert.match(compactCss, /\.enhanced-game \.opponents\s*\{[^}]*display:\s*none !important/s);
+  assert.match(compactCss, /grid-template-rows:\s*auto minmax\(240px, 1fr\) auto/);
+  assert.match(compactCss, /\.responsive-board-ready \.shared-boards\s*\{[^}]*height:\s*100%/s);
+});
+
 test("shows one collapsed card with a count bubble and canasta colors", async () => {
   const compactCss = await readFile(compactCssUrl, "utf8");
   assert.match(compactCss, /\.real-card:first-child\s*\{[^}]*display:\s*block/s);
