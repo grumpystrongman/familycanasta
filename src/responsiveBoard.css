@@ -4,8 +4,8 @@
 
 .board-view-bar {
   position: fixed;
-  top: 78px;
-  right: 316px;
+  top: 140px;
+  right: 344px;
   z-index: 90;
   display: flex;
   align-items: center;
@@ -186,7 +186,7 @@
 
 .responsive-board-ready .center {
   position: relative;
-  z-index: 8;
+  z-index: 100;
   width: min(100% - 28px, 760px);
   margin: 0 auto 8px !important;
   padding: 8px 14px;
@@ -226,7 +226,7 @@
   scroll-snap-align: center;
 }
 
-@media (max-width: 1180px) {
+@media (max-width: 900px) and (min-width: 851px) {
   .board-view-bar {
     right: 14px;
   }
@@ -234,7 +234,7 @@
 
 @media (max-height: 820px) and (min-width: 851px) {
   .board-view-bar {
-    top: 72px;
+    top: 136px;
     transform: scale(.92);
     transform-origin: top right;
   }
