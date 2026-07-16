@@ -20,6 +20,7 @@ import "./topActionBar.css";
 import "./emotes.css";
 import "./autoSort.css";
 import "./responsiveBoard.css";
+import "./classicCanastaLayout.css";
 
 const rootElement = document.getElementById("root");
 
