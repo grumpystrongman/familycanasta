@@ -3,7 +3,6 @@ import { db } from "../firebase";
 import {
   cardPoints,
   finishRound,
-  isBlackThree,
   isRedThree,
   isWild,
   openingRequirementForTeam,
@@ -14,6 +13,7 @@ import {
   stockExhaustionPickupStatus,
   validatePendingPickupSelection,
 } from "./discardPickupPlanner";
+import { applyDiscardFreezeState } from "./discardFreezeRules";
 import { boardCanGoOut, teamCanGoOut } from "./goOutRules";
 
 function orderedPlayers(room) {
@@ -172,6 +172,7 @@ export async function takeDiscardPile(code, uid) {
 
       room.publicState.discardPile = [];
       room.publicState.discardFrozen = false;
+      room.publicState.discardFreezeReason = null;
       room.publicState.discardPileHasBeenTaken = true;
       room.publicState.handCounts[uid] = room.privateHands[uid].length;
       room.publicState.turnPhase = "play";
@@ -276,9 +277,7 @@ export async function discardSelectedCard(code, uid, cardId) {
       room.privateHands[uid] = hand.filter((item) => item.id !== cardId);
       room.publicState.discardPile ||= [];
       room.publicState.discardPile.push(card);
-      const freezesPile = (isWild(card) && room.rules?.freezeOnWild !== false)
-        || (isBlackThree(card) && room.rules?.freezeOnBlackThree !== false);
-      if (freezesPile) room.publicState.discardFrozen = true;
+      const freezesPile = applyDiscardFreezeState(room.publicState, card, room.rules || {});
       room.publicState.handCounts[uid] = room.privateHands[uid].length;
       room.publicState.lastAction = `${player.nickname} discarded ${card.rank}${card.suit}${freezesPile ? " and froze the discard pile" : ""}.`;
       if (room.privateHands[uid].length === 0) return finishRound(room, uid);
