@@ -158,13 +158,6 @@ export default function HomeRulesOptions() {
 
   useEffect(() => {
     const uid = auth?.currentUser?.uid;
-    if (!uid || !roomCode || !room || room.hostUid !== uid || room.status !== "lobby") return;
-    if (Number(room.rules?.canastasToGoOut || 1) === canastasToGoOut) return;
-    update(ref(db, `rooms/${roomCode}/rules`), { canastasToGoOut }).catch(() => {});
-  }, [canastasToGoOut, roomCode, room]);
-
-  useEffect(() => {
-    const uid = auth?.currentUser?.uid;
     if (!uid || !roomCode || !room || room.hostUid !== uid || room.status !== "lobby" || setupSyncing.current) return;
 
     const requestedSetup = readPendingSetup();
