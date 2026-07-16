@@ -143,6 +143,8 @@ export default function MultiMeldEnhancer() {
   const pendingPickup = room?.publicState?.pendingDiscardPickup?.uid === uid
     ? room.publicState.pendingDiscardPickup
     : null;
+  const pendingSupportDescription = pendingPickup?.supportDescription
+    || `two natural ${pendingPickup?.rank || "matching"}s`;
   const openingNeed = team >= 0 ? openingRequirementForTeam(room, team) : 0;
   const pendingError = validatePendingPickupSelection(pendingPickup, selectedCards);
   const groupedUi = useMemo(
@@ -205,7 +207,7 @@ export default function MultiMeldEnhancer() {
     <div className={`multi-meld-tools ${usesGroupedAction ? "active" : ""}`}>
       {pendingPickup && !usesGroupedAction && (
         <span className="multi-meld-help">
-          The pile is in your hand. Your atomic opening must include the picked-up {pendingPickup.rank}, two natural {pendingPickup.rank}s from your original hand, and at least {openingNeed} total points.
+          The pile is in your hand. Your atomic opening must include the picked-up {pendingPickup.rank}, {pendingSupportDescription} from your original hand, and at least {openingNeed} total points.
         </span>
       )}
 
