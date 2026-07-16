@@ -23,6 +23,7 @@ import "./chatReadability.css";
 import "./autoSort.css";
 import "./responsiveBoard.css";
 import "./classicCanastaLayout.css";
+import "./premiumDashboard.css";
 
 const rootElement = document.getElementById("root");
 
@@ -108,6 +109,7 @@ function showNonfatalError(name, error) {
 }
 
 const enhancementLoaders = [
+  ["PremiumDashboardEnhancer", () => import("./PremiumDashboardEnhancer")],
   ["StrategyDashboardEnhancer", () => import("./StrategyDashboardEnhancer")],
   ["GameStateEnhancer", () => import("./GameStateEnhancer")],
   ["GameCelebration", () => import("./GameCelebration")],
