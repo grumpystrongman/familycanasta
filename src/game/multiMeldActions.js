@@ -3,6 +3,7 @@ import { db } from "../firebase";
 import { finishRound, openingRequirementForTeam, sortHand } from "./engine";
 import { planGroupedMelds } from "./multiMeldPlanner";
 import { validatePendingPickupSelection } from "./discardPickupPlanner";
+import { cleanBoard, restoreUndoSnapshot } from "./undoSnapshot";
 
 function orderedPlayers(room) {
   return Object.values(room.members || {}).sort((a, b) => a.seat - b.seat);
@@ -58,11 +59,11 @@ export async function playGroupedMelds(code, uid, orderedCardIds) {
         playerIndex: Number(room.publicState.currentPlayerIndex || 0),
         privateHand: hand,
         team: player.team,
-        teamBoard: structuredClone(board),
+        teamBoard: cleanBoard(board),
         opened: alreadyOpened,
         pendingDiscardPickup: pending ? structuredClone(pending) : null,
         handCount: hand.length,
-        lastAction: room.publicState.lastAction || "",
+        lastAction: String(room.publicState.lastAction || ""),
       };
 
       for (const group of groups) {
@@ -99,15 +100,8 @@ export async function undoLastPlay(code, uid) {
       const player = assertPlayTurn(room, uid);
       const undo = room.publicState?.undoPlay;
       if (!undo || undo.uid !== uid || Number(undo.playerIndex) !== Number(room.publicState.currentPlayerIndex || 0)) throw new Error("Only your most recent play in this turn can be undone.");
-      room.privateHands[uid] = undo.privateHand;
-      room.publicState.teamBoards[player.team] = undo.teamBoard;
-      room.publicState.opened[player.team] = undo.opened;
-      room.publicState.pendingDiscardPickup = undo.pendingDiscardPickup || null;
-      room.publicState.openingTurnUid = null;
-      room.publicState.openingTurnPoints = 0;
-      room.publicState.handCounts[uid] = undo.handCount;
+      restoreUndoSnapshot(room, player, undo);
       room.publicState.lastAction = `${player.nickname} undid the previous play.`;
-      room.publicState.undoPlay = null;
       return room;
     } catch (error) {
       actionError = error.message;
