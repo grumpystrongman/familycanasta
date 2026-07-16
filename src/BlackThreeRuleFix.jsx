@@ -5,6 +5,7 @@ import { onValue, ref, runTransaction } from "firebase/database";
 import { auth, db } from "./firebase";
 import { blackThreeGoOutPlan } from "./game/blackThreeGoOutRules";
 import { goOutWithBlackThrees } from "./game/blackThreeGoOutAction";
+import { shouldRepairBlackThreeFreeze } from "./game/discardFreezeRules";
 import { isBlackThree } from "./game/engine";
 import "./blackThreeGoOut.css";
 
@@ -49,12 +50,6 @@ function selectedCardIds() {
       return dataTransfer.getData(CARD_ID_TYPE);
     })
     .filter(Boolean);
-}
-
-function isLegacyBlackThreeFreeze(room) {
-  const pile = room?.publicState?.discardPile || [];
-  const top = pile[pile.length - 1];
-  return room?.publicState?.discardFrozen && isBlackThree(top);
 }
 
 function goOutStatus(plan) {
@@ -108,14 +103,14 @@ export default function BlackThreeRuleFix() {
       if (!value || !uid || !value.members?.[uid]) return;
 
       const needsRuleRepair = value.rules?.freezeOnBlackThree !== false;
-      const needsPileRepair = isLegacyBlackThreeFreeze(value);
+      const needsPileRepair = shouldRepairBlackThreeFreeze(value);
       if (!needsRuleRepair && !needsPileRepair) return;
 
       await runTransaction(ref(db, `rooms/${roomCode}`), (current) => {
         if (!current) return current;
         current.rules ||= {};
         current.rules.freezeOnBlackThree = false;
-        if (isLegacyBlackThreeFreeze(current)) {
+        if (shouldRepairBlackThreeFreeze(current)) {
           current.publicState.discardFrozen = false;
           current.publicState.discardFreezeReason = null;
           current.publicState.lastAction = "A black three was discarded. The discard pile remains unfrozen; only twos and Jokers freeze it.";
