@@ -108,6 +108,7 @@ function showNonfatalError(name, error) {
 }
 
 const enhancementLoaders = [
+  ["StrategyDashboardEnhancer", () => import("./StrategyDashboardEnhancer")],
   ["GameStateEnhancer", () => import("./GameStateEnhancer")],
   ["GameCelebration", () => import("./GameCelebration")],
   ["MultiMeldEnhancer", () => import("./MultiMeldEnhancer")],
