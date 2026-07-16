@@ -82,6 +82,8 @@ function selectPickupSupport({ hand, top, frozen, existing, rule }) {
     };
   }
 
+  // Classic Canasta: an unfrozen top discard may always be added directly
+  // to an existing matching meld, including a meld that is already a canasta.
   if (existing) {
     return {
       supportCards: [],
@@ -100,8 +102,8 @@ function selectPickupSupport({ hand, top, frozen, existing, rule }) {
     };
   }
 
-  // Classic Canasta: when the pile is unfrozen, the top discard plus one
-  // matching natural and one wild card form the required three-card meld.
+  // Otherwise, the top discard plus one matching natural and one wild card
+  // form the required three-card meld for an unfrozen Classic Canasta pile.
   if (matchingNaturals.length >= 1 && wildCards.length >= 1) {
     return {
       supportCards: [matchingNaturals[0], wildCards[0]],
@@ -111,7 +113,7 @@ function selectPickupSupport({ hand, top, frozen, existing, rule }) {
     };
   }
 
-  throw new Error(`Classic Canasta needs two natural ${top.rank}s, one natural ${top.rank} plus one wild card, or an existing ${top.rank} meld to take an unfrozen pile.`);
+  throw new Error(`Classic Canasta needs an existing ${top.rank} meld, two natural ${top.rank}s, or one natural ${top.rank} plus one wild card to take an unfrozen pile.`);
 }
 
 function projectedBoardAfterPickup(board, existing, top, supportCards) {
@@ -165,10 +167,6 @@ export function planDiscardPickup(room, player) {
 
   const board = room.publicState?.teamBoards?.[player.team] || [];
   const existing = board.find((meld) => meld.rank === top.rank);
-  if ((existing?.cards?.length || 0) >= 7) {
-    throw new Error(`${top.rank}s are already a completed book on your board. This safe discard cannot be picked up.`);
-  }
-
   const frozen = room.publicState?.discardFrozen !== false;
   const opened = Boolean(room.publicState?.opened?.[player.team]);
   const rule = discardPickupRule(room);
