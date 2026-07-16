@@ -5,13 +5,14 @@ import { readFile } from "node:fs/promises";
 const enhancerUrl = new URL("./MultiMeldEnhancer.jsx", import.meta.url);
 const stylesUrl = new URL("./multiMeld.css", import.meta.url);
 
-test("uses a dedicated grouped-play button instead of racing the core disabled button", async () => {
+test("uses a dedicated grouped-play button and only adjusts the core button for single-rank melds", async () => {
   const source = await readFile(enhancerUrl, "utf8");
 
   assert.match(source, /className="multi-meld-button"/);
   assert.match(source, /playGroupedMelds\(roomCode, uid, selectedIds\)/);
   assert.match(source, /primaryButton\.hidden = true/);
-  assert.doesNotMatch(source, /primaryButton\.disabled\s*=/);
+  assert.match(source, /if \(!usesGroupedAction\)[\s\S]*primaryButton\.disabled = !canAct \|\| busy/s);
+  assert.match(source, /combinedWilds\.length <= combinedNaturals\.length/);
   assert.doesNotMatch(source, /primaryButton\.addEventListener\("click"/);
 });
 

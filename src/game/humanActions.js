@@ -3,7 +3,6 @@ import { db } from "../firebase";
 import {
   cardPoints,
   finishRound,
-  isBlackThree,
   isRedThree,
   isWild,
   openingRequirementForTeam,
@@ -14,6 +13,7 @@ import {
   stockExhaustionPickupStatus,
   validatePendingPickupSelection,
 } from "./discardPickupPlanner";
+import { applyDiscardFreezeState } from "./discardFreezeRules";
 import { boardCanGoOut, teamCanGoOut } from "./goOutRules";
 
 function orderedPlayers(room) {
@@ -108,14 +108,13 @@ export async function drawFromStock(code, uid) {
   if (!result.committed) throw new Error(actionError);
 }
 
-function validateCombinedMeld(cards, rules) {
+function validateCombinedMeld(cards) {
   if (cards.some((card) => card.rank === "3")) throw new Error("Threes cannot be used in a normal meld.");
   const naturals = cards.filter((card) => !isWild(card));
   const wilds = cards.filter(isWild);
   if (!naturals.length) throw new Error("A meld needs natural cards.");
   if (new Set(naturals.map((card) => card.rank)).size !== 1) throw new Error("All natural cards must have the same rank.");
-  if (wilds.length > Number(rules?.maxWildsPerMeld || 3)) throw new Error("Too many wild cards in that meld.");
-  if (wilds.length >= naturals.length) throw new Error("A meld must contain more natural cards than wild cards.");
+  if (wilds.length > naturals.length) throw new Error("A meld cannot contain more wild cards than natural cards.");
   return naturals[0].rank;
 }
 
@@ -173,6 +172,7 @@ export async function takeDiscardPile(code, uid) {
 
       room.publicState.discardPile = [];
       room.publicState.discardFrozen = false;
+      room.publicState.discardFreezeReason = null;
       room.publicState.discardPileHasBeenTaken = true;
       room.publicState.handCounts[uid] = room.privateHands[uid].length;
       room.publicState.turnPhase = "play";
@@ -209,10 +209,10 @@ export async function meldSelectedCards(code, uid, cardIds, targetRank = null) {
         rank = targetRank;
       }
 
-      if (existing) validateCombinedMeld([...(existing.cards || []), ...selected], room.rules);
+      if (existing) validateCombinedMeld([...(existing.cards || []), ...selected]);
       else {
         if (selected.length < 3) throw new Error("A new meld needs at least three cards. To add one or two cards, choose an existing board meld.");
-        rank = validateCombinedMeld(selected, room.rules);
+        rank = validateCombinedMeld(selected);
       }
 
       const alreadyOpened = Boolean(room.publicState.opened[player.team]);
@@ -277,9 +277,7 @@ export async function discardSelectedCard(code, uid, cardId) {
       room.privateHands[uid] = hand.filter((item) => item.id !== cardId);
       room.publicState.discardPile ||= [];
       room.publicState.discardPile.push(card);
-      const freezesPile = (isWild(card) && room.rules?.freezeOnWild !== false)
-        || (isBlackThree(card) && room.rules?.freezeOnBlackThree !== false);
-      if (freezesPile) room.publicState.discardFrozen = true;
+      const freezesPile = applyDiscardFreezeState(room.publicState, card, room.rules || {});
       room.publicState.handCounts[uid] = room.privateHands[uid].length;
       room.publicState.lastAction = `${player.nickname} discarded ${card.rank}${card.suit}${freezesPile ? " and froze the discard pile" : ""}.`;
       if (room.privateHands[uid].length === 0) return finishRound(room, uid);

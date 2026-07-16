@@ -8,7 +8,7 @@ import { planGroupedMelds } from "./game/multiMeldPlanner";
 import { groupedMeldUiState } from "./game/groupedMeldUi";
 import { guaranteePileUnfrozenAfterPickup } from "./game/discardStateRepair";
 import { validatePendingPickupSelection } from "./game/discardPickupPlanner";
-import { openingRequirementForTeam, SUIT_SYMBOLS } from "./game/engine";
+import { isWild, openingRequirementForTeam, SUIT_SYMBOLS } from "./game/engine";
 
 function labelFor(card) {
   return `${card.rank} ${SUIT_SYMBOLS[card.suit] || "★"}`;
@@ -73,6 +73,7 @@ export default function MultiMeldEnhancer() {
   const [hand, setHand] = useState([]);
   const [advisor, setAdvisor] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
+  const [wildTargetRank, setWildTargetRank] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -86,6 +87,7 @@ export default function MultiMeldEnhancer() {
       const code = document.querySelector(".code b")?.textContent?.trim() || "";
       if (/^[A-Z0-9]{6}$/.test(code)) setRoomCode(code);
       setAdvisor(document.querySelector(".selection-advisor"));
+      setWildTargetRank(document.querySelector(".wild-target select")?.value || "");
       applyBoardColors();
 
       const wraps = [...document.querySelectorAll(".cards .hand-card-wrap")];
@@ -97,12 +99,18 @@ export default function MultiMeldEnhancer() {
       setSelectedIds((current) => current.join("|") === ordered.join("|") ? current : ordered);
     };
 
+    const onChange = (event) => {
+      if (event.target?.closest?.(".wild-target")) scan();
+    };
+
     scan();
     const observer = new MutationObserver(scan);
     observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["class"] });
+    document.addEventListener("change", onChange, true);
     window.addEventListener("resize", scan);
     return () => {
       observer.disconnect();
+      document.removeEventListener("change", onChange, true);
       window.removeEventListener("resize", scan);
     };
   }, [hand]);
@@ -159,15 +167,54 @@ export default function MultiMeldEnhancer() {
   );
   const usesGroupedAction = groupedUi.grouped;
 
+  const singleRank = groupedUi.naturalRanks.length === 1
+    ? groupedUi.naturalRanks[0]
+    : selectedCards.length > 0 && selectedCards.every(isWild)
+      ? wildTargetRank
+      : "";
+  const existingSingleMeld = singleRank ? board.find((meld) => meld.rank === singleRank) : null;
+  const combinedSingleMeld = existingSingleMeld
+    ? [...(existingSingleMeld.cards || []), ...selectedCards]
+    : selectedCards;
+  const combinedNaturals = combinedSingleMeld.filter((card) => !isWild(card));
+  const combinedWilds = combinedSingleMeld.filter(isWild);
+  const singleRankLegal = Boolean(
+    !usesGroupedAction
+    && selectedCards.length > 0
+    && !selectedCards.some((card) => card.rank === "3")
+    && combinedNaturals.length > 0
+    && new Set(combinedNaturals.map((card) => card.rank)).size === 1
+    && combinedWilds.length <= combinedNaturals.length
+    && (existingSingleMeld || selectedCards.length >= 3)
+    && !pendingError
+    && groupedUi.openingSatisfied
+  );
+  const equalWildBalance = singleRankLegal
+    && combinedWilds.length > 0
+    && combinedWilds.length === combinedNaturals.length;
+
   useEffect(() => {
     if (!advisor) return undefined;
-    const primaryButton = [...advisor.children].find((child) => child.matches?.("button:not(.discard-button)"));
+    const primaryButton = [...advisor.children].find((child) => (
+      child.matches?.("button:not(.discard-button):not(.autosort-hand-button)")
+    ));
     if (!primaryButton) return undefined;
 
     if (!usesGroupedAction) {
       primaryButton.hidden = false;
       advisor.classList.remove("grouped-meld-mode");
-      return undefined;
+      const previousDisabled = primaryButton.disabled;
+      const statusText = advisor.querySelector(":scope > div > span");
+      const previousStatus = statusText?.textContent || "";
+      const equalityMessage = "Legal play. Wild cards may equal, but cannot exceed, the natural cards.";
+
+      if (singleRankLegal) primaryButton.disabled = !canAct || busy;
+      if (equalWildBalance && statusText) statusText.textContent = equalityMessage;
+
+      return () => {
+        primaryButton.disabled = previousDisabled;
+        if (statusText?.textContent === equalityMessage) statusText.textContent = previousStatus;
+      };
     }
 
     primaryButton.hidden = true;
@@ -176,7 +223,7 @@ export default function MultiMeldEnhancer() {
       primaryButton.hidden = false;
       advisor.classList.remove("grouped-meld-mode");
     };
-  }, [advisor, usesGroupedAction]);
+  }, [advisor, usesGroupedAction, singleRankLegal, equalWildBalance, canAct, busy]);
 
   useEffect(() => {
     if (!pendingPickup) return undefined;

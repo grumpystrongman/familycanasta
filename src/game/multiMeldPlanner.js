@@ -14,11 +14,8 @@ export function meldValidationError(existingCards = [], selectedCards = [], rule
   if (!naturals.length || naturals.some((card) => card.rank !== rank)) {
     return `The ${rank} meld contains a card of another rank.`;
   }
-  if (wilds.length > Number(rules?.maxWildsPerMeld || 3)) {
-    return `The ${rank} meld has too many wild cards.`;
-  }
-  if (wilds.length >= naturals.length) {
-    return `The ${rank} meld must have more natural cards than wild cards.`;
+  if (wilds.length > naturals.length) {
+    return `The ${rank} meld cannot have more wild cards than natural cards.`;
   }
   if (!existingCards.length && selectedCards.length < 3) {
     return `A new ${rank} meld needs at least three cards.`;
@@ -127,9 +124,8 @@ export function planGroupedMelds(cards = [], board = [], rules = {}) {
       const existing = board.find((meld) => meld.rank === rank)?.cards || [];
       const combinedNaturals = [...existing, ...groups.get(rank)].filter((card) => !isWild(card)).length;
       const existingWilds = existing.filter(isWild).length;
-      const wildLimit = Number(rules?.maxWildsPerMeld || 3) - existingWilds;
-      const naturalLimit = combinedNaturals - existingWilds - 1;
-      return [rank, Math.max(0, Math.min(wildLimit, naturalLimit))];
+      const naturalBalanceLimit = combinedNaturals - existingWilds;
+      return [rank, Math.max(0, naturalBalanceLimit)];
     }));
 
     function search(wildIndex, working, distance) {

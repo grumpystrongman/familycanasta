@@ -49,7 +49,7 @@ test("reports an error on the individual invalid meld", () => {
 
   assert.equal(plan.valid, false);
   assert.equal(eights.error, "");
-  assert.match(queens.error, /needs at least three cards|more natural cards than wild cards/);
+  assert.match(queens.error, /needs at least three cards/);
   assert.equal(plan.totalPoints, 30);
 });
 
@@ -77,4 +77,28 @@ test("accepts sixes, nines, and jacks with a nearby wild as separate melds", () 
     ["9", 30],
     ["J", 40],
   ]);
+});
+
+test("allows the wild-card count to equal the natural-card count", () => {
+  const selection = [
+    card("q1", "Q"), card("q2", "Q", "C"), card("q3", "Q", "D"), card("q4", "Q", "H"),
+    card("w1", "2"), card("w2", "2", "C"), card("w3", "JOKER", "J"), card("w4", "JOKER", "J"),
+  ];
+
+  const plan = planGroupedMelds(selection, [], { maxWildsPerMeld: 3 });
+
+  assert.equal(plan.valid, true);
+  assert.equal(plan.groups[0].cards.filter((item) => item.rank === "2" || item.rank === "JOKER").length, 4);
+});
+
+test("rejects a meld with more wild cards than natural cards", () => {
+  const selection = [
+    card("q1", "Q"), card("q2", "Q", "C"), card("q3", "Q", "D"),
+    card("w1", "2"), card("w2", "2", "C"), card("w3", "JOKER", "J"), card("w4", "JOKER", "J"),
+  ];
+
+  const plan = planGroupedMelds(selection);
+
+  assert.equal(plan.valid, false);
+  assert.match(plan.groups[0].error, /cannot have more wild cards than natural cards/i);
 });

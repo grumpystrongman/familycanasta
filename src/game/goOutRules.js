@@ -17,14 +17,13 @@ export function teamCanGoOut(room, team) {
   return boardCanGoOut(board, room?.rules || {});
 }
 
-function validMeld(cards, rules = {}) {
+function validMeld(cards) {
   if (cards.length < 3 || cards.some((card) => card.rank === "3")) return false;
   const naturals = cards.filter((card) => !isWild(card));
   const wilds = cards.filter(isWild);
   return naturals.length > 0
     && new Set(naturals.map((card) => card.rank)).size === 1
-    && wilds.length < naturals.length
-    && wilds.length <= Number(rules.maxWildsPerMeld || 3);
+    && wilds.length <= naturals.length;
 }
 
 function uniqueSelectedCards(selected, hand) {

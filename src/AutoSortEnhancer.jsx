@@ -116,6 +116,11 @@ function errorMessage(error) {
   return error instanceof Error ? error.message : "The hand could not be sorted.";
 }
 
+function findMountTarget() {
+  return document.querySelector(".game-page .selection-advisor")
+    || document.querySelector(".game-page .hand");
+}
+
 export default function AutoSortEnhancer() {
   useEffect(() => {
     const body = document.body;
@@ -123,9 +128,10 @@ export default function AutoSortEnhancer() {
 
     const button = document.createElement("button");
     button.type = "button";
-    button.className = "autosort-hand-button";
-    button.title = "Group matching ranks, face cards, and wild cards";
-    button.setAttribute("aria-label", "Auto-sort hand by rank and card type");
+    button.className = "autosort-hand-button autosort-always-available";
+    button.title = "Auto-sort your hand at any time";
+    button.dataset.availability = "any-turn";
+    button.setAttribute("aria-label", "Auto-sort hand by rank and card type at any time");
     appendButtonLabel(button);
 
     const status = document.createElement("span");
@@ -136,12 +142,15 @@ export default function AutoSortEnhancer() {
     let statusTimer;
 
     const refresh = () => {
-      const advisor = document.querySelector(".game-page .selection-advisor");
+      const mountTarget = findMountTarget();
       const cardCount = document.querySelectorAll(".game-page .hand .cards > .hand-card-wrap").length;
+
+      // Sorting is deliberately independent of whose turn it is, whether the
+      // player has drawn, and whether cards can currently be selected or melded.
       button.disabled = cardCount < 2;
 
-      if (advisor && button.parentElement !== advisor) {
-        advisor.append(button, status);
+      if (mountTarget && button.parentElement !== mountTarget) {
+        mountTarget.append(button, status);
       }
     };
 

@@ -11,7 +11,7 @@ function discardPickupRule(room) {
   return room.rules?.discardPickupRule === "modern" ? "modern" : "classic";
 }
 
-function maximumOpeningPoints(hand, top, supportCards, rules = {}) {
+function maximumOpeningPoints(hand, top, supportCards) {
   const used = new Set(supportCards.map((card) => card.id));
   const topNaturals = hand.filter((card) => (
     !used.has(card.id)
@@ -46,12 +46,11 @@ function maximumOpeningPoints(hand, top, supportCards, rules = {}) {
     groups.push(pair);
   }
 
-  const maxWilds = Number(rules?.maxWildsPerMeld || 3);
   for (const wild of wildCards) {
     const target = groups.find((group) => {
       const naturals = group.cards.filter((card) => !isWild(card)).length;
       const wilds = group.cards.filter(isWild).length;
-      return wilds < maxWilds && wilds + 1 < naturals;
+      return wilds + 1 <= naturals;
     });
     if (!target) break;
     target.cards.push(wild);
@@ -181,7 +180,7 @@ export function planDiscardPickup(room, player) {
 
   if (!opened) {
     const requirement = openingRequirementForTeam(room, player.team);
-    const availablePoints = maximumOpeningPoints(hand, top, support.supportCards, room.rules);
+    const availablePoints = maximumOpeningPoints(hand, top, support.supportCards);
     if (availablePoints < requirement) {
       throw new Error(`Taking this pile cannot produce a legal ${requirement}-point opening. The available legal melds total ${availablePoints}.`);
     }
