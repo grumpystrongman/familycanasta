@@ -237,7 +237,7 @@ test("pending pickup validation requires the top card and the exact support card
   );
 });
 
-test("stock exhaustion makes an unfrozen matching board meld mandatory", () => {
+test("stock exhaustion leaves an existing-meld pickup available but never automatic", () => {
   const room = roomWith({
     hand: [card("spare", "6"), card("other", "7")],
     pile: [card("top", "Q", "H")],
@@ -248,10 +248,11 @@ test("stock exhaustion makes an unfrozen matching board meld mandatory", () => {
 
   const status = stockExhaustionPickupStatus(room, player);
   assert.equal(status.canTake, true);
-  assert.equal(status.mustTake, true);
+  assert.equal(status.mustTake, false);
+  assert.equal(status.plan.pickupMethod, "existing-meld");
 });
 
-test("stock exhaustion treats a completed matching canasta as an available board meld", () => {
+test("stock exhaustion leaves a completed matching canasta pickup available but optional", () => {
   const room = roomWith({
     hand: [card("spare", "6"), card("other", "7")],
     pile: [card("top", "Q", "H")],
@@ -265,7 +266,7 @@ test("stock exhaustion treats a completed matching canasta as an available board
 
   const status = stockExhaustionPickupStatus(room, player);
   assert.equal(status.canTake, true);
-  assert.equal(status.mustTake, true);
+  assert.equal(status.mustTake, false);
   assert.equal(status.plan.pickupMethod, "existing-meld");
 });
 
