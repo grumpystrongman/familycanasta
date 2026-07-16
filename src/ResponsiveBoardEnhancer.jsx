@@ -33,18 +33,38 @@ function expandedForView(view, teamIndex, boardCount, customTeams) {
   return boardCount ? [0] : [];
 }
 
+function annotateMelds(board) {
+  board.querySelectorAll(".board-meld").forEach((meld) => {
+    const cards = [...meld.querySelectorAll(".real-card")];
+    const hasWild = cards.some((card) => {
+      const label = card.getAttribute("aria-label") || "";
+      return label.startsWith("2 ") || label.startsWith("JOKER ");
+    });
+    const completed = cards.length >= 7;
+
+    meld.dataset.cardCount = String(cards.length);
+    meld.classList.toggle("meld-canasta", completed);
+    meld.classList.toggle("clean-canasta", completed && !hasWild);
+    meld.classList.toggle("dirty-canasta", completed && hasWild);
+  });
+}
+
 function applyBoardState(game, view, customTeams) {
   if (!game) return;
   const boards = [...game.querySelectorAll(".shared-board")];
   const teamIndex = currentTeamIndex(game);
   const expanded = new Set(expandedForView(view, teamIndex, boards.length, customTeams));
+  const playerCount = game.querySelectorAll(".opponents article").length + 1;
+  const multiSolo = boards.length > 2 && playerCount === boards.length;
 
   game.classList.add("responsive-board-ready");
+  game.classList.toggle("multi-solo-board-mode", multiSolo);
   game.dataset.boardView = view;
   boards.forEach((board, index) => {
     const isExpanded = expanded.has(index);
     board.classList.toggle("board-collapsed", !isExpanded);
     board.classList.toggle("board-expanded", isExpanded);
+    annotateMelds(board);
     const title = board.querySelector(".board-title");
     if (title) {
       title.tabIndex = 0;
