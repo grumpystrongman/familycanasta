@@ -23,6 +23,14 @@ test("tracks authentication and preserves exact selected card identities", async
   assert.match(source, /selectedIdsFromRenderedHand/);
 });
 
+test("shows the actual support cards required for a pending discard pickup", async () => {
+  const source = await readFile(enhancerUrl, "utf8");
+
+  assert.match(source, /pendingPickup\?\.supportDescription/);
+  assert.match(source, /\{pendingSupportDescription\} from your original hand/);
+  assert.doesNotMatch(source, /picked-up \{pendingPickup\.rank\}, two natural \{pendingPickup\.rank\}s/);
+});
+
 test("gives grouped controls their own full-width responsive layout", async () => {
   const styles = await readFile(stylesUrl, "utf8");
 
