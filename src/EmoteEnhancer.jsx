@@ -13,6 +13,7 @@ const EMOTES = [
 const EMOTE_PREFIX = "[[EMOTE:";
 const EMOTE_SUFFIX = "]]";
 const ACTIVE_LIFETIME_MS = 6500;
+export const TABLE_FLIP_DURATION_MS = 1500;
 
 function findRoomCode() {
   const code = document.querySelector(".game-page .code b")?.textContent?.trim();
@@ -129,6 +130,25 @@ export default function EmoteEnhancer() {
       unsubscribeEmote();
     };
   }, [roomCode]);
+
+  useEffect(() => {
+    if (activeEmote?.id !== "table-flip") return undefined;
+    const game = document.querySelector(".game-page.enhanced-game");
+    if (!game) return undefined;
+
+    game.classList.remove("evelyn-table-flipping");
+    void game.offsetWidth;
+    game.classList.add("evelyn-table-flipping");
+
+    const timer = window.setTimeout(() => {
+      game.classList.remove("evelyn-table-flipping");
+    }, TABLE_FLIP_DURATION_MS);
+
+    return () => {
+      window.clearTimeout(timer);
+      game.classList.remove("evelyn-table-flipping");
+    };
+  }, [activeEmote?.id, activeEmote?.nonce]);
 
   const me = useMemo(() => room?.members?.[auth?.currentUser?.uid] || null, [room]);
 
