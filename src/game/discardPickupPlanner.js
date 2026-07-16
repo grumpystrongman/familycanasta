@@ -78,11 +78,17 @@ function selectPickupSupport({ hand, top, frozen, existing, rule }) {
       supportCards: matchingNaturals.slice(0, 2),
       matchingNaturals,
       description: `two natural ${top.rank}s`,
+      method: "two-naturals",
     };
   }
 
   if (existing) {
-    return { supportCards: [], matchingNaturals, description: `your existing ${top.rank} meld` };
+    return {
+      supportCards: [],
+      matchingNaturals,
+      description: `your existing ${top.rank} meld`,
+      method: "existing-meld",
+    };
   }
 
   if (matchingNaturals.length >= 2) {
@@ -90,14 +96,18 @@ function selectPickupSupport({ hand, top, frozen, existing, rule }) {
       supportCards: matchingNaturals.slice(0, 2),
       matchingNaturals,
       description: `two natural ${top.rank}s`,
+      method: "two-naturals",
     };
   }
 
+  // Classic Canasta: when the pile is unfrozen, the top discard plus one
+  // matching natural and one wild card form the required three-card meld.
   if (matchingNaturals.length >= 1 && wildCards.length >= 1) {
     return {
       supportCards: [matchingNaturals[0], wildCards[0]],
       matchingNaturals,
       description: `one natural ${top.rank} and one wild card`,
+      method: "natural-wild",
     };
   }
 
@@ -186,6 +196,7 @@ export function planDiscardPickup(room, player) {
       requiredNaturalCount: support.supportCards.filter((card) => !isWild(card)).length,
       requiredSupportCardIds: support.supportCards.map((card) => card.id),
       supportDescription: support.description,
+      pickupMethod: support.method,
       availablePoints,
       pickupRule: rule,
     };
@@ -207,6 +218,7 @@ export function planDiscardPickup(room, player) {
     usedHandCardIds: support.supportCards.map((card) => card.id),
     usedNaturalIds: support.supportCards.filter((card) => !isWild(card)).map((card) => card.id),
     pickupRule: rule,
+    pickupMethod: support.method,
     supportDescription: support.description,
   };
 }
