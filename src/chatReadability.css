@@ -1,0 +1,20 @@
+/* Table-chat messages sit on a light panel, so all message text remains black.
+   This scope intentionally excludes the over-board emote stage, which keeps
+   each emote's original display colors and animation styling. */
+.score-chat-sidebar .messages article,
+.score-chat-sidebar .messages article > div,
+.score-chat-sidebar .messages article b,
+.score-chat-sidebar .messages article p,
+.score-chat-sidebar .messages article p strong {
+  color: #111111 !important;
+}
+
+.score-chat-sidebar .messages article p.chat-emote-message {
+  background: #ffffff;
+  border-color: #d6ddd9;
+  color: #111111 !important;
+}
+
+.score-chat-sidebar .messages article p.chat-emote-message strong {
+  color: #111111 !important;
+}

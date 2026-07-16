@@ -4,10 +4,10 @@ import { readFile } from "node:fs/promises";
 
 const sourceUrl = new URL("./GameStateEnhancer.jsx", import.meta.url);
 
-test("explains the classic unfrozen pickup decision order", async () => {
+test("explains the click-driven classic unfrozen pickup decision order", async () => {
   const source = await readFile(sourceUrl, "utf8");
 
-  assert.match(source, /use a matching board meld; otherwise two matches or one match \+ wild/);
+  assert.match(source, /click to take: top card to matching meld, rest to hand; otherwise two matches or one match \+ wild/);
   assert.match(source, /Modern American still requires two natural matches/);
   assert.match(source, /FROZEN — two natural matches required/);
 });

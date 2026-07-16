@@ -101,7 +101,7 @@ test("robot ends the round when the stock is empty and a black three tops the di
   assert.equal(result.publicState.discardPile.at(-1).rank, "3");
 });
 
-test("robot must take an unfrozen discard that matches its open meld after stock exhaustion", () => {
+test("robot is not forced to take an unfrozen discard matching its open meld after stock exhaustion", () => {
   const room = baseRoom({
     robotHand: [card("r1", "4"), card("r2", "6"), card("r3", "8")],
     humanHand: [card("h1", "K")],
@@ -114,9 +114,10 @@ test("robot must take an unfrozen discard that matches its open meld after stock
   const result = executeRobotTurn(room);
 
   assert.equal(result.publicState.phase, "handOver");
-  assert.equal(result.publicState.teamBoards[0][0].cards.some((item) => item.id === "top"), true);
-  assert.equal(result.publicState.stockBlockedUid, "human");
-  assert.equal(result.publicState.discardPile.at(-1).id, "r1");
+  assert.equal(result.publicState.roundEndReason, "stock-exhausted");
+  assert.equal(result.publicState.teamBoards[0][0].cards.some((item) => item.id === "top"), false);
+  assert.equal(result.publicState.discardPile.at(-1).id, "top");
+  assert.equal(result.privateHands.robot.length, 3);
 });
 
 test("drawing the final red three ends the round before the robot can meld or discard", () => {

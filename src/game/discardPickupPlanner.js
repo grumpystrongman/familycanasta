@@ -82,8 +82,8 @@ function selectPickupSupport({ hand, top, frozen, existing, rule }) {
     };
   }
 
-  // Classic Canasta: an unfrozen top discard may always be added directly
-  // to an existing matching meld, including a meld that is already a canasta.
+  // Classic Canasta: after the player explicitly clicks the discard pile,
+  // an unfrozen top discard may be added directly to a matching board meld.
   if (existing) {
     return {
       supportCards: [],
@@ -224,12 +224,11 @@ export function planDiscardPickup(room, player) {
 export function stockExhaustionPickupStatus(room, player) {
   try {
     const plan = planDiscardPickup(room, player);
-    const frozen = room.publicState?.discardFrozen !== false;
-    const board = room.publicState?.teamBoards?.[player.team] || [];
-    const existing = board.find((meld) => meld.rank === plan.top.rank);
     return {
       canTake: true,
-      mustTake: !frozen && Boolean(existing),
+      // Even with a matching board meld, taking the pile is a player choice.
+      // The player must explicitly click the discard pile to perform the pickup.
+      mustTake: false,
       plan,
       reason: "",
     };

@@ -19,6 +19,7 @@ import "./homeRules.css";
 import "./topActionBar.css";
 import "./emotes.css";
 import "./chatBubble.css";
+import "./chatReadability.css";
 import "./autoSort.css";
 import "./responsiveBoard.css";
 import "./classicCanastaLayout.css";
