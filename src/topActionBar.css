@@ -9,7 +9,8 @@
   position: relative;
   z-index: 40;
   display: grid;
-  grid-template-columns: auto minmax(180px, 1fr) auto;
+  grid-template-columns: 1fr auto 1fr;
+  grid-template-areas: "stock discard status";
   align-items: center;
   flex: 0 0 auto;
   width: 100%;
@@ -45,6 +46,17 @@
   border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 10px;
   background: rgba(0, 20, 16, 0.42);
+}
+
+.enhanced-game .center > .pile-action:first-child {
+  grid-area: stock;
+  justify-self: start;
+}
+
+.enhanced-game .center > .pile-action:last-child {
+  grid-area: discard;
+  justify-self: center;
+  min-width: 164px;
 }
 
 .enhanced-game .pile-action:disabled {
@@ -85,6 +97,10 @@
 }
 
 .enhanced-game .dealer-orb {
+  grid-area: status;
+  justify-self: stretch;
+  width: 100%;
+  max-width: 460px;
   min-width: 0;
   display: grid;
   grid-template-columns: auto auto minmax(0, 1fr);
@@ -137,18 +153,24 @@
 
 @media (max-width: 850px) {
   .enhanced-game .center {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "discard"
+      "stock"
+      "status";
     gap: 6px;
     padding-inline: 6px;
   }
 
-  .enhanced-game .dealer-orb {
-    grid-column: 1 / -1;
-    grid-row: 1;
+  .enhanced-game .center > .pile-action:first-child,
+  .enhanced-game .center > .pile-action:last-child {
+    justify-self: center;
+    width: min(100%, 280px);
   }
 
-  .enhanced-game .pile-action {
-    grid-row: 2;
+  .enhanced-game .dealer-orb {
+    justify-self: stretch;
+    max-width: none;
   }
 
   .enhanced-game .pile-action > b {
