@@ -99,7 +99,13 @@
 /* The hand must always fit the center column. Cards wrap instead of scrolling sideways. */
 .hand {
   overflow: visible !important;
+  display: grid !important;
+  grid-template-rows: auto auto auto !important;
 }
+
+.hand .identity { grid-row: 1; }
+.hand .selection-advisor { grid-row: 2; }
+.hand .cards { grid-row: 3; }
 
 .hand .cards {
   display: grid !important;
@@ -125,38 +131,99 @@
   max-width: 100%;
 }
 
-/* Keep all hand controls visible in one wrapping toolbar. */
+/* Full play advisor restored above the cards. */
 .selection-advisor {
-  display: flex !important;
-  flex-wrap: wrap;
+  display: grid !important;
+  grid-template-columns: minmax(240px, 1fr) auto auto !important;
   align-items: center !important;
-  gap: 8px !important;
-  min-height: 52px;
+  gap: 10px !important;
+  min-height: 74px;
+  padding: 10px 14px !important;
   overflow: visible !important;
+  border-top: 1px solid #18352f !important;
+  border-bottom: 1px solid #18352f !important;
+  background: linear-gradient(180deg, rgba(8, 25, 25, .98), rgba(5, 18, 20, .98)) !important;
 }
 
 .selection-advisor > div {
-  flex: 1 1 180px;
   min-width: 0;
+  display: grid !important;
+  gap: 5px;
 }
 
-.selection-advisor button,
-.hand-arrange-toolbar button,
-.hand-arrange-toolbar select {
-  flex: 0 0 auto;
-  min-height: 36px !important;
+.selection-advisor > div > b {
+  display: block !important;
+  color: #f4f7f7 !important;
+  font-size: 13px !important;
+}
+
+.selection-advisor > div > span {
+  display: block !important;
+  color: #aebdb9 !important;
+  font-size: 12px !important;
+  line-height: 1.35 !important;
+  white-space: normal !important;
+  overflow-wrap: anywhere;
+}
+
+.selection-advisor .wild-target {
+  display: flex !important;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+  color: #f2c861 !important;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.selection-advisor .wild-target select {
+  min-width: 150px;
+  min-height: 34px;
+  border: 1px solid #3d665e;
+  border-radius: 8px;
+  background: #091a1d;
+  color: #fff;
+  padding: 6px 9px;
+}
+
+.selection-advisor > button {
+  min-width: 126px;
+  min-height: 42px !important;
+  padding: 9px 13px !important;
+  border-radius: 8px !important;
   white-space: nowrap;
+  font-weight: 800;
 }
 
+.selection-advisor > button:not(.discard-button) {
+  border: 1px solid #d4b84d !important;
+  background: linear-gradient(180deg, #f1d25d, #cda72c) !important;
+  color: #172018 !important;
+}
+
+.selection-advisor .discard-button {
+  border: 1px solid #7b2e31 !important;
+  background: #351416 !important;
+  color: #ffd9d9 !important;
+}
+
+.selection-advisor > button:disabled {
+  opacity: .42 !important;
+  filter: grayscale(.25);
+}
+
+/* Sorting is a separate row so it cannot cover meld controls. */
 .hand-arrange-toolbar {
-  order: -1;
-  flex: 1 1 100%;
+  order: initial;
+  grid-column: 1 / -1;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  padding-bottom: 7px;
-  border-bottom: 1px solid #18352f;
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px solid #18352f;
 }
 
 .hand-arrange-toolbar label {
@@ -168,6 +235,14 @@
   font-weight: 700;
   letter-spacing: .04em;
   text-transform: uppercase;
+}
+
+.selection-advisor button,
+.hand-arrange-toolbar button,
+.hand-arrange-toolbar select {
+  flex: 0 0 auto;
+  min-height: 36px !important;
+  white-space: nowrap;
 }
 
 .hand-arrange-toolbar select,
@@ -207,6 +282,9 @@
   .mock-header-dashboard {
     grid-template-columns: minmax(260px, 1fr) minmax(320px, 1.2fr) 100px 95px 78px !important;
   }
+  .selection-advisor {
+    grid-template-columns: minmax(220px, 1fr) repeat(2, minmax(112px, auto)) !important;
+  }
 }
 
 @media (max-width: 1040px) {
@@ -245,6 +323,12 @@
   .mock-right-rail {
     display: flex !important;
     flex-direction: column;
+  }
+  .selection-advisor {
+    grid-template-columns: 1fr !important;
+  }
+  .selection-advisor > button {
+    width: 100%;
   }
   .hand .cards {
     grid-template-columns: repeat(auto-fit, minmax(54px, 1fr));
