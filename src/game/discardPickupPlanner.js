@@ -72,7 +72,7 @@ function selectPickupSupport({ hand, top, frozen, existing, rule }) {
     if (matchingNaturals.length < 2) {
       throw new Error(rule === "modern"
         ? "Modern American Canasta requires two natural cards matching the top discard, whether the pile is frozen or unfrozen."
-        : "The discard pile is frozen. You need two natural cards matching the top discard.");
+        : "The discard pile is frozen. You need two natural cards matching the top discard, even when that rank is already melded on your board.");
     }
     return {
       supportCards: matchingNaturals.slice(0, 2),
@@ -82,8 +82,8 @@ function selectPickupSupport({ hand, top, frozen, existing, rule }) {
     };
   }
 
-  // Classic Canasta: after the player explicitly clicks the discard pile,
-  // an unfrozen top discard may be added directly to a matching board meld.
+  // Classic Canasta only: after the player explicitly clicks an UNFROZEN
+  // discard pile, the top card may be added directly to a matching board meld.
   if (existing) {
     return {
       supportCards: [],
@@ -170,11 +170,12 @@ export function planDiscardPickup(room, player) {
   const frozen = room.publicState?.discardFrozen !== false;
   const opened = Boolean(room.publicState?.opened?.[player.team]);
   const rule = discardPickupRule(room);
+  const directBoardMeld = !frozen && rule === "classic" && opened ? existing : null;
   const support = selectPickupSupport({
     hand,
     top,
     frozen,
-    existing: opened ? existing : null,
+    existing: directBoardMeld,
     rule,
   });
 
