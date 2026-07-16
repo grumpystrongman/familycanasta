@@ -18,6 +18,7 @@ import "./safeDiscard.css";
 import "./homeRules.css";
 import "./topActionBar.css";
 import "./emotes.css";
+import "./chatBubble.css";
 import "./autoSort.css";
 import "./responsiveBoard.css";
 import "./classicCanastaLayout.css";
@@ -116,6 +117,7 @@ const enhancementLoaders = [
   ["HomeRulesOptions", () => import("./HomeRulesOptions")],
   ["ScoringDisplayFix", () => import("./ScoringDisplayFix")],
   ["EmoteEnhancer", () => import("./EmoteEnhancer")],
+  ["ChatBubbleEnhancer", () => import("./ChatBubbleEnhancer")],
   ["AutoSortEnhancer", () => import("./AutoSortEnhancer")],
   ["ResponsiveBoardEnhancer", () => import("./ResponsiveBoardEnhancer")],
 ];
