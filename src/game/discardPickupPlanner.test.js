@@ -188,7 +188,7 @@ test("stock exhaustion makes an unfrozen matching board meld mandatory", () => {
 
 test("stock exhaustion permits but does not force a new meld pickup", () => {
   const room = roomWith({
-    hand: [card("q1", "Q"), card("q2", "Q", "C"), card("spare", "6")],
+    hand: [card("q1", "Q"), card("q2", "Q", "C"), card("spare", "6"), card("other", "7")],
     pile: [card("top", "Q", "H")],
     opened: true,
     frozen: false,
