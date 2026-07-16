@@ -14,6 +14,7 @@ import {
   stockExhaustionPickupStatus,
   validatePendingPickupSelection,
 } from "./discardPickupPlanner";
+import { boardCanGoOut, teamCanGoOut } from "./goOutRules";
 
 function orderedPlayers(room) {
   return Object.values(room.members || {}).sort((a, b) => a.seat - b.seat);
@@ -118,6 +119,17 @@ function validateCombinedMeld(cards, rules) {
   return naturals[0].rank;
 }
 
+function projectedBoardAfterPlay(board, existing, rank, selected) {
+  const projected = board.map((meld) => ({ ...meld, cards: [...(meld.cards || [])] }));
+  if (existing) {
+    const target = projected.find((meld) => meld.rank === existing.rank);
+    target.cards.push(...selected);
+  } else {
+    projected.push({ rank, cards: [...selected] });
+  }
+  return projected;
+}
+
 export async function takeDiscardPile(code, uid) {
   let actionError = "The discard pile cannot be taken with your current hand.";
   const result = await runTransaction(ref(db, `rooms/${code}`), (room) => {
@@ -139,22 +151,24 @@ export async function takeDiscardPile(code, uid) {
           topCardId: plan.top.id,
           matchingNaturalIds: plan.matchingNaturalIds,
           requiredNaturalCount: plan.requiredNaturalCount,
+          requiredSupportCardIds: plan.requiredSupportCardIds,
+          supportDescription: plan.supportDescription,
           requirement: plan.requirement,
         };
-        room.publicState.lastAction = `${player.nickname} took the discard pile. Their opening must include the picked-up ${plan.rank} and two natural ${plan.rank}s.`;
+        room.publicState.lastAction = `${player.nickname} took the discard pile. Their opening must include the picked-up ${plan.rank} and ${plan.supportDescription}.`;
       } else {
         if (plan.existing) {
           plan.existing.cards = [...(plan.existing.cards || []), ...plan.forcedCards];
         } else {
           board.push({ rank: plan.top.rank, cards: plan.forcedCards });
         }
-        const used = new Set(plan.usedNaturalIds);
+        const used = new Set(plan.usedHandCardIds || plan.usedNaturalIds || []);
         room.privateHands[uid] = sortHand([
           ...hand.filter((card) => !used.has(card.id)),
           ...plan.lowerPile,
         ]);
         room.publicState.pendingDiscardPickup = null;
-        room.publicState.lastAction = `${player.nickname} took the discard pile, played the top ${plan.top.rank}, and kept the remaining cards in hand.`;
+        room.publicState.lastAction = `${player.nickname} took the discard pile using ${plan.supportDescription}, played the top ${plan.top.rank}, and kept the remaining cards in hand.`;
       }
 
       room.publicState.discardPile = [];
@@ -215,13 +229,19 @@ export async function meldSelectedCards(code, uid, cardIds, targetRank = null) {
         }
       }
 
+      const remainingHand = hand.filter((card) => !cardIds.includes(card.id));
+      const projectedBoard = projectedBoardAfterPlay(board, existing, rank, selected);
+      if (!boardCanGoOut(projectedBoard, room.rules) && remainingHand.length < 2) {
+        throw new Error("Your team needs a canasta before going out. Keep at least two cards before the discard so one card remains after your turn.");
+      }
+
       if (existing) existing.cards = [...(existing.cards || []), ...selected];
       else board.push({ rank, cards: selected });
       room.publicState.opened[player.team] = true;
       room.publicState.pendingDiscardPickup = null;
       room.publicState.openingTurnUid = null;
       room.publicState.openingTurnPoints = 0;
-      room.privateHands[uid] = hand.filter((card) => !cardIds.includes(card.id));
+      room.privateHands[uid] = remainingHand;
       room.publicState.handCounts[uid] = room.privateHands[uid].length;
       room.publicState.turnPhase = "play";
       room.publicState.lastAction = `${player.nickname} played ${selected.length} card${selected.length === 1 ? "" : "s"} on ${rank}s.`;
@@ -251,6 +271,9 @@ export async function discardSelectedCard(code, uid, cardId) {
       const card = hand.find((item) => item.id === cardId);
       if (!card) throw new Error("That card is no longer in your hand.");
       if (isRedThree(card)) throw new Error("Red threes are laid down automatically and replaced.");
+      if (hand.length === 1 && !teamCanGoOut(room, player.team)) {
+        throw new Error("Your team needs a canasta before going out. You must keep at least one card in your hand.");
+      }
       room.privateHands[uid] = hand.filter((item) => item.id !== cardId);
       room.publicState.discardPile ||= [];
       room.publicState.discardPile.push(card);
