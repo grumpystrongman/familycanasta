@@ -1,0 +1,5 @@
+- Opening discard pile remains frozen.
+- One canasta is required before a player or robot can go out.
+- Classic discard pickup is the default; Modern American is selectable.
+- Multi-player solo boards use one-card summaries with count badges.
+- Center draw controls are compact so boards receive more space.
