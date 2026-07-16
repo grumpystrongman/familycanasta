@@ -7,11 +7,14 @@ const CARD_ID_TYPE = "text/card-id";
 function createDataTransfer(initialCardId = "") {
   const values = new Map();
   const types = [];
+
   const setData = (type, value) => {
     values.set(type, String(value));
     if (!types.includes(type)) types.push(type);
   };
+
   if (initialCardId) setData(CARD_ID_TYPE, initialCardId);
+
   return {
     dropEffect: "move",
     effectAllowed: "move",
@@ -25,10 +28,13 @@ function createDataTransfer(initialCardId = "") {
         if (typeIndex >= 0) types.splice(typeIndex, 1);
         return;
       }
+
       values.clear();
       types.splice(0, types.length);
     },
-    getData(type) { return values.get(type) || ""; },
+    getData(type) {
+      return values.get(type) || "";
+    },
     setData,
   };
 }
@@ -68,30 +74,42 @@ function compareCards(a, b) {
 export function autoSortVisibleHand() {
   const wrappers = Array.from(document.querySelectorAll(".game-page .hand .cards > .hand-card-wrap"));
   if (wrappers.length < 2) return { cardCount: wrappers.length, moved: 0 };
+
   const currentEntries = wrappers.map((wrapper, index) => cardSortEntry(wrapper, index));
-  if (currentEntries.some((entry) => !entry.id)) throw new Error("The hand could not be sorted because a card identifier was unavailable.");
+  if (currentEntries.some((entry) => !entry.id)) {
+    throw new Error("The hand could not be sorted because a card identifier was unavailable.");
+  }
+
   const desiredEntries = [...currentEntries].sort(compareCards);
   const currentIds = currentEntries.map((entry) => entry.id);
   const wrappersById = new Map(currentEntries.map((entry) => [entry.id, entry.wrapper]));
   let moved = 0;
+
   desiredEntries.forEach((desired, targetIndex) => {
     const sourceIndex = currentIds.indexOf(desired.id);
     if (sourceIndex < 0 || sourceIndex === targetIndex) return;
+
     const targetId = currentIds[targetIndex];
     const targetWrapper = wrappersById.get(targetId);
     if (!targetWrapper) return;
+
     dispatchDragEvent(targetWrapper, "drop", createDataTransfer(desired.id));
     currentIds.splice(sourceIndex, 1);
     currentIds.splice(targetIndex, 0, desired.id);
     moved += 1;
   });
+
   return { cardCount: wrappers.length, moved };
 }
 
-function clearSelectedCards() {
-  const selected = Array.from(document.querySelectorAll(".game-page .hand .hand-card-wrap.selected-wrap .real-card"));
-  selected.forEach((card) => card.click());
-  return selected.length;
+function appendButtonLabel(button) {
+  const icon = document.createElement("span");
+  icon.setAttribute("aria-hidden", "true");
+  icon.textContent = "⇅";
+
+  const label = document.createElement("span");
+  label.textContent = "Auto-sort hand";
+  button.append(icon, label);
 }
 
 function errorMessage(error) {
@@ -99,7 +117,8 @@ function errorMessage(error) {
 }
 
 function findMountTarget() {
-  return document.querySelector(".game-page .selection-advisor") || document.querySelector(".game-page .hand");
+  return document.querySelector(".game-page .selection-advisor")
+    || document.querySelector(".game-page .hand");
 }
 
 export default function AutoSortEnhancer() {
@@ -107,79 +126,65 @@ export default function AutoSortEnhancer() {
     const body = document.body;
     if (!body) return undefined;
 
-    const toolbar = document.createElement("div");
-    toolbar.className = "hand-arrange-toolbar";
-    toolbar.setAttribute("aria-label", "Hand arrangement controls");
-
-    const sortLabel = document.createElement("label");
-    sortLabel.textContent = "Arrange";
-    const sortMode = document.createElement("select");
-    sortMode.setAttribute("aria-label", "Hand arrangement mode");
-    sortMode.innerHTML = '<option value="rank">By rank</option>';
-    sortLabel.append(sortMode);
-
-    const sortButton = document.createElement("button");
-    sortButton.type = "button";
-    sortButton.className = "autosort-hand-button autosort-always-available";
-    sortButton.title = "Automatically arrange your hand";
-    sortButton.setAttribute("aria-label", "Auto arrange hand by rank and card type");
-    sortButton.innerHTML = '<span aria-hidden="true">⇅</span><span>Auto arrange</span>';
-
-    const clearButton = document.createElement("button");
-    clearButton.type = "button";
-    clearButton.className = "clear-hand-selection-button";
-    clearButton.textContent = "Clear selection";
-    clearButton.setAttribute("aria-label", "Clear selected cards");
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "autosort-hand-button autosort-always-available";
+    button.title = "Auto-sort your hand at any time";
+    button.dataset.availability = "any-turn";
+    button.setAttribute("aria-label", "Auto-sort hand by rank and card type at any time");
+    appendButtonLabel(button);
 
     const status = document.createElement("span");
     status.className = "autosort-hand-status";
     status.setAttribute("role", "status");
     status.setAttribute("aria-live", "polite");
 
-    toolbar.append(sortLabel, sortButton, clearButton, status);
     let statusTimer;
-
-    const announce = (message) => {
-      status.textContent = message;
-      if (statusTimer !== undefined) window.clearTimeout(statusTimer);
-      statusTimer = window.setTimeout(() => { status.textContent = ""; }, 2500);
-    };
 
     const refresh = () => {
       const mountTarget = findMountTarget();
       const cardCount = document.querySelectorAll(".game-page .hand .cards > .hand-card-wrap").length;
-      const selectedCount = document.querySelectorAll(".game-page .hand .hand-card-wrap.selected-wrap").length;
-      sortButton.disabled = cardCount < 2;
-      clearButton.disabled = selectedCount === 0;
-      if (mountTarget && toolbar.parentElement !== mountTarget) mountTarget.prepend(toolbar);
+
+      // Sorting is deliberately independent of whose turn it is, whether the
+      // player has drawn, and whether cards can currently be selected or melded.
+      button.disabled = cardCount < 2;
+
+      if (mountTarget && button.parentElement !== mountTarget) {
+        mountTarget.append(button, status);
+      }
     };
 
-    const handleSort = () => {
+    const announce = (message) => {
+      status.textContent = message;
+      if (statusTimer !== undefined) window.clearTimeout(statusTimer);
+      statusTimer = window.setTimeout(() => {
+        status.textContent = "";
+      }, 2500);
+    };
+
+    const handleClick = () => {
       try {
         const result = autoSortVisibleHand();
-        announce(result.moved > 0 ? `Arranged ${result.cardCount} cards by rank, with wild cards together.` : "Your hand is already arranged.");
+        announce(result.moved > 0
+          ? `Sorted ${result.cardCount} cards into matching rank groups, with wild cards together.`
+          : "Your hand is already sorted.");
       } catch (error) {
         announce(errorMessage(error));
       }
     };
 
-    const handleClear = () => {
-      const count = clearSelectedCards();
-      announce(count ? `Cleared ${count} selected card${count === 1 ? "" : "s"}.` : "No cards are selected.");
-    };
-
-    sortButton.addEventListener("click", handleSort);
-    clearButton.addEventListener("click", handleClear);
+    button.addEventListener("click", handleClick);
     refresh();
+
     const observer = new MutationObserver(refresh);
-    observer.observe(body, { childList: true, subtree: true, attributes: true, attributeFilter: ["class"] });
+    observer.observe(body, { childList: true, subtree: true });
 
     return () => {
       observer.disconnect();
       if (statusTimer !== undefined) window.clearTimeout(statusTimer);
-      sortButton.removeEventListener("click", handleSort);
-      clearButton.removeEventListener("click", handleClear);
-      toolbar.remove();
+      button.removeEventListener("click", handleClick);
+      button.remove();
+      status.remove();
     };
   }, []);
 
