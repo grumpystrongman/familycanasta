@@ -10,6 +10,10 @@ import {
   planDiscardPickup,
   stockExhaustionPickupStatus,
 } from "./discardPickupPlanner.js";
+import {
+  preserveCardsUntilCanasta,
+  teamCanGoOut,
+} from "./goOutRules.js";
 
 const rankOrder = ["4","5","6","7","8","9","10","J","Q","K","A","2","JOKER","3"];
 
@@ -55,6 +59,8 @@ function takePileForRobot(state, player, hand, plan) {
       topCardId: plan.top.id,
       matchingNaturalIds: plan.matchingNaturalIds,
       requiredNaturalCount: plan.requiredNaturalCount,
+      requiredSupportCardIds: plan.requiredSupportCardIds,
+      supportDescription: plan.supportDescription,
       requirement: plan.requirement,
     };
   } else {
@@ -62,7 +68,7 @@ function takePileForRobot(state, player, hand, plan) {
     const existing = melds.find((meld) => meld.rank === plan.top.rank);
     if (existing) existing.cards.push(...plan.forcedCards);
     else melds.push({ rank: plan.top.rank, cards: [...plan.forcedCards] });
-    const used = new Set(plan.usedNaturalIds);
+    const used = new Set(plan.usedHandCardIds || plan.usedNaturalIds || []);
     state.privateHands[player.uid] = [
       ...hand.filter((card) => !used.has(card.id)),
       ...plan.lowerPile,
@@ -223,6 +229,10 @@ function candidateSatisfiesPending(candidate, pending) {
   if (!pending || candidate.rank !== pending.rank) return false;
   const ids = new Set(candidate.cards.map((card) => card.id));
   if (!ids.has(pending.topCardId)) return false;
+  const requiredSupportCardIds = pending.requiredSupportCardIds || [];
+  if (requiredSupportCardIds.length) {
+    return requiredSupportCardIds.every((id) => ids.has(id));
+  }
   const matches = (pending.matchingNaturalIds || []).filter((id) => ids.has(id)).length;
   return matches >= Number(pending.requiredNaturalCount || 2);
 }
@@ -275,7 +285,18 @@ function applyMelds(state, player, rules) {
     if (actualOpeningPoints < requirement) selected = [];
   }
 
+  selected = preserveCardsUntilCanasta(hand, currentMelds, selected, rules);
   if (!selected.length) return { count: 0, ranks: [] };
+
+  if (!opened) {
+    const actualOpeningCards = uniqueSelectedCards(selected, hand);
+    const actualOpeningPoints = actualOpeningCards.reduce((sum, card) => sum + cardPoints(card), 0);
+    if (actualOpeningPoints < requirement) return { count: 0, ranks: [] };
+    if (pending && !selected.some((candidate) => candidateSatisfiesPending(candidate, pending))) {
+      return { count: 0, ranks: [] };
+    }
+  }
+
   const used = new Set();
   for (const candidate of selected) {
     const availableCards = candidate.cards.filter(
@@ -314,6 +335,7 @@ function discardForRobot(state, player, rules) {
   if (state.publicState?.pendingDiscardPickup?.uid === player.uid) return null;
   const hand = [...(state.privateHands[player.uid] || [])];
   if (!hand.length) return null;
+  if (hand.length === 1 && !teamCanGoOut(state, player.team)) return null;
   const melds = getTeamMelds(state, player.team);
   const candidates = hand.filter((card) => !isRedThree(card));
   const discard = (candidates.length ? candidates : hand)
@@ -379,10 +401,13 @@ export function executeRobotTurn(room) {
   state.publicState.turnPhase = "play";
   const meldResult = applyMelds(state, player, state.rules || {});
   if (state.publicState?.pendingDiscardPickup?.uid === player.uid) return room;
-  if (!(state.privateHands[player.uid] || []).length) return finishRound(state, player.uid);
+  if (!(state.privateHands[player.uid] || []).length) {
+    return teamCanGoOut(state, player.team) ? finishRound(state, player.uid) : room;
+  }
 
   const discarded = discardForRobot(state, player, state.rules || {});
   const hand = state.privateHands[player.uid] || [];
+  if (!discarded && !teamCanGoOut(state, player.team)) return room;
   state.publicState.handCounts ||= {};
   state.publicState.handCounts[player.uid] = hand.length;
   state.publicState.botThinkingUid = null;

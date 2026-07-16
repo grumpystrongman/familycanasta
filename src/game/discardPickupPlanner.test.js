@@ -13,9 +13,17 @@ const card = (id, rank, suit = "S") => ({
   color: suit === "H" || suit === "D" ? "red" : "black",
 });
 
-function roomWith({ hand, pile, board = [], opened = false, frozen = true, requirement = 50 }) {
+function roomWith({
+  hand,
+  pile,
+  board = [],
+  opened = false,
+  frozen = true,
+  requirement = 50,
+  pickupRule = "classic",
+}) {
   return {
-    rules: { maxWildsPerMeld: 3 },
+    rules: { maxWildsPerMeld: 3, discardPickupRule: pickupRule },
     privateHands: { player: hand },
     publicState: {
       discardPile: pile,
@@ -60,6 +68,7 @@ test("puts an unopened pickup into pending state instead of auto-playing the han
   assert.equal(plan.top.id, "top");
   assert.deepEqual(plan.pile.map((item) => item.id), ["lower", "top"]);
   assert.deepEqual(plan.matchingNaturalIds.sort(), ["q1", "q2"]);
+  assert.deepEqual(plan.requiredSupportCardIds.sort(), ["q1", "q2"]);
   assert.equal(plan.requiredNaturalCount, 2);
   assert.ok(plan.availablePoints >= 90);
   assert.equal("forcedCards" in plan, false);
@@ -78,29 +87,87 @@ test("an opened frozen pickup forces only two natural matches", () => {
 
   assert.equal(plan.mode, "immediate");
   assert.deepEqual(plan.forcedCards.map((item) => item.id), ["top", "q1", "q2"]);
-  assert.deepEqual(plan.usedNaturalIds, ["q1", "q2"]);
-  assert.equal(plan.usedNaturalIds.includes("q3"), false);
+  assert.deepEqual(plan.usedHandCardIds, ["q1", "q2"]);
+  assert.equal(plan.usedHandCardIds.includes("q3"), false);
   assert.deepEqual(plan.lowerPile.map((item) => item.id), ["lower"]);
 });
 
-test("pending pickup validation requires the top card and two original matches", () => {
+test("classic unfrozen pickup permits one natural match plus one wild card", () => {
+  const room = roomWith({
+    hand: [card("q1", "Q"), card("wild", "2"), card("spare", "6")],
+    pile: [card("lower", "4"), card("top", "Q", "H")],
+    opened: true,
+    frozen: false,
+    pickupRule: "classic",
+  });
+
+  const plan = planDiscardPickup(room, player);
+
+  assert.equal(plan.pickupRule, "classic");
+  assert.deepEqual(plan.forcedCards.map((item) => item.id), ["top", "q1", "wild"]);
+  assert.deepEqual(plan.usedHandCardIds, ["q1", "wild"]);
+});
+
+test("classic unfrozen pickup can add the top card directly to an existing meld", () => {
+  const room = roomWith({
+    hand: [card("spare", "6"), card("other", "7")],
+    pile: [card("top", "Q", "H")],
+    board: [{ rank: "Q", cards: [card("q1", "Q"), card("q2", "Q"), card("q3", "Q")] }],
+    opened: true,
+    frozen: false,
+    pickupRule: "classic",
+  });
+
+  const plan = planDiscardPickup(room, player);
+
+  assert.equal(plan.existing.rank, "Q");
+  assert.deepEqual(plan.forcedCards.map((item) => item.id), ["top"]);
+  assert.deepEqual(plan.usedHandCardIds, []);
+});
+
+test("modern American pickup always requires two natural matches", () => {
+  const room = roomWith({
+    hand: [card("q1", "Q"), card("wild", "2"), card("spare", "6")],
+    pile: [card("top", "Q", "H")],
+    opened: true,
+    frozen: false,
+    pickupRule: "modern",
+  });
+
+  assert.throws(() => planDiscardPickup(room, player), /two natural cards matching/i);
+});
+
+test("modern American pickup requires two naturals even for an existing meld", () => {
+  const room = roomWith({
+    hand: [card("q1", "Q"), card("wild", "2"), card("spare", "6")],
+    pile: [card("top", "Q", "H")],
+    board: [{ rank: "Q", cards: [card("board-q1", "Q"), card("board-q2", "Q"), card("board-q3", "Q")] }],
+    opened: true,
+    frozen: false,
+    pickupRule: "modern",
+  });
+
+  assert.throws(() => planDiscardPickup(room, player), /two natural cards matching/i);
+});
+
+test("pending pickup validation requires the top card and the exact support cards", () => {
   const pending = {
     rank: "Q",
     topCardId: "top",
-    matchingNaturalIds: ["q1", "q2", "q3"],
-    requiredNaturalCount: 2,
+    requiredSupportCardIds: ["q1", "wild"],
+    supportDescription: "one natural Q and one wild card",
   };
 
   assert.match(
-    validatePendingPickupSelection(pending, [card("q1", "Q"), card("q2", "Q")]),
+    validatePendingPickupSelection(pending, [card("q1", "Q"), card("wild", "2")]),
     /picked-up Q/i,
   );
   assert.match(
     validatePendingPickupSelection(pending, [card("top", "Q"), card("q1", "Q")]),
-    /two natural Qs/i,
+    /one natural Q and one wild card/i,
   );
   assert.equal(
-    validatePendingPickupSelection(pending, [card("top", "Q"), card("q1", "Q"), card("q3", "Q")]),
+    validatePendingPickupSelection(pending, [card("top", "Q"), card("q1", "Q"), card("wild", "2")]),
     "",
   );
 });
@@ -121,7 +188,7 @@ test("stock exhaustion makes an unfrozen matching board meld mandatory", () => {
 
 test("stock exhaustion permits but does not force a new meld pickup", () => {
   const room = roomWith({
-    hand: [card("q1", "Q"), card("q2", "Q", "C"), card("spare", "6")],
+    hand: [card("q1", "Q"), card("q2", "Q", "C"), card("spare", "6"), card("other", "7")],
     pile: [card("top", "Q", "H")],
     opened: true,
     frozen: false,

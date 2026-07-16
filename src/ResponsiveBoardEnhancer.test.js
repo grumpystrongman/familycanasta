@@ -4,11 +4,13 @@ import { readFile } from "node:fs/promises";
 
 const enhancerUrl = new URL("./ResponsiveBoardEnhancer.jsx", import.meta.url);
 const cssUrl = new URL("./responsiveBoard.css", import.meta.url);
+const compactCssUrl = new URL("./classicCanastaLayout.css", import.meta.url);
 const mainUrl = new URL("./main.jsx", import.meta.url);
 
 test("loads the responsive board enhancer", async () => {
   const source = await readFile(mainUrl, "utf8");
   assert.match(source, /import "\.\/responsiveBoard\.css";/);
+  assert.match(source, /import "\.\/classicCanastaLayout\.css";/);
   assert.match(source, /\["ResponsiveBoardEnhancer", \(\) => import\("\.\/ResponsiveBoardEnhancer"\)\]/);
 });
 
@@ -20,9 +22,24 @@ test("defaults to a focused board view and preserves compact and full controls",
   assert.match(source, /\["full", "Full boards"/);
 });
 
-test("keeps actions reachable and summarizes completed books", async () => {
+test("detects multi-player individual games and annotates meld counts", async () => {
+  const source = await readFile(enhancerUrl, "utf8");
+  assert.match(source, /boards\.length > 2 && playerCount === boards\.length/);
+  assert.match(source, /meld\.dataset\.cardCount = String\(cards\.length\)/);
+  assert.match(source, /clean-canasta/);
+  assert.match(source, /dirty-canasta/);
+});
+
+test("shows one collapsed card with a count bubble and canasta colors", async () => {
+  const compactCss = await readFile(compactCssUrl, "utf8");
+  assert.match(compactCss, /\.real-card:first-child\s*\{[^}]*display:\s*block/s);
+  assert.match(compactCss, /content:\s*attr\(data-card-count\)/);
+  assert.match(compactCss, /\.board-meld\.clean-canasta\s*\{[^}]*border-color:\s*#e04652/s);
+  assert.match(compactCss, /\.board-meld\.dirty-canasta\s*\{[^}]*border-color:\s*#9a6543/s);
+});
+
+test("keeps actions reachable and supports the original responsive board styles", async () => {
   const css = await readFile(cssUrl, "utf8");
-  assert.match(css, /grid-template-rows: auto minmax\(110px, 1fr\) auto auto/);
   assert.match(css, /\.responsive-board-ready \.hand \{[\s\S]*position: relative !important/);
   assert.match(css, /board-meld:has\(\.real-card:nth-child\(7\)\)/);
   assert.match(css, /aria-label\^="JOKER "/);

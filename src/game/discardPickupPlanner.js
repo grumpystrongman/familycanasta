@@ -5,10 +5,22 @@ import {
   isWild,
   openingRequirementForTeam,
 } from "./engine.js";
+import { boardCanGoOut } from "./goOutRules.js";
 
-function maximumOpeningPoints(hand, top, matchingNaturals, rules = {}) {
-  const used = new Set(matchingNaturals.map((card) => card.id));
-  const groups = [{ rank: top.rank, cards: [top, ...matchingNaturals], valid: true }];
+function discardPickupRule(room) {
+  return room.rules?.discardPickupRule === "modern" ? "modern" : "classic";
+}
+
+function maximumOpeningPoints(hand, top, supportCards, rules = {}) {
+  const used = new Set(supportCards.map((card) => card.id));
+  const topNaturals = hand.filter((card) => (
+    !used.has(card.id)
+    && !isWild(card)
+    && card.rank === top.rank
+  ));
+  topNaturals.forEach((card) => used.add(card.id));
+
+  const groups = [{ rank: top.rank, cards: [top, ...supportCards, ...topNaturals], valid: true }];
   const pairs = [];
   const byRank = hand.reduce((result, card) => {
     if (!used.has(card.id) && !isWild(card) && card.rank !== "3") {
@@ -23,7 +35,7 @@ function maximumOpeningPoints(hand, top, matchingNaturals, rules = {}) {
   }
 
   const wildCards = hand
-    .filter((card) => isWild(card))
+    .filter((card) => isWild(card) && !used.has(card.id))
     .sort((left, right) => cardPoints(right) - cardPoints(left));
 
   for (const pair of pairs) {
@@ -51,12 +63,75 @@ function maximumOpeningPoints(hand, top, matchingNaturals, rules = {}) {
     .reduce((sum, card) => sum + cardPoints(card), 0);
 }
 
+function selectPickupSupport({ hand, top, frozen, existing, rule }) {
+  const matchingNaturals = hand.filter((card) => !isWild(card) && card.rank === top.rank);
+  const wildCards = hand.filter(isWild);
+  const requiresTwoNaturals = frozen || rule === "modern";
+
+  if (requiresTwoNaturals) {
+    if (matchingNaturals.length < 2) {
+      throw new Error(rule === "modern"
+        ? "Modern American Canasta requires two natural cards matching the top discard, whether the pile is frozen or unfrozen."
+        : "The discard pile is frozen. You need two natural cards matching the top discard.");
+    }
+    return {
+      supportCards: matchingNaturals.slice(0, 2),
+      matchingNaturals,
+      description: `two natural ${top.rank}s`,
+    };
+  }
+
+  if (existing) {
+    return { supportCards: [], matchingNaturals, description: `your existing ${top.rank} meld` };
+  }
+
+  if (matchingNaturals.length >= 2) {
+    return {
+      supportCards: matchingNaturals.slice(0, 2),
+      matchingNaturals,
+      description: `two natural ${top.rank}s`,
+    };
+  }
+
+  if (matchingNaturals.length >= 1 && wildCards.length >= 1) {
+    return {
+      supportCards: [matchingNaturals[0], wildCards[0]],
+      matchingNaturals,
+      description: `one natural ${top.rank} and one wild card`,
+    };
+  }
+
+  throw new Error(`Classic Canasta needs two natural ${top.rank}s, one natural ${top.rank} plus one wild card, or an existing ${top.rank} meld to take an unfrozen pile.`);
+}
+
+function projectedBoardAfterPickup(board, existing, top, supportCards) {
+  const projected = board.map((meld) => ({ ...meld, cards: [...(meld.cards || [])] }));
+  if (existing) {
+    const target = projected.find((meld) => meld.rank === existing.rank);
+    target.cards.push(top, ...supportCards);
+  } else {
+    projected.push({ rank: top.rank, cards: [top, ...supportCards] });
+  }
+  return projected;
+}
+
 export function validatePendingPickupSelection(pending, selectedCards = []) {
   if (!pending) return "";
   const selectedIds = new Set(selectedCards.map((card) => card.id));
   if (!selectedIds.has(pending.topCardId)) {
     return `Your opening must include the picked-up ${pending.rank}.`;
   }
+
+  const requiredSupportCardIds = pending.requiredSupportCardIds || [];
+  if (requiredSupportCardIds.length) {
+    const missingSupport = requiredSupportCardIds.some((id) => !selectedIds.has(id));
+    if (missingSupport) {
+      return `Your opening must include ${pending.supportDescription || "the cards used to claim the discard pile"}.`;
+    }
+    return "";
+  }
+
+  // Legacy pending pickups stored only the natural-card requirement.
   const naturalMatches = (pending.matchingNaturalIds || [])
     .filter((id) => selectedIds.has(id))
     .length;
@@ -84,23 +159,20 @@ export function planDiscardPickup(room, player) {
     throw new Error(`${top.rank}s are already a completed book on your board. This safe discard cannot be picked up.`);
   }
 
-  const matchingNaturals = hand.filter((card) => !isWild(card) && card.rank === top.rank);
   const frozen = room.publicState?.discardFrozen !== false;
   const opened = Boolean(room.publicState?.opened?.[player.team]);
-
-  if (frozen && matchingNaturals.length < 2) {
-    throw new Error("The discard pile is frozen. You need two natural cards matching the top discard.");
-  }
-  if (!frozen && !existing && matchingNaturals.length < 2) {
-    throw new Error("You need two natural matches unless that rank is already on your board.");
-  }
+  const rule = discardPickupRule(room);
+  const support = selectPickupSupport({
+    hand,
+    top,
+    frozen,
+    existing: opened ? existing : null,
+    rule,
+  });
 
   if (!opened) {
-    if (matchingNaturals.length < 2) {
-      throw new Error("Before opening, the top discard must be combined with two natural matches from your hand.");
-    }
     const requirement = openingRequirementForTeam(room, player.team);
-    const availablePoints = maximumOpeningPoints(hand, top, matchingNaturals, room.rules);
+    const availablePoints = maximumOpeningPoints(hand, top, support.supportCards, room.rules);
     if (availablePoints < requirement) {
       throw new Error(`Taking this pile cannot produce a legal ${requirement}-point opening. The available legal melds total ${availablePoints}.`);
     }
@@ -110,20 +182,32 @@ export function planDiscardPickup(room, player) {
       pile: [...pile],
       rank: top.rank,
       requirement,
-      matchingNaturalIds: matchingNaturals.map((card) => card.id),
-      requiredNaturalCount: 2,
+      matchingNaturalIds: support.matchingNaturals.map((card) => card.id),
+      requiredNaturalCount: support.supportCards.filter((card) => !isWild(card)).length,
+      requiredSupportCardIds: support.supportCards.map((card) => card.id),
+      supportDescription: support.description,
       availablePoints,
+      pickupRule: rule,
     };
   }
 
-  const requiredNaturals = existing && !frozen ? [] : matchingNaturals.slice(0, 2);
+  const lowerPile = pile.slice(0, -1);
+  const remainingHandCount = hand.length - support.supportCards.length + lowerPile.length;
+  const projectedBoard = projectedBoardAfterPickup(board, existing, top, support.supportCards);
+  if (!boardCanGoOut(projectedBoard, room.rules) && remainingHandCount < 2) {
+    throw new Error("Taking this discard pile would leave too few cards to complete the turn. Until your team has a canasta, you must keep one card after discarding.");
+  }
+
   return {
     mode: "immediate",
     top,
-    lowerPile: pile.slice(0, -1),
+    lowerPile,
     existing,
-    forcedCards: [top, ...requiredNaturals],
-    usedNaturalIds: requiredNaturals.map((card) => card.id),
+    forcedCards: [top, ...support.supportCards],
+    usedHandCardIds: support.supportCards.map((card) => card.id),
+    usedNaturalIds: support.supportCards.filter((card) => !isWild(card)).map((card) => card.id),
+    pickupRule: rule,
+    supportDescription: support.description,
   };
 }
 

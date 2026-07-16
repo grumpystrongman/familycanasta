@@ -38,6 +38,7 @@ export function normalizeRoomSetup(input = {}) {
     seatCount,
     deckCount: VALID_DECK_COUNTS.has(requestedDeckCount) ? requestedDeckCount : (seatCount > 4 ? 3 : 2),
     cardsPerPlayer: VALID_CARD_COUNTS.has(requestedCardsPerPlayer) ? requestedCardsPerPlayer : (seatCount === 2 ? 15 : 11),
+    discardPickupRule: input.discardPickupRule === "modern" ? "modern" : "classic",
   };
 
   if (typeof input.cardBack === "string" && input.cardBack.trim()) {
@@ -50,7 +51,15 @@ export function normalizeRoomSetup(input = {}) {
 export function roomSetupMatches(roomRules = {}, requestedSetup = {}) {
   const current = normalizeRoomSetup(roomRules);
   const requested = normalizeRoomSetup(requestedSetup);
-  const fields = ["playMode", "playersPerTeam", "teamCount", "seatCount", "deckCount", "cardsPerPlayer"];
+  const fields = [
+    "playMode",
+    "playersPerTeam",
+    "teamCount",
+    "seatCount",
+    "deckCount",
+    "cardsPerPlayer",
+    "discardPickupRule",
+  ];
 
   if (!fields.every((field) => current[field] === requested[field])) return false;
   if (requested.cardBack && current.cardBack !== requested.cardBack) return false;
