@@ -5,6 +5,10 @@ function teamLabel(index) {
   return ["Crimson", "Emerald", "Sapphire", "Gold"][index] || `Team ${index + 1}`;
 }
 
+function setText(node, value) {
+  if (node && node.textContent !== value) node.textContent = value;
+}
+
 function enhanceGame(root) {
   if (!root || root.dataset.strategyDashboardReady === "true") return;
 
@@ -92,7 +96,7 @@ function enhanceGame(root) {
   boards.querySelectorAll(".shared-board").forEach((board, index) => {
     board.dataset.teamName = teamLabel(index);
     const title = board.querySelector(".board-title b");
-    if (title) title.textContent = `Team ${teamLabel(index)}`;
+    setText(title, `Team ${teamLabel(index)}`);
     board.querySelectorAll(".board-meld").forEach((meld) => {
       const count = Number.parseInt(meld.querySelector("small")?.textContent || "0", 10);
       if (count >= 7) meld.classList.add("completed-canasta");
@@ -109,10 +113,11 @@ function enhanceGame(root) {
     const isDraw = /draw two cards|discard pile first/i.test(guidance);
     const isWarning = /need|choose matching|wild cards/i.test(guidance);
 
-    coach.querySelector(".coach-copy").textContent = guidance;
-    coach.querySelector(".coach-confidence").textContent = isLegal ? "High" : isDraw ? "High" : selectedCount ? "Medium" : "—";
-    coach.querySelector(".coach-risk").textContent = isWarning ? "Elevated" : isLegal ? "Low" : "Moderate";
-    coach.querySelector(".coach-points").textContent = points ? `+${points}` : "—";
+    const copy = coach.querySelector(".coach-copy");
+    if (!copy.classList.contains("expanded")) setText(copy, guidance);
+    setText(coach.querySelector(".coach-confidence"), isLegal ? "High" : isDraw ? "High" : selectedCount ? "Medium" : "—");
+    setText(coach.querySelector(".coach-risk"), isWarning ? "Elevated" : isLegal ? "Low" : "Moderate");
+    setText(coach.querySelector(".coach-points"), points ? `+${points}` : "—");
     coach.classList.toggle("coach-positive", isLegal);
     coach.classList.toggle("coach-warning", isWarning);
   };
@@ -124,8 +129,13 @@ function enhanceGame(root) {
     if (!action || action === lastAction) return;
     lastAction = action;
     const item = document.createElement("div");
+    const dot = document.createElement("span");
+    const text = document.createElement("p");
+    const time = document.createElement("small");
     item.className = "strategy-log-entry";
-    item.innerHTML = `<span></span><p>${action}</p><small>now</small>`;
+    text.textContent = action;
+    time.textContent = "now";
+    item.append(dot, text, time);
     logItems.prepend(item);
     while (logItems.children.length > 6) logItems.lastElementChild.remove();
   };
@@ -133,17 +143,24 @@ function enhanceGame(root) {
   coach.querySelector(".coach-explain").addEventListener("click", () => {
     const copy = coach.querySelector(".coach-copy");
     copy.classList.toggle("expanded");
-    copy.textContent = copy.classList.contains("expanded")
-      ? `${copy.textContent} The coach prioritizes legal progress toward a canasta while preserving flexible wild cards and avoiding premature commitment.`
-      : advisor.querySelector("span")?.textContent?.trim() || copy.textContent;
+    const guidance = advisor.querySelector("span")?.textContent?.trim() || "Review your hand and choose a legal action.";
+    setText(copy, copy.classList.contains("expanded")
+      ? `${guidance} The coach prioritizes legal progress toward a canasta while preserving flexible wild cards and avoiding premature commitment.`
+      : guidance);
   });
 
+  let scheduled = false;
   const observer = new MutationObserver(() => {
-    updateCoach();
-    updateLog();
-    boards.querySelectorAll(".board-meld").forEach((meld) => {
-      const count = Number.parseInt(meld.querySelector("small")?.textContent || "0", 10);
-      meld.classList.toggle("completed-canasta", count >= 7);
+    if (scheduled) return;
+    scheduled = true;
+    window.requestAnimationFrame(() => {
+      scheduled = false;
+      updateCoach();
+      updateLog();
+      boards.querySelectorAll(".board-meld").forEach((meld) => {
+        const count = Number.parseInt(meld.querySelector("small")?.textContent || "0", 10);
+        meld.classList.toggle("completed-canasta", count >= 7);
+      });
     });
   });
 
