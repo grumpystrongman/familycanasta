@@ -49,7 +49,7 @@ export default function GameStateEnhancer() {
     ? "❄ FROZEN — two natural matches required"
     : pickupRule === "modern"
       ? "✓ UNFROZEN — Modern American still requires two natural matches"
-      : "✓ UNFROZEN — use a matching board meld; otherwise two matches or one match + wild";
+      : "✓ UNFROZEN — click to take: top card to matching meld, rest to hand; otherwise two matches or one match + wild";
   const indicator = discardTarget ? createPortal(
     <span className={`discard-state-badge ${frozen ? "frozen" : "open"}`}>
       {discardMessage}
