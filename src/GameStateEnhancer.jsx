@@ -44,11 +44,15 @@ export default function GameStateEnhancer() {
   }
 
   const frozen = room?.publicState?.discardFrozen !== false;
+  const pickupRule = room?.rules?.discardPickupRule === "modern" ? "modern" : "classic";
+  const discardMessage = frozen
+    ? "❄ FROZEN — two natural matches required"
+    : pickupRule === "modern"
+      ? "✓ UNFROZEN — Modern American still requires two natural matches"
+      : "✓ UNFROZEN — two naturals, one natural + wild, or an existing meld";
   const indicator = discardTarget ? createPortal(
     <span className={`discard-state-badge ${frozen ? "frozen" : "open"}`}>
-      {frozen
-        ? "❄ FROZEN — two natural matches required"
-        : "✓ UNFROZEN — stays open until a wild or black three is discarded"}
+      {discardMessage}
     </span>,
     discardTarget,
   ) : null;
@@ -66,7 +70,7 @@ export default function GameStateEnhancer() {
     ? "The final stock card was a red three with no replacement available. The hand ended immediately; no meld or discard was allowed."
     : roundEndReason === "stock-exhausted"
       ? "No legal continuation remained from the discard pile. Cards left in every hand were deducted, and no going-out bonus was awarded."
-      : "The hand ended immediately when the last card was played. Remaining cards have been deducted.";
+      : "The hand ended after the player completed the required canasta and played the last card. Remaining cards have been deducted.";
   const isHost = auth?.currentUser?.uid && room?.hostUid === auth.currentUser.uid;
 
   return (
