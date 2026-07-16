@@ -31,7 +31,7 @@ export function groupedMeldUiState({
   let statusText;
   if (!planValid) {
     buttonText = "Fix incomplete melds";
-    statusText = "Each new rank needs at least three cards, with more natural cards than wild cards.";
+    statusText = "Each new rank needs at least three cards. Wild cards may equal, but never exceed, the natural cards in a meld.";
   } else if (pendingError) {
     buttonText = "Complete discard-pile opening";
     statusText = pendingError;
