@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 
 const enhancerUrl = new URL("./EmoteEnhancer.jsx", import.meta.url);
 const stylesUrl = new URL("./emotes.css", import.meta.url);
+const redThreeStylesUrl = new URL("./redThreeBoard.css", import.meta.url);
 
 test("runs the synchronized Evelyn table flip for exactly 1.5 seconds", async () => {
   const source = await readFile(enhancerUrl, "utf8");
@@ -13,14 +14,17 @@ test("runs the synchronized Evelyn table flip for exactly 1.5 seconds", async ()
   assert.match(source, /window\.setTimeout\(\(\) => \{[\s\S]*game\.classList\.remove\("evelyn-table-flipping"\);[\s\S]*\}, TABLE_FLIP_DURATION_MS\)/);
 });
 
-test("makes hand, board, stock, and discard cards fly while the screen shakes", async () => {
+test("makes every visible card fly while the screen shakes", async () => {
   const styles = await readFile(stylesUrl, "utf8");
+  const redThreeStyles = await readFile(redThreeStylesUrl, "utf8");
   assert.match(styles, /\.game-page\.evelyn-table-flipping\s*\{[^}]*evelynScreenShake 1500ms/s);
   assert.match(styles, /\.game-page\.evelyn-table-flipping \.hand-card-wrap/);
   assert.match(styles, /\.game-page\.evelyn-table-flipping \.board-meld \.real-card/);
   assert.match(styles, /\.game-page\.evelyn-table-flipping \.pile-action \.pile/);
   assert.match(styles, /animation:\s*evelynCardScatter 1500ms/);
   assert.match(styles, /@keyframes evelynCardScatter/);
+  assert.match(redThreeStyles, /\.game-page\.evelyn-table-flipping \.red-three-card/);
+  assert.match(redThreeStyles, /animation:evelynCardScatter 1500ms/);
 });
 
 test("restores every card to its original visual position after the flip", async () => {
@@ -31,6 +35,8 @@ test("restores every card to its original visual position after the flip", async
 
 test("honors reduced-motion preferences", async () => {
   const styles = await readFile(stylesUrl, "utf8");
+  const redThreeStyles = await readFile(redThreeStylesUrl, "utf8");
   assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/);
   assert.match(styles, /\.game-page\.evelyn-table-flipping[\s\S]*animation-duration:\s*1ms !important/s);
+  assert.match(redThreeStyles, /@media\(prefers-reduced-motion:reduce\)/);
 });
