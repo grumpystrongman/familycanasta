@@ -21,8 +21,9 @@ test("places compact rectangular draw controls before the boards", async () => {
   assert.doesNotMatch(styles, /min-height:\s*154px/);
 });
 
-test("assigns the flexible table row to the shared boards", async () => {
+test("assigns the flexible table row to the shared boards without an opponent row", async () => {
   const layout = await readFile(layoutUrl, "utf8");
-  assert.match(layout, /grid-template-rows:\s*auto auto minmax\(180px, 1fr\) auto/);
-  assert.match(layout, /\.responsive-board-ready \.shared-boards\s*\{[^}]*min-height:\s*180px/s);
+  assert.match(layout, /grid-template-rows:\s*auto minmax\(240px, 1fr\) auto/);
+  assert.match(layout, /\.enhanced-game \.opponents\s*\{[^}]*display:\s*none !important/s);
+  assert.match(layout, /\.responsive-board-ready \.shared-boards\s*\{[^}]*min-height:\s*240px/s);
 });
