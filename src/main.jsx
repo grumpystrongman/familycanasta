@@ -111,6 +111,7 @@ const enhancementLoaders = [
   ["GameStateEnhancer", () => import("./GameStateEnhancer")],
   ["GameCelebration", () => import("./GameCelebration")],
   ["MultiMeldEnhancer", () => import("./MultiMeldEnhancer")],
+  ["WildTargetEnhancer", () => import("./WildTargetEnhancer")],
   ["RedThreeBoard", () => import("./RedThreeBoard")],
   ["RedThreeTurnControl", () => import("./RedThreeTurnControl")],
   ["BlackThreeRuleFix", () => import("./BlackThreeRuleFix")],
