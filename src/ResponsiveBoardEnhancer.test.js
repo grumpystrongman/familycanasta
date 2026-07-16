@@ -30,6 +30,13 @@ test("detects multi-player individual games and annotates meld counts", async ()
   assert.match(source, /dirty-canasta/);
 });
 
+test("keeps board view controls below the top discard area", async () => {
+  const css = await readFile(cssUrl, "utf8");
+  assert.match(css, /\.board-view-bar\s*\{[^}]*top:\s*140px/s);
+  assert.match(css, /\.responsive-board-ready \.center\s*\{[^}]*z-index:\s*100/s);
+  assert.doesNotMatch(css, /\.board-view-bar\s*\{[^}]*top:\s*78px/s);
+});
+
 test("removes the oversized opponent circles and gives the boards the flexible row", async () => {
   const compactCss = await readFile(compactCssUrl, "utf8");
   assert.match(compactCss, /\.enhanced-game \.opponents\s*\{[^}]*display:\s*none !important/s);
