@@ -13,6 +13,7 @@ test("normalizes a four-player partnership room to four seats", () => {
       deckCount: 2,
       cardsPerPlayer: 11,
       discardPickupRule: "classic",
+      canastasToGoOut: 1,
     },
   );
 });
@@ -29,6 +30,12 @@ test("defaults discard pickup to classic and preserves modern American", () => {
   assert.equal(normalizeRoomSetup({ discardPickupRule: "modern" }).discardPickupRule, "modern");
 });
 
+test("defaults to one canasta and preserves the two-canasta house rule", () => {
+  assert.equal(normalizeRoomSetup({}).canastasToGoOut, 1);
+  assert.equal(normalizeRoomSetup({ canastasToGoOut: 2 }).canastasToGoOut, 2);
+  assert.equal(normalizeRoomSetup({ canastasToGoOut: 3 }).canastasToGoOut, 1);
+});
+
 test("detects the two-seat fallback as different from a requested four-seat room", () => {
   const current = { playMode: "solo", playersPerTeam: 1, teamCount: 2, deckCount: 2, cardsPerPlayer: 15 };
   const requested = { playMode: "partners", playersPerTeam: 2, teamCount: 2, deckCount: 2, cardsPerPlayer: 11 };
@@ -41,6 +48,12 @@ test("detects a discard pickup variation change", () => {
   assert.equal(roomSetupMatches(classic, modern), false);
 });
 
+test("detects a canastas-to-go-out house rule change", () => {
+  const standard = normalizeRoomSetup({ playMode: "partners", teamCount: 2, canastasToGoOut: 1 });
+  const houseRule = normalizeRoomSetup({ playMode: "partners", teamCount: 2, canastasToGoOut: 2 });
+  assert.equal(roomSetupMatches(standard, houseRule), false);
+});
+
 test("recognizes matching four-seat room rules", () => {
   const current = {
     playMode: "partners",
@@ -50,6 +63,7 @@ test("recognizes matching four-seat room rules", () => {
     deckCount: 2,
     cardsPerPlayer: 11,
     discardPickupRule: "classic",
+    canastasToGoOut: 2,
   };
   assert.equal(roomSetupMatches(current, current), true);
 });

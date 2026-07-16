@@ -30,6 +30,7 @@ export function normalizeRoomSetup(input = {}) {
   const seatCount = teamCount * playersPerTeam;
   const requestedDeckCount = integerOr(input.deckCount, seatCount > 4 ? 3 : 2);
   const requestedCardsPerPlayer = integerOr(input.cardsPerPlayer, seatCount === 2 ? 15 : 11);
+  const requestedCanastasToGoOut = integerOr(input.canastasToGoOut, 1);
 
   const setup = {
     playMode,
@@ -39,6 +40,7 @@ export function normalizeRoomSetup(input = {}) {
     deckCount: VALID_DECK_COUNTS.has(requestedDeckCount) ? requestedDeckCount : (seatCount > 4 ? 3 : 2),
     cardsPerPlayer: VALID_CARD_COUNTS.has(requestedCardsPerPlayer) ? requestedCardsPerPlayer : (seatCount === 2 ? 15 : 11),
     discardPickupRule: input.discardPickupRule === "modern" ? "modern" : "classic",
+    canastasToGoOut: requestedCanastasToGoOut === 2 ? 2 : 1,
   };
 
   if (typeof input.cardBack === "string" && input.cardBack.trim()) {
@@ -59,6 +61,7 @@ export function roomSetupMatches(roomRules = {}, requestedSetup = {}) {
     "deckCount",
     "cardsPerPlayer",
     "discardPickupRule",
+    "canastasToGoOut",
   ];
 
   if (!fields.every((field) => current[field] === requested[field])) return false;
