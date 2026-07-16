@@ -4,7 +4,7 @@
 
 .board-view-bar {
   position: fixed;
-  top: 140px;
+  top: calc(70px + var(--canasta-draw-row-height, 10vh) + 8px);
   right: 344px;
   z-index: 90;
   display: flex;
@@ -234,7 +234,7 @@
 
 @media (max-height: 820px) and (min-width: 851px) {
   .board-view-bar {
-    top: 136px;
+    top: calc(70px + var(--canasta-draw-row-height, 10vh) + 8px);
     transform: scale(.92);
     transform-origin: top right;
   }
