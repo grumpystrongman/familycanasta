@@ -5,6 +5,7 @@ import {
   isWild,
   openingRequirementForTeam,
 } from "./engine.js";
+import { boardCanGoOut } from "./goOutRules.js";
 
 function discardPickupRule(room) {
   return room.rules?.discardPickupRule === "modern" ? "modern" : "classic";
@@ -103,6 +104,17 @@ function selectPickupSupport({ hand, top, frozen, existing, rule }) {
   throw new Error(`Classic Canasta needs two natural ${top.rank}s, one natural ${top.rank} plus one wild card, or an existing ${top.rank} meld to take an unfrozen pile.`);
 }
 
+function projectedBoardAfterPickup(board, existing, top, supportCards) {
+  const projected = board.map((meld) => ({ ...meld, cards: [...(meld.cards || [])] }));
+  if (existing) {
+    const target = projected.find((meld) => meld.rank === existing.rank);
+    target.cards.push(top, ...supportCards);
+  } else {
+    projected.push({ rank: top.rank, cards: [top, ...supportCards] });
+  }
+  return projected;
+}
+
 export function validatePendingPickupSelection(pending, selectedCards = []) {
   if (!pending) return "";
   const selectedIds = new Set(selectedCards.map((card) => card.id));
@@ -179,10 +191,17 @@ export function planDiscardPickup(room, player) {
     };
   }
 
+  const lowerPile = pile.slice(0, -1);
+  const remainingHandCount = hand.length - support.supportCards.length + lowerPile.length;
+  const projectedBoard = projectedBoardAfterPickup(board, existing, top, support.supportCards);
+  if (!boardCanGoOut(projectedBoard, room.rules) && remainingHandCount < 2) {
+    throw new Error("Taking this discard pile would leave too few cards to complete the turn. Until your team has a canasta, you must keep one card after discarding.");
+  }
+
   return {
     mode: "immediate",
     top,
-    lowerPile: pile.slice(0, -1),
+    lowerPile,
     existing,
     forcedCards: [top, ...support.supportCards],
     usedHandCardIds: support.supportCards.map((card) => card.id),
