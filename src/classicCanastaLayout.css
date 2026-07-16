@@ -1,0 +1,109 @@
+/* The center draw controls stay compact so the boards receive the flexible row. */
+.responsive-board-ready .table {
+  grid-template-rows: auto auto minmax(180px, 1fr) auto;
+}
+
+.responsive-board-ready .center {
+  width: calc(100% - 28px) !important;
+  min-height: 0 !important;
+  margin: 3px 14px 6px !important;
+  padding: 4px 6px !important;
+  border-radius: 12px;
+}
+
+.responsive-board-ready .shared-boards {
+  min-height: 180px;
+  max-height: 100%;
+  flex: 1 1 auto !important;
+}
+
+/* In games with three or four individual players, collapsed opponent boards
+   show one representative card per meld with a count bubble. */
+.multi-solo-board-mode .shared-board.board-collapsed {
+  flex-basis: min(280px, 44vw) !important;
+}
+
+.multi-solo-board-mode .shared-board.board-collapsed .meld-slots {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(62px, 1fr));
+  gap: 8px;
+}
+
+.multi-solo-board-mode .shared-board.board-collapsed .board-meld {
+  position: relative;
+  display: block;
+  min-width: 62px;
+  min-height: 82px;
+  padding: 5px;
+  border: 2px solid rgba(255, 255, 255, 0.22);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.multi-solo-board-mode .shared-board.board-collapsed .board-meld > b,
+.multi-solo-board-mode .shared-board.board-collapsed .board-meld > small {
+  display: none;
+}
+
+.multi-solo-board-mode .shared-board.board-collapsed .board-meld > div {
+  display: block;
+  height: 70px;
+  padding: 0;
+}
+
+.multi-solo-board-mode .shared-board.board-collapsed .board-meld .real-card {
+  display: none;
+  width: 50px;
+  height: 70px;
+  margin: 0 auto;
+  pointer-events: none;
+}
+
+.multi-solo-board-mode .shared-board.board-collapsed .board-meld .real-card:first-child {
+  display: block;
+}
+
+.multi-solo-board-mode .shared-board.board-collapsed .board-meld::after {
+  content: attr(data-card-count);
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  min-width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  padding: 0 5px;
+  border: 2px solid #071c16;
+  border-radius: 999px;
+  background: #f0c85a;
+  color: #173027;
+  font-size: 11px;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.multi-solo-board-mode .shared-board.board-collapsed .board-meld.clean-canasta {
+  border-color: #e04652;
+  box-shadow: 0 0 0 2px rgba(224, 70, 82, 0.25), 0 0 18px rgba(224, 70, 82, 0.28);
+}
+
+.multi-solo-board-mode .shared-board.board-collapsed .board-meld.dirty-canasta {
+  border-color: #9a6543;
+  background: rgba(105, 62, 36, 0.35);
+  box-shadow: 0 0 0 2px rgba(154, 101, 67, 0.24), 0 0 18px rgba(91, 51, 29, 0.28);
+}
+
+@media (max-width: 850px) {
+  .responsive-board-ready .table {
+    display: block;
+  }
+
+  .responsive-board-ready .center {
+    width: calc(100% - 16px) !important;
+    margin-inline: 8px !important;
+  }
+
+  .multi-solo-board-mode .shared-board.board-collapsed {
+    flex-basis: 72vw !important;
+  }
+}
