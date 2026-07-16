@@ -1,0 +1,1 @@
+Classic Canasta rules and compact board layout are ready for pull-request validation.
