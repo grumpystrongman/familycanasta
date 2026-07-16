@@ -6,6 +6,7 @@ import { normalizeRoomSetup, roomSetupMatches } from "./game/roomSetup";
 
 const STORAGE_KEY = "canastaUnprotectedRedThreesPenalty";
 const PICKUP_RULE_KEY = "canastaDiscardPickupRule";
+const CANASTAS_TO_GO_OUT_KEY = "canastaCanastasToGoOut";
 const PENDING_SETUP_KEY = "canastaPendingRoomSetup";
 const PENDING_SETUP_TTL = 5 * 60 * 1000;
 const ROOM_OPTIONS = [
@@ -18,6 +19,10 @@ const ROOM_OPTIONS = [
 
 function storedPickupRule() {
   return localStorage.getItem(PICKUP_RULE_KEY) === "modern" ? "modern" : "classic";
+}
+
+function storedCanastasToGoOut() {
+  return localStorage.getItem(CANASTAS_TO_GO_OUT_KEY) === "2" ? 2 : 1;
 }
 
 function findSettingsControl(settings, labelText) {
@@ -40,6 +45,7 @@ function readSelectedSetup() {
     cardsPerPlayer: findSettingsControl(settings, "Starting cards")?.value,
     cardBack: findSettingsControl(settings, "Card back")?.value,
     discardPickupRule: findSettingsControl(settings, "Discard pickup")?.value || storedPickupRule(),
+    canastasToGoOut: findSettingsControl(settings, "Canastas to go out")?.value || storedCanastasToGoOut(),
   });
 }
 
@@ -76,6 +82,7 @@ function readPendingSetup() {
 export default function HomeRulesOptions() {
   const [enabled, setEnabled] = useState(() => localStorage.getItem(STORAGE_KEY) === "true");
   const [pickupRule, setPickupRule] = useState(storedPickupRule);
+  const [canastasToGoOut, setCanastasToGoOut] = useState(storedCanastasToGoOut);
   const [settingsTarget, setSettingsTarget] = useState(null);
   const [lobbySummaryTarget, setLobbySummaryTarget] = useState(null);
   const [roomCode, setRoomCode] = useState("");
@@ -127,6 +134,10 @@ export default function HomeRulesOptions() {
   }, [pickupRule]);
 
   useEffect(() => {
+    localStorage.setItem(CANASTAS_TO_GO_OUT_KEY, String(canastasToGoOut));
+  }, [canastasToGoOut]);
+
+  useEffect(() => {
     if (!roomCode || !db) {
       setRoom(null);
       return undefined;
@@ -144,6 +155,13 @@ export default function HomeRulesOptions() {
       freezeOnBlackThree: false,
     }).catch(() => {});
   }, [enabled, roomCode, room]);
+
+  useEffect(() => {
+    const uid = auth?.currentUser?.uid;
+    if (!uid || !roomCode || !room || room.hostUid !== uid || room.status !== "lobby") return;
+    if (Number(room.rules?.canastasToGoOut || 1) === canastasToGoOut) return;
+    update(ref(db, `rooms/${roomCode}/rules`), { canastasToGoOut }).catch(() => {});
+  }, [canastasToGoOut, roomCode, room]);
 
   useEffect(() => {
     const uid = auth?.currentUser?.uid;
@@ -173,6 +191,7 @@ export default function HomeRulesOptions() {
       teamCount: Number(teamCountValue),
       cardBack: room.rules?.cardBack,
       discardPickupRule: room.rules?.discardPickupRule,
+      canastasToGoOut: room.rules?.canastasToGoOut,
     });
 
     clearPendingSetup();
@@ -202,6 +221,21 @@ export default function HomeRulesOptions() {
     }
   }
 
+  async function changeLobbyCanastasToGoOut(value) {
+    if (!roomCode || !room || room.status !== "lobby") return;
+    const nextValue = Number(value) === 2 ? 2 : 1;
+    setCanastasToGoOut(nextValue);
+    setSavingSetup(true);
+    setSetupError("");
+    try {
+      await update(ref(db, `rooms/${roomCode}/rules`), { canastasToGoOut: nextValue });
+    } catch (error) {
+      setSetupError(error.message || "Could not update the canasta requirement.");
+    } finally {
+      setSavingSetup(false);
+    }
+  }
+
   const uid = auth?.currentUser?.uid;
   const isLobbyHost = Boolean(uid && room && room.hostUid === uid && room.status === "lobby");
   const currentSetup = normalizeRoomSetup(room?.rules || {});
@@ -218,6 +252,13 @@ export default function HomeRulesOptions() {
               <option value="modern">Modern American</option>
             </select>
             <small>Classic allows an unfrozen pickup with two naturals, one natural plus one wild, or an existing meld. Modern always requires two naturals.</small>
+          </label>
+          <label className="wide-setting">Canastas to go out
+            <select value={canastasToGoOut} onChange={(event) => setCanastasToGoOut(Number(event.target.value) === 2 ? 2 : 1)}>
+              <option value={1}>1 canasta — standard</option>
+              <option value={2}>2 canastas — house rule</option>
+            </select>
+            <small>When set to two, a team must complete two seven-card canastas before any player on that team may go out.</small>
           </label>
           <label className="home-rule-toggle wide-setting">
             <input
@@ -263,6 +304,19 @@ export default function HomeRulesOptions() {
             >
               <option value="classic">Classic</option>
               <option value="modern">Modern American</option>
+            </select>
+          </p>
+          <p>
+            <span>Go out</span>
+            <select
+              aria-label="Canastas required to go out"
+              value={currentSetup.canastasToGoOut}
+              disabled={savingSetup}
+              onChange={(event) => changeLobbyCanastasToGoOut(event.target.value)}
+              style={{ maxWidth: "136px" }}
+            >
+              <option value={1}>1 canasta</option>
+              <option value={2}>2 canastas</option>
             </select>
           </p>
           {setupError && <small className="error">{setupError}</small>}
