@@ -38,17 +38,25 @@ function roomWith({
 
 const player = { uid: "player", team: 0 };
 
-test("rejects a safe discard when the matching book is complete", () => {
+test("classic unfrozen pickup adds the top card to an existing completed canasta", () => {
   const queens = Array.from({ length: 7 }, (_, index) => card(`q${index}`, "Q"));
   const room = roomWith({
-    hand: [card("q8", "Q"), card("q9", "Q")],
-    pile: [card("top", "Q", "H")],
+    hand: [card("spare", "6"), card("other", "7")],
+    pile: [card("lower", "4"), card("top", "Q", "H")],
     board: [{ rank: "Q", cards: queens }],
     opened: true,
     frozen: false,
+    pickupRule: "classic",
   });
 
-  assert.throws(() => planDiscardPickup(room, player), /completed book|safe discard/i);
+  const plan = planDiscardPickup(room, player);
+
+  assert.equal(plan.mode, "immediate");
+  assert.equal(plan.pickupMethod, "existing-meld");
+  assert.equal(plan.existing.rank, "Q");
+  assert.deepEqual(plan.forcedCards.map((item) => item.id), ["top"]);
+  assert.deepEqual(plan.usedHandCardIds, []);
+  assert.deepEqual(plan.lowerPile.map((item) => item.id), ["lower"]);
 });
 
 test("puts an unopened pickup into pending state instead of auto-playing the hand", () => {
@@ -112,6 +120,22 @@ test("classic unfrozen pickup permits one natural match plus one wild card", () 
   assert.deepEqual(plan.usedHandCardIds, ["q1", "wild"]);
 });
 
+test("classic unfrozen pickup permits two matching natural cards when no board meld exists", () => {
+  const room = roomWith({
+    hand: [card("q1", "Q"), card("q2", "Q", "C"), card("spare", "6")],
+    pile: [card("lower", "4"), card("top", "Q", "H")],
+    opened: true,
+    frozen: false,
+    pickupRule: "classic",
+  });
+
+  const plan = planDiscardPickup(room, player);
+
+  assert.equal(plan.pickupMethod, "two-naturals");
+  assert.deepEqual(plan.forcedCards.map((item) => item.id), ["top", "q1", "q2"]);
+  assert.deepEqual(plan.usedHandCardIds, ["q1", "q2"]);
+});
+
 test("classic unfrozen pickup permits a matching natural plus a Joker before opening", () => {
   const room = roomWith({
     hand: [
@@ -148,9 +172,9 @@ test("a frozen pile still rejects one natural plus one wild card", () => {
   assert.throws(() => planDiscardPickup(room, player), /frozen.*two natural/i);
 });
 
-test("classic unfrozen pickup can add the top card directly to an existing meld", () => {
+test("classic unfrozen pickup uses the matching board meld before hand combinations", () => {
   const room = roomWith({
-    hand: [card("spare", "6"), card("other", "7")],
+    hand: [card("q4", "Q"), card("q5", "Q", "C"), card("wild", "2"), card("spare", "6")],
     pile: [card("top", "Q", "H")],
     board: [{ rank: "Q", cards: [card("q1", "Q"), card("q2", "Q"), card("q3", "Q")] }],
     opened: true,
@@ -225,6 +249,24 @@ test("stock exhaustion makes an unfrozen matching board meld mandatory", () => {
   const status = stockExhaustionPickupStatus(room, player);
   assert.equal(status.canTake, true);
   assert.equal(status.mustTake, true);
+});
+
+test("stock exhaustion treats a completed matching canasta as an available board meld", () => {
+  const room = roomWith({
+    hand: [card("spare", "6"), card("other", "7")],
+    pile: [card("top", "Q", "H")],
+    board: [{
+      rank: "Q",
+      cards: Array.from({ length: 7 }, (_, index) => card(`q${index}`, "Q")),
+    }],
+    opened: true,
+    frozen: false,
+  });
+
+  const status = stockExhaustionPickupStatus(room, player);
+  assert.equal(status.canTake, true);
+  assert.equal(status.mustTake, true);
+  assert.equal(status.plan.pickupMethod, "existing-meld");
 });
 
 test("stock exhaustion permits but does not force a new meld pickup", () => {
