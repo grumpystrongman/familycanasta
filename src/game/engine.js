@@ -253,6 +253,8 @@ export function dealHand({ players, rules, dealerIndex, existingScores }) {
       stockCount: stock.length,
       discardPile: firstDiscard ? [firstDiscard] : [],
       discardFrozen: true,
+      discardFreezeReason: "opening",
+      discardPileHasBeenTaken: false,
       teamMelds: teamRecord(teamCount, () => []),
       teamBoards: teamRecord(teamCount, () => []),
       teamScores: scores,
