@@ -21,6 +21,13 @@ test("places compact rectangular draw controls before the boards", async () => {
   assert.doesNotMatch(styles, /min-height:\s*154px/);
 });
 
+test("centers the discard pile in the top action bar", async () => {
+  const styles = await readFile(stylesUrl, "utf8");
+  assert.match(styles, /grid-template-columns:\s*1fr auto 1fr/);
+  assert.match(styles, /grid-template-areas:\s*"stock discard status"/);
+  assert.match(styles, /\.center > \.pile-action:last-child\s*\{[^}]*grid-area:\s*discard[^}]*justify-self:\s*center/s);
+});
+
 test("assigns the flexible table row to the shared boards without an opponent row", async () => {
   const layout = await readFile(layoutUrl, "utf8");
   assert.match(layout, /grid-template-rows:\s*auto minmax\(240px, 1fr\) auto/);
