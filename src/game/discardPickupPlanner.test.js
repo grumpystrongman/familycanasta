@@ -70,6 +70,7 @@ test("puts an unopened pickup into pending state instead of auto-playing the han
   assert.deepEqual(plan.matchingNaturalIds.sort(), ["q1", "q2"]);
   assert.deepEqual(plan.requiredSupportCardIds.sort(), ["q1", "q2"]);
   assert.equal(plan.requiredNaturalCount, 2);
+  assert.equal(plan.pickupMethod, "two-naturals");
   assert.ok(plan.availablePoints >= 90);
   assert.equal("forcedCards" in plan, false);
 });
@@ -86,6 +87,7 @@ test("an opened frozen pickup forces only two natural matches", () => {
   const plan = planDiscardPickup(room, player);
 
   assert.equal(plan.mode, "immediate");
+  assert.equal(plan.pickupMethod, "two-naturals");
   assert.deepEqual(plan.forcedCards.map((item) => item.id), ["top", "q1", "q2"]);
   assert.deepEqual(plan.usedHandCardIds, ["q1", "q2"]);
   assert.equal(plan.usedHandCardIds.includes("q3"), false);
@@ -104,8 +106,46 @@ test("classic unfrozen pickup permits one natural match plus one wild card", () 
   const plan = planDiscardPickup(room, player);
 
   assert.equal(plan.pickupRule, "classic");
+  assert.equal(plan.pickupMethod, "natural-wild");
+  assert.equal(plan.supportDescription, "one natural Q and one wild card");
   assert.deepEqual(plan.forcedCards.map((item) => item.id), ["top", "q1", "wild"]);
   assert.deepEqual(plan.usedHandCardIds, ["q1", "wild"]);
+});
+
+test("classic unfrozen pickup permits a matching natural plus a Joker before opening", () => {
+  const room = roomWith({
+    hand: [
+      card("q1", "Q"),
+      card("joker", "JOKER", "J"),
+      card("spare", "6"),
+    ],
+    pile: [card("lower", "4"), card("top", "Q", "H")],
+    opened: false,
+    frozen: false,
+    requirement: 50,
+    pickupRule: "classic",
+  });
+
+  const plan = planDiscardPickup(room, player);
+
+  assert.equal(plan.mode, "pending-opening");
+  assert.equal(plan.pickupMethod, "natural-wild");
+  assert.equal(plan.requiredNaturalCount, 1);
+  assert.deepEqual(plan.requiredSupportCardIds, ["q1", "joker"]);
+  assert.equal(plan.supportDescription, "one natural Q and one wild card");
+  assert.ok(plan.availablePoints >= 50);
+});
+
+test("a frozen pile still rejects one natural plus one wild card", () => {
+  const room = roomWith({
+    hand: [card("q1", "Q"), card("wild", "2"), card("spare", "6")],
+    pile: [card("top", "Q", "H")],
+    opened: true,
+    frozen: true,
+    pickupRule: "classic",
+  });
+
+  assert.throws(() => planDiscardPickup(room, player), /frozen.*two natural/i);
 });
 
 test("classic unfrozen pickup can add the top card directly to an existing meld", () => {
@@ -121,6 +161,7 @@ test("classic unfrozen pickup can add the top card directly to an existing meld"
   const plan = planDiscardPickup(room, player);
 
   assert.equal(plan.existing.rank, "Q");
+  assert.equal(plan.pickupMethod, "existing-meld");
   assert.deepEqual(plan.forcedCards.map((item) => item.id), ["top"]);
   assert.deepEqual(plan.usedHandCardIds, []);
 });
