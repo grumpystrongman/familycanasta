@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
+import "./premiumDashboardFixes.css";
 import {
   BarChart3,
   ChevronDown,
