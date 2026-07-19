@@ -28,19 +28,21 @@ export function normalizeRoomSetup(input = {}) {
 
   const teamCount = clamp(requestedTeams, 2, maxTeams);
   const seatCount = teamCount * playersPerTeam;
-  const requestedDeckCount = integerOr(input.deckCount, seatCount > 4 ? 3 : 2);
-  const requestedCardsPerPlayer = integerOr(input.cardsPerPlayer, seatCount === 2 ? 15 : 11);
   const requestedCanastasToGoOut = integerOr(input.canastasToGoOut, 1);
+  const canastasToGoOut = requestedCanastasToGoOut === 2 ? 2 : 1;
+  const defaultDeckCount = canastasToGoOut === 2 || seatCount > 4 ? 3 : 2;
+  const requestedDeckCount = integerOr(input.deckCount, defaultDeckCount);
+  const requestedCardsPerPlayer = integerOr(input.cardsPerPlayer, seatCount === 2 ? 15 : 11);
 
   const setup = {
     playMode,
     playersPerTeam,
     teamCount,
     seatCount,
-    deckCount: VALID_DECK_COUNTS.has(requestedDeckCount) ? requestedDeckCount : (seatCount > 4 ? 3 : 2),
+    deckCount: VALID_DECK_COUNTS.has(requestedDeckCount) ? requestedDeckCount : defaultDeckCount,
     cardsPerPlayer: VALID_CARD_COUNTS.has(requestedCardsPerPlayer) ? requestedCardsPerPlayer : (seatCount === 2 ? 15 : 11),
     discardPickupRule: input.discardPickupRule === "modern" ? "modern" : "classic",
-    canastasToGoOut: requestedCanastasToGoOut === 2 ? 2 : 1,
+    canastasToGoOut,
   };
 
   if (typeof input.cardBack === "string" && input.cardBack.trim()) {
