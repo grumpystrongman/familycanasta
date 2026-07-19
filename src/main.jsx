@@ -24,6 +24,7 @@ import "./autoSort.css";
 import "./responsiveBoard.css";
 import "./classicCanastaLayout.css";
 import "./actionHistory.css";
+import "./turnAwareness.css";
 
 const rootElement = document.getElementById("root");
 
@@ -123,6 +124,7 @@ const enhancementLoaders = [
   ["AutoSortEnhancer", () => import("./AutoSortEnhancer")],
   ["ResponsiveBoardEnhancer", () => import("./ResponsiveBoardEnhancer")],
   ["ActionHistoryEnhancer", () => import("./ActionHistoryEnhancer")],
+  ["TurnAwarenessEnhancer", () => import("./TurnAwarenessEnhancer")],
 ];
 
 async function mountEnhancement(name, load) {
