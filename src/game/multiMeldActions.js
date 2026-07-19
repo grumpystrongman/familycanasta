@@ -3,7 +3,7 @@ import { db } from "../firebase";
 import { finishRound, openingRequirementForTeam, sortHand } from "./engine";
 import { planGroupedMelds } from "./multiMeldPlanner";
 import { validatePendingPickupSelection } from "./discardPickupPlanner";
-import { cleanBoard, restoreUndoSnapshot } from "./undoSnapshot";
+import { createUndoSnapshot, restoreUndoSnapshot } from "./undoSnapshot";
 
 function orderedPlayers(room) {
   return Object.values(room.members || {}).sort((a, b) => a.seat - b.seat);
@@ -54,17 +54,7 @@ export async function playGroupedMelds(code, uid, orderedCardIds) {
         }
       }
 
-      room.publicState.undoPlay = {
-        uid,
-        playerIndex: Number(room.publicState.currentPlayerIndex || 0),
-        privateHand: hand,
-        team: player.team,
-        teamBoard: cleanBoard(board),
-        opened: alreadyOpened,
-        pendingDiscardPickup: pending ? structuredClone(pending) : null,
-        handCount: hand.length,
-        lastAction: String(room.publicState.lastAction || ""),
-      };
+      room.publicState.undoPlay = createUndoSnapshot(room, player, hand, board);
 
       for (const group of groups) {
         const existing = board.find((meld) => meld.rank === group.rank);
