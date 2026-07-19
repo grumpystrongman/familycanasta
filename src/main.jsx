@@ -25,6 +25,7 @@ import "./responsiveBoard.css";
 import "./classicCanastaLayout.css";
 import "./actionHistory.css";
 import "./turnAwareness.css";
+import "./boardMeldDisplay.css";
 
 const rootElement = document.getElementById("root");
 
@@ -125,6 +126,7 @@ const enhancementLoaders = [
   ["ResponsiveBoardEnhancer", () => import("./ResponsiveBoardEnhancer")],
   ["ActionHistoryEnhancer", () => import("./ActionHistoryEnhancer")],
   ["TurnAwarenessEnhancer", () => import("./TurnAwarenessEnhancer")],
+  ["BoardMeldDisplayEnhancer", () => import("./BoardMeldDisplayEnhancer")],
 ];
 
 async function mountEnhancement(name, load) {
