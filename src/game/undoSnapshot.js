@@ -24,6 +24,22 @@ function cleanTeamBoards(teamBoards) {
   );
 }
 
+export function createUndoSnapshot(room, player, hand, board) {
+  return {
+    uid: player.uid,
+    playerIndex: Number(room.publicState?.currentPlayerIndex || 0),
+    privateHand: cleanCards(hand),
+    team: player.team,
+    teamBoard: cleanBoard(board),
+    opened: Boolean(room.publicState?.opened?.[player.team]),
+    pendingDiscardPickup: room.publicState?.pendingDiscardPickup
+      ? structuredClone(room.publicState.pendingDiscardPickup)
+      : null,
+    handCount: Array.isArray(hand) ? hand.length : 0,
+    lastAction: String(room.publicState?.lastAction || ""),
+  };
+}
+
 export function restoreUndoSnapshot(room, player, undo) {
   if (!room?.publicState || !player || !undo || !Array.isArray(undo.privateHand)) {
     throw new Error("The saved play cannot be undone safely.");
