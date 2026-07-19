@@ -16,10 +16,7 @@ function actionFingerprint(room) {
     .sort(([left], [right]) => String(left).localeCompare(String(right)))
     .map(([team, board]) => [
       team,
-      (Array.isArray(board) ? board : []).map((meld) => [
-        meld?.rank || "",
-        (meld?.cards || []).map((card) => card?.id || "").filter(Boolean).sort(),
-      ]),
+      (Array.isArray(board) ? board : []).map((meld) => [meld?.rank || "", meld?.cards?.length || 0]),
     ]);
   const handCounts = Object.entries(state.handCounts || {})
     .sort(([left], [right]) => String(left).localeCompare(String(right)));
@@ -48,7 +45,7 @@ function normalizeActions(value) {
 
 function actorForMessage(room, message) {
   const members = orderedMembers(room);
-  return members.find((member) => message.startsWith(`${member.nickname} `)) || null;
+  return members.find((member) => message.startsWith(member.nickname)) || null;
 }
 
 function displayTime(createdAt) {
@@ -82,6 +79,7 @@ export default function ActionHistoryEnhancer() {
   }, [roomCode]);
 
   const members = useMemo(() => orderedMembers(room), [room]);
+  const activeUid = members[Number(room?.publicState?.currentPlayerIndex || 0)]?.uid || "";
   const actions = useMemo(
     () => normalizeActions(room?.publicState?.actionLog),
     [room?.publicState?.actionLog],
@@ -131,7 +129,7 @@ export default function ActionHistoryEnhancer() {
         </div>
         <div className="public-hand-count-grid">
           {members.map((member) => (
-            <article key={member.uid} className={room.publicState?.currentPlayerIndex === member.seat ? "active" : ""}>
+            <article key={member.uid} className={activeUid === member.uid ? "active" : ""}>
               <span className="public-hand-avatar">{member.avatar}</span>
               <div>
                 <b>{member.nickname}</b>
