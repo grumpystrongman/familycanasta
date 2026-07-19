@@ -31,10 +31,10 @@ export function applyDiscardFreezeState(publicState, card, rules = {}) {
     return true;
   }
 
-  // Once the pile has been picked up, it stays open through ordinary and
-  // black-three discards. Only a subsequently discarded two or Joker may
-  // freeze it again.
-  if (publicState.discardPileHasBeenTaken === true) {
+  // Covering a wild card with an ordinary card does not thaw a frozen pile.
+  // The pile remains frozen until somebody legally takes the entire pile.
+  // When the pile is already open, keep its state normalized as open.
+  if (publicState.discardFrozen !== true) {
     publicState.discardFrozen = false;
     publicState.discardFreezeReason = null;
   }
