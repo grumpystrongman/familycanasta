@@ -32,6 +32,13 @@ function findSettingsControl(settings, labelText) {
   return label?.querySelector("select, input") || null;
 }
 
+function applyTwoCanastaDeckDefault(settings) {
+  const deckControl = findSettingsControl(settings, "Decks");
+  if (!deckControl || deckControl.value === "3") return;
+  deckControl.value = "3";
+  deckControl.dispatchEvent(new Event("change", { bubbles: true }));
+}
+
 function readSelectedSetup() {
   const settings = document.querySelector(".settings-grid");
   const playMode = findSettingsControl(settings, "Play style")?.value;
@@ -138,6 +145,10 @@ export default function HomeRulesOptions() {
   }, [canastasToGoOut]);
 
   useEffect(() => {
+    if (canastasToGoOut === 2 && settingsTarget) applyTwoCanastaDeckDefault(settingsTarget);
+  }, [canastasToGoOut, settingsTarget]);
+
+  useEffect(() => {
     if (!roomCode || !db) {
       setRoom(null);
       return undefined;
@@ -221,7 +232,9 @@ export default function HomeRulesOptions() {
     setSavingSetup(true);
     setSetupError("");
     try {
-      await update(ref(db, `rooms/${roomCode}/rules`), { canastasToGoOut: nextValue });
+      const updates = { canastasToGoOut: nextValue };
+      if (nextValue === 2) updates.deckCount = 3;
+      await update(ref(db, `rooms/${roomCode}/rules`), updates);
     } catch (error) {
       setSetupError(error.message || "Could not update the canasta requirement.");
     } finally {
@@ -251,7 +264,7 @@ export default function HomeRulesOptions() {
               <option value={1}>1 canasta — standard</option>
               <option value={2}>2 canastas — house rule</option>
             </select>
-            <small>When set to two, a team must complete two seven-card canastas before any player on that team may go out.</small>
+            <small>When set to two, a team must complete two seven-card canastas before any player on that team may go out. Three decks are selected by default.</small>
           </label>
           <label className="home-rule-toggle wide-setting">
             <input
