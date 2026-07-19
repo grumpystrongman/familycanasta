@@ -60,6 +60,18 @@ test("a picked-up pile stays unfrozen after an ordinary discard", () => {
   assert.equal(state.discardFreezeReason, null);
 });
 
+test("an ordinary card covering a wild card does not thaw the pile", () => {
+  const state = {
+    discardFrozen: true,
+    discardFreezeReason: "wild",
+    discardPileHasBeenTaken: true,
+  };
+
+  assert.equal(applyDiscardFreezeState(state, card("10")), false);
+  assert.equal(state.discardFrozen, true);
+  assert.equal(state.discardFreezeReason, "wild");
+});
+
 test("a black three does not refreeze a pile that was picked up", () => {
   const state = {
     discardFrozen: false,
