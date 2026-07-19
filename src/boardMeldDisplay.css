@@ -1,0 +1,108 @@
+.board-meld:not(.canasta-complete) > div {
+  padding-left: 0;
+  overflow: visible;
+}
+
+.board-meld:not(.canasta-complete) > div > .real-card {
+  margin-left: -39px;
+  position: relative;
+}
+
+.board-meld:not(.canasta-complete) > div > .real-card:first-child {
+  margin-left: 0;
+}
+
+.board-meld.canasta-complete > div {
+  height: 82px;
+  padding-left: 0;
+  align-items: center;
+  justify-content: center;
+}
+
+.board-meld.canasta-complete > div > .real-card {
+  display: none !important;
+}
+
+.canasta-summary-card {
+  width: 55px;
+  height: 78px;
+  flex: none;
+  position: relative;
+  display: grid;
+  place-content: center;
+  gap: 3px;
+  overflow: hidden;
+  border: 2px solid #e7c65e;
+  border-radius: 7px;
+  color: #fff8d6;
+  box-shadow: 0 7px 18px #0009, inset 0 0 0 2px #ffffff24;
+  text-align: center;
+  font-family: Georgia, serif;
+}
+
+.canasta-summary-card::before {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border: 1px solid #f7df8a88;
+  border-radius: 4px;
+  background: repeating-linear-gradient(45deg, transparent 0 5px, #ffffff0d 5px 7px);
+}
+
+.canasta-summary-card.clean {
+  background: linear-gradient(145deg, #d83d4c, #9f1323);
+}
+
+.canasta-summary-card.dirty {
+  background: linear-gradient(145deg, #30343a, #070809);
+}
+
+.canasta-summary-card strong,
+.canasta-summary-card small {
+  position: relative;
+  z-index: 1;
+}
+
+.canasta-summary-card strong {
+  font-size: 8px;
+  letter-spacing: .08em;
+}
+
+.canasta-summary-card small {
+  color: #fff8d6;
+  font: 800 7px/1 system-ui, sans-serif;
+  letter-spacing: .12em;
+}
+
+.canasta-summary-rank {
+  position: absolute;
+  z-index: 1;
+  font-weight: 900;
+  font-size: 11px;
+  line-height: 1;
+}
+
+.canasta-summary-rank.top {
+  top: 6px;
+  left: 6px;
+}
+
+.canasta-summary-rank.bottom {
+  right: 6px;
+  bottom: 6px;
+  transform: rotate(180deg);
+}
+
+.board-meld.clean-canasta {
+  border-color: #e34a59aa;
+}
+
+.board-meld.dirty-canasta {
+  border-color: #c9ad55aa;
+}
+
+@media (max-width: 850px) {
+  .board-meld:not(.canasta-complete) > div > .real-card {
+    margin-left: -41px;
+  }
+}
