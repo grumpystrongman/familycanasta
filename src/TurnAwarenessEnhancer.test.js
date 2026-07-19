@@ -6,7 +6,7 @@ import {
   remainingTurnSeconds,
   TURN_OVERLAY_MS,
   TURN_REMINDER_SECONDS,
-} from "./TurnAwarenessEnhancer.jsx";
+} from "./turnAwarenessTiming.js";
 
 const sourceUrl = new URL("./TurnAwarenessEnhancer.jsx", import.meta.url);
 const cssUrl = new URL("./turnAwareness.css", import.meta.url);
