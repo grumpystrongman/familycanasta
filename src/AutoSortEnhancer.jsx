@@ -1,8 +1,11 @@
 import { useEffect } from "react";
+import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "./firebase";
 
 const RANK_ORDER = ["A", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "3", "2", "JOKER"];
 const SUIT_ORDER = ["♠", "♥", "♦", "♣", "★"];
 const CARD_ID_TYPE = "text/card-id";
+const AUTO_SORT_KEY = "canastaAutoSortAfterDraw";
 
 function createDataTransfer(initialCardId = "") {
   const values = new Map();
@@ -108,7 +111,7 @@ function appendButtonLabel(button) {
   icon.textContent = "⇅";
 
   const label = document.createElement("span");
-  label.textContent = "Auto-sort hand";
+  label.textContent = "Sort hand now";
   button.append(icon, label);
 }
 
@@ -121,37 +124,68 @@ function findMountTarget() {
     || document.querySelector(".game-page .hand");
 }
 
+function handToken() {
+  const wrappers = Array.from(document.querySelectorAll(".game-page .hand .cards > .hand-card-wrap"));
+  const ids = wrappers.map(readCardId).filter(Boolean).sort();
+  return ids.join("|");
+}
+
+function isOwnDrawOrPickup() {
+  const turnText = document.querySelector(".game-page .turn")?.textContent || "";
+  if (!turnText.includes("YOUR TURN")) return false;
+
+  const nickname = document.querySelector(".game-page .hand .identity b")?.textContent?.trim() || "";
+  const action = document.querySelector(".game-page .dealer-orb span")?.textContent?.trim() || "";
+  if (!nickname || !action.startsWith(`${nickname} `)) return false;
+
+  return action.includes(" drew ")
+    || action.includes(" took the discard pile")
+    || action.includes(" drew from the discard pile");
+}
+
 export default function AutoSortEnhancer() {
   useEffect(() => {
     const body = document.body;
     if (!body) return undefined;
 
+    let currentUid = auth?.currentUser?.uid || "anonymous";
+    let enabled = true;
+    let statusTimer;
+    let automaticTimer;
+    let lastAutomaticToken = "";
+
+    const preferenceKey = () => `${AUTO_SORT_KEY}:${currentUid}`;
+    const readPreference = () => {
+      const saved = window.localStorage.getItem(preferenceKey());
+      return saved === null ? true : saved !== "false";
+    };
+
     const button = document.createElement("button");
     button.type = "button";
     button.className = "autosort-hand-button autosort-always-available";
-    button.title = "Auto-sort your hand at any time";
+    button.title = "Sort your hand by rank at any time";
     button.dataset.availability = "any-turn";
-    button.setAttribute("aria-label", "Auto-sort hand by rank and card type at any time");
+    button.setAttribute("aria-label", "Sort hand by rank and card type now");
     appendButtonLabel(button);
+
+    const preference = document.createElement("label");
+    preference.className = "autosort-preference";
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.setAttribute("aria-label", "Automatically sort my hand after drawing or taking the discard pile");
+    const preferenceText = document.createElement("span");
+    preference.append(checkbox, preferenceText);
 
     const status = document.createElement("span");
     status.className = "autosort-hand-status";
     status.setAttribute("role", "status");
     status.setAttribute("aria-live", "polite");
 
-    let statusTimer;
-
-    const refresh = () => {
-      const mountTarget = findMountTarget();
-      const cardCount = document.querySelectorAll(".game-page .hand .cards > .hand-card-wrap").length;
-
-      // Sorting is deliberately independent of whose turn it is, whether the
-      // player has drawn, and whether cards can currently be selected or melded.
-      button.disabled = cardCount < 2;
-
-      if (mountTarget && button.parentElement !== mountTarget) {
-        mountTarget.append(button, status);
-      }
+    const syncPreferenceDisplay = () => {
+      enabled = readPreference();
+      checkbox.checked = enabled;
+      preferenceText.textContent = enabled ? "Auto-sort after draw: On" : "Auto-sort after draw: Off";
+      preference.classList.toggle("enabled", enabled);
     };
 
     const announce = (message) => {
@@ -162,27 +196,84 @@ export default function AutoSortEnhancer() {
       }, 2500);
     };
 
-    const handleClick = () => {
+    const runSort = (automatic = false) => {
       try {
         const result = autoSortVisibleHand();
-        announce(result.moved > 0
-          ? `Sorted ${result.cardCount} cards into matching rank groups, with wild cards together.`
-          : "Your hand is already sorted.");
+        if (!automatic) {
+          announce(result.moved > 0
+            ? `Sorted ${result.cardCount} cards into matching rank groups, with wild cards together.`
+            : "Your hand is already sorted.");
+        }
+        return result;
       } catch (error) {
         announce(errorMessage(error));
+        return null;
       }
     };
 
+    const scheduleAutomaticSort = () => {
+      if (!enabled || !isOwnDrawOrPickup()) return;
+      const token = `${document.querySelector(".game-page .dealer-orb span")?.textContent?.trim() || ""}|${handToken()}`;
+      if (!token || token === lastAutomaticToken) return;
+
+      if (automaticTimer !== undefined) window.clearTimeout(automaticTimer);
+      automaticTimer = window.setTimeout(() => {
+        if (!enabled || !isOwnDrawOrPickup()) return;
+        const latestToken = `${document.querySelector(".game-page .dealer-orb span")?.textContent?.trim() || ""}|${handToken()}`;
+        if (!latestToken || latestToken === lastAutomaticToken) return;
+        const result = runSort(true);
+        if (result) lastAutomaticToken = latestToken;
+      }, 120);
+    };
+
+    const refresh = () => {
+      const mountTarget = findMountTarget();
+      const cardCount = document.querySelectorAll(".game-page .hand .cards > .hand-card-wrap").length;
+
+      button.disabled = cardCount < 2;
+
+      if (mountTarget && button.parentElement !== mountTarget) {
+        mountTarget.append(preference, button, status);
+      }
+
+      scheduleAutomaticSort();
+    };
+
+    const handleClick = () => runSort(false);
+    const handlePreferenceChange = () => {
+      enabled = checkbox.checked;
+      window.localStorage.setItem(preferenceKey(), String(enabled));
+      syncPreferenceDisplay();
+      announce(enabled
+        ? "Automatic sorting is on for your draws and discard-pile pickups."
+        : "Automatic sorting is off. Your manual card order will be preserved.");
+      if (enabled) scheduleAutomaticSort();
+    };
+
+    const unsubscribeAuth = auth
+      ? onAuthStateChanged(auth, (user) => {
+        currentUid = user?.uid || "anonymous";
+        syncPreferenceDisplay();
+        refresh();
+      })
+      : undefined;
+
     button.addEventListener("click", handleClick);
+    checkbox.addEventListener("change", handlePreferenceChange);
+    syncPreferenceDisplay();
     refresh();
 
     const observer = new MutationObserver(refresh);
-    observer.observe(body, { childList: true, subtree: true });
+    observer.observe(body, { childList: true, subtree: true, characterData: true });
 
     return () => {
       observer.disconnect();
+      unsubscribeAuth?.();
       if (statusTimer !== undefined) window.clearTimeout(statusTimer);
+      if (automaticTimer !== undefined) window.clearTimeout(automaticTimer);
       button.removeEventListener("click", handleClick);
+      checkbox.removeEventListener("change", handlePreferenceChange);
+      preference.remove();
       button.remove();
       status.remove();
     };
