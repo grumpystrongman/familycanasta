@@ -13,6 +13,7 @@ import {
   stockExhaustionPickupStatus,
   validatePendingPickupSelection,
 } from "./discardPickupPlanner";
+import { applyImmediateDiscardPickup } from "./discardPickupApply";
 import { applyDiscardFreezeState } from "./discardFreezeRules";
 import { boardCanGoOut, teamCanGoOut } from "./goOutRules";
 import { createUndoSnapshot } from "./undoSnapshot";
@@ -159,18 +160,10 @@ export async function takeDiscardPile(code, uid) {
         };
         room.publicState.lastAction = `${player.nickname} took the discard pile. Their opening must include the picked-up ${plan.rank} and ${plan.supportDescription}.`;
       } else {
-        if (plan.existing) {
-          plan.existing.cards = [...(plan.existing.cards || []), ...plan.forcedCards];
-        } else {
-          board.push({ rank: plan.top.rank, cards: plan.forcedCards });
-        }
-        const used = new Set(plan.usedHandCardIds || plan.usedNaturalIds || []);
-        room.privateHands[uid] = sortHand([
-          ...hand.filter((card) => !used.has(card.id)),
-          ...plan.lowerPile,
-        ]);
+        const pickup = applyImmediateDiscardPickup(hand, board, plan);
+        room.privateHands[uid] = sortHand(pickup.remainingHand);
         room.publicState.pendingDiscardPickup = null;
-        room.publicState.lastAction = `${player.nickname} took the discard pile using ${plan.supportDescription}, played the top ${plan.top.rank}, and kept the remaining cards in hand.`;
+        room.publicState.lastAction = `${player.nickname} took the discard pile using ${plan.supportDescription} and melded ${pickup.committedCards.length} ${plan.top.rank}${pickup.committedCards.length === 1 ? "" : "s"}.`;
       }
 
       room.publicState.discardPile = [];
