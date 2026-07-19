@@ -10,7 +10,7 @@ test("human plays and discards enforce the canasta go-out requirement", async ()
   assert.match(source, /boardCanGoOut\(projectedBoard, room\.rules\)/);
   assert.match(source, /remainingHand\.length < 2/);
   assert.match(source, /hand\.length === 1 && !teamCanGoOut\(room, player\.team\)/);
-  assert.match(source, /usedHandCardIds \|\| plan\.usedNaturalIds/);
+  assert.match(source, /applyImmediateDiscardPickup\(hand, board, plan\)/);
 });
 
 test("custom-game and lobby settings expose classic and modern pickup rules", async () => {
