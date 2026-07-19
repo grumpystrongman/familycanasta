@@ -23,6 +23,7 @@ import "./chatReadability.css";
 import "./autoSort.css";
 import "./responsiveBoard.css";
 import "./classicCanastaLayout.css";
+import "./actionHistory.css";
 
 const rootElement = document.getElementById("root");
 
@@ -121,6 +122,7 @@ const enhancementLoaders = [
   ["ChatBubbleEnhancer", () => import("./ChatBubbleEnhancer")],
   ["AutoSortEnhancer", () => import("./AutoSortEnhancer")],
   ["ResponsiveBoardEnhancer", () => import("./ResponsiveBoardEnhancer")],
+  ["ActionHistoryEnhancer", () => import("./ActionHistoryEnhancer")],
 ];
 
 async function mountEnhancement(name, load) {

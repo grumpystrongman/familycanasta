@@ -36,6 +36,11 @@ test("defaults to one canasta and preserves the two-canasta house rule", () => {
   assert.equal(normalizeRoomSetup({ canastasToGoOut: 3 }).canastasToGoOut, 1);
 });
 
+test("defaults two-canasta games to three decks but preserves an explicit deck choice", () => {
+  assert.equal(normalizeRoomSetup({ canastasToGoOut: 2 }).deckCount, 3);
+  assert.equal(normalizeRoomSetup({ canastasToGoOut: 2, deckCount: 2 }).deckCount, 2);
+});
+
 test("detects the two-seat fallback as different from a requested four-seat room", () => {
   const current = { playMode: "solo", playersPerTeam: 1, teamCount: 2, deckCount: 2, cardsPerPlayer: 15 };
   const requested = { playMode: "partners", playersPerTeam: 2, teamCount: 2, deckCount: 2, cardsPerPlayer: 11 };

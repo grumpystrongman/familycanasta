@@ -15,6 +15,7 @@ import {
 } from "./discardPickupPlanner";
 import { applyDiscardFreezeState } from "./discardFreezeRules";
 import { boardCanGoOut, teamCanGoOut } from "./goOutRules";
+import { createUndoSnapshot } from "./undoSnapshot";
 
 function orderedPlayers(room) {
   return Object.values(room.members || {}).sort((a, b) => a.seat - b.seat);
@@ -76,6 +77,7 @@ export async function drawFromStock(code, uid) {
   const result = await runTransaction(ref(db, `rooms/${code}`), (room) => {
     try {
       const player = assertTurn(room, uid, "draw");
+      room.publicState.undoPlay = null;
       if (!room.stock?.length) {
         const status = stockExhaustionPickupStatus(room, player);
         if (status.mustTake) {
@@ -134,6 +136,7 @@ export async function takeDiscardPile(code, uid) {
   const result = await runTransaction(ref(db, `rooms/${code}`), (room) => {
     try {
       const player = assertTurn(room, uid, "draw");
+      room.publicState.undoPlay = null;
       const plan = planDiscardPickup(room, player);
       const hand = [...(room.privateHands?.[uid] || [])];
       room.publicState.teamBoards ||= {};
@@ -235,6 +238,7 @@ export async function meldSelectedCards(code, uid, cardIds, targetRank = null) {
         throw new Error("Your team needs a canasta before going out. Keep at least two cards before the discard so one card remains after your turn.");
       }
 
+      room.publicState.undoPlay = createUndoSnapshot(room, player, hand, board);
       if (existing) existing.cards = [...(existing.cards || []), ...selected];
       else board.push({ rank, cards: selected });
       room.publicState.opened[player.team] = true;
@@ -279,6 +283,7 @@ export async function discardSelectedCard(code, uid, cardId) {
       room.publicState.discardPile.push(card);
       const freezesPile = applyDiscardFreezeState(room.publicState, card, room.rules || {});
       room.publicState.handCounts[uid] = room.privateHands[uid].length;
+      room.publicState.undoPlay = null;
       room.publicState.lastAction = `${player.nickname} discarded ${card.rank}${card.suit}${freezesPile ? " and froze the discard pile" : ""}.`;
       if (room.privateHands[uid].length === 0) return finishRound(room, uid);
 

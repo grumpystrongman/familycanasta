@@ -1,8 +1,34 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { restoreUndoSnapshot } from "./undoSnapshot.js";
+import { createUndoSnapshot, restoreUndoSnapshot } from "./undoSnapshot.js";
 
 const card = (id, rank = "Q") => ({ id, rank, suit: "S", color: "black" });
+
+test("creates an isolated snapshot of the immediate pre-play hand and board", () => {
+  const hand = [card("q1"), card("q2")];
+  const board = [{ rank: "A", cards: [card("a1", "A")] }];
+  const room = {
+    publicState: {
+      currentPlayerIndex: 2,
+      opened: { 1: true },
+      pendingDiscardPickup: { uid: "player", rank: "Q" },
+      lastAction: "Player drew two cards.",
+    },
+  };
+  const player = { uid: "player", team: 1 };
+
+  const snapshot = createUndoSnapshot(room, player, hand, board);
+  hand.pop();
+  board[0].cards.push(card("a2", "A"));
+  room.publicState.pendingDiscardPickup.rank = "K";
+
+  assert.equal(snapshot.playerIndex, 2);
+  assert.equal(snapshot.handCount, 2);
+  assert.deepEqual(snapshot.privateHand.map((item) => item.id), ["q1", "q2"]);
+  assert.deepEqual(snapshot.teamBoard[0].cards.map((item) => item.id), ["a1"]);
+  assert.equal(snapshot.pendingDiscardPickup.rank, "Q");
+  assert.equal(snapshot.lastAction, "Player drew two cards.");
+});
 
 test("restores a missing team board as an empty array instead of undefined", () => {
   const room = {

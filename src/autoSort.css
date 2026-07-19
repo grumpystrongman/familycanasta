@@ -32,6 +32,37 @@
   line-height: 1;
 }
 
+.autosort-preference {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 8px 11px;
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: 10px;
+  background: rgba(0,0,0,.18);
+  color: rgba(255,255,255,.82);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.autosort-preference.enabled {
+  border-color: rgba(185,230,202,.52);
+  background: rgba(78,145,102,.2);
+  color: #f3fff7;
+}
+
+.autosort-preference input {
+  width: 17px;
+  height: 17px;
+  margin: 0;
+  accent-color: #68b985;
+  cursor: pointer;
+}
+
 .autosort-hand-status {
   position: absolute;
   width: 1px;
@@ -46,7 +77,9 @@
 
 @media(max-width:850px) {
   .selection-advisor .autosort-hand-button,
-  .hand > .autosort-hand-button {
+  .hand > .autosort-hand-button,
+  .selection-advisor .autosort-preference,
+  .hand > .autosort-preference {
     flex: 1;
     justify-content: center;
   }

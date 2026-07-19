@@ -13,10 +13,21 @@ test("adds a stored one-or-two canasta house rule to custom game setup", async (
   assert.match(source, /canastasToGoOut: findSettingsControl\(settings, "Canastas to go out"\)/);
 });
 
+test("defaults the deck selector to three when two canastas are chosen", async () => {
+  const source = await readFile(optionsUrl, "utf8");
+  assert.match(source, /function applyTwoCanastaDeckDefault\(settings\)/);
+  assert.match(source, /findSettingsControl\(settings, "Decks"\)/);
+  assert.match(source, /deckControl\.value = "3"/);
+  assert.match(source, /canastasToGoOut === 2 && settingsTarget/);
+  assert.match(source, /Three decks are selected by default/);
+});
+
 test("lets the host change the canasta requirement in the lobby", async () => {
   const source = await readFile(optionsUrl, "utf8");
   assert.match(source, /async function changeLobbyCanastasToGoOut/);
-  assert.match(source, /update\(ref\(db, `rooms\/\$\{roomCode\}\/rules`\), \{ canastasToGoOut: nextValue \}\)/);
+  assert.match(source, /const updates = \{ canastasToGoOut: nextValue \}/);
+  assert.match(source, /if \(nextValue === 2\) updates\.deckCount = 3/);
+  assert.match(source, /update\(ref\(db, `rooms\/\$\{roomCode\}\/rules`\), updates\)/);
   assert.match(source, /aria-label="Canastas required to go out"/);
   assert.match(source, /value=\{currentSetup\.canastasToGoOut\}/);
 });
