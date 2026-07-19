@@ -1,20 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { onValue, ref } from "firebase/database";
 import { auth, db, firebaseReady } from "./firebase";
-
-export const TURN_REMINDER_SECONDS = 60;
-export const TURN_OVERLAY_MS = 5000;
-
-export function remainingTurnSeconds(startedAt, now = Date.now()) {
-  if (!Number.isFinite(Number(startedAt))) return TURN_REMINDER_SECONDS;
-  const elapsed = Math.max(0, Number(now) - Number(startedAt));
-  return Math.max(0, Math.ceil((TURN_REMINDER_SECONDS * 1000 - elapsed) / 1000));
-}
-
-export function formatTurnTime(seconds) {
-  const safe = Math.max(0, Math.floor(Number(seconds) || 0));
-  return `${Math.floor(safe / 60)}:${String(safe % 60).padStart(2, "0")}`;
-}
+import {
+  formatTurnTime,
+  remainingTurnSeconds,
+  TURN_OVERLAY_MS,
+  TURN_REMINDER_SECONDS,
+} from "./turnAwarenessTiming";
 
 function findRoomCode() {
   const code = document.querySelector(".game-page .code b")?.textContent?.trim();
@@ -63,16 +55,18 @@ export default function TurnAwarenessEnhancer() {
       setShowOverlay(false);
       setTurnStartedAt(null);
       setSecondsLeft(TURN_REMINDER_SECONDS);
-      return undefined;
+      return;
     }
 
-    if (previousTurnRef.current === turnIdentity) return undefined;
+    if (previousTurnRef.current === turnIdentity) return;
     previousTurnRef.current = turnIdentity;
     const startedAt = Date.now();
     setTurnStartedAt(startedAt);
     setSecondsLeft(TURN_REMINDER_SECONDS);
+  }, [playing, turnIdentity, activePlayer?.uid]);
 
-    if (!isMyTurn) {
+  useEffect(() => {
+    if (!playing || !isMyTurn || turnStartedAt === null) {
       setShowOverlay(false);
       return undefined;
     }
@@ -86,7 +80,7 @@ export default function TurnAwarenessEnhancer() {
       window.clearTimeout(timeout);
       window.removeEventListener("mousemove", dismiss);
     };
-  }, [playing, turnIdentity, activePlayer?.uid, isMyTurn]);
+  }, [playing, isMyTurn, turnStartedAt]);
 
   useEffect(() => {
     if (!playing || turnStartedAt === null) return undefined;
