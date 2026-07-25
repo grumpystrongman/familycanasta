@@ -52,9 +52,12 @@ test("shows one collapsed card with a count bubble and canasta colors", async ()
   assert.match(compactCss, /\.board-meld\.dirty-canasta\s*\{[^}]*border-color:\s*#9a6543/s);
 });
 
-test("keeps actions reachable and supports the original responsive board styles", async () => {
+test("floats the hand and its controls over the bottom of the board", async () => {
   const css = await readFile(cssUrl, "utf8");
-  assert.match(css, /\.responsive-board-ready \.hand \{[\s\S]*position: relative !important/);
+  assert.match(css, /--canasta-hand-hover-height:\s*clamp\(288px, 31vh, 332px\)/);
+  assert.match(css, /\.responsive-board-ready \.hand \{[\s\S]*position: absolute !important[\s\S]*inset: auto 0 0 0 !important[\s\S]*grid-template-rows: auto auto minmax\(0, 1fr\)/);
+  assert.match(css, /\.responsive-board-ready \.selection-advisor \{[^}]*position:\s*relative[^}]*z-index:\s*4/s);
+  assert.match(css, /\.responsive-board-ready \.cards \{[^}]*overflow-x:\s*auto[^}]*overflow-y:\s*visible !important/s);
   assert.match(css, /board-meld:has\(\.real-card:nth-child\(7\)\)/);
   assert.match(css, /aria-label\^="JOKER "/);
 });
