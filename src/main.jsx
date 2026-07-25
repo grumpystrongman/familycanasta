@@ -25,6 +25,7 @@ import "./responsiveBoard.css";
 import "./classicCanastaLayout.css";
 import "./actionHistory.css";
 import "./turnAwareness.css";
+import "./playSurfaceIsolation.css";
 
 const rootElement = document.getElementById("root");
 
