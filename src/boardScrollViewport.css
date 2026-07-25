@@ -1,0 +1,83 @@
+/*
+ * The fixed hand overlays the bottom of the play viewport. Give the team-board
+ * row only the space that actually exists above the hand, then scroll each
+ * board vertically so lower melds and red threes remain reachable.
+ */
+
+:root {
+  --canasta-board-scroll-height: clamp(170px, 38dvh, 470px);
+}
+
+@media (min-width: 851px) {
+  .game-page.responsive-board-ready .table {
+    min-height: 0;
+    overflow: hidden !important;
+  }
+
+  .game-page.responsive-board-ready .shared-boards {
+    box-sizing: border-box;
+    flex: 0 0 var(--canasta-board-scroll-height) !important;
+    align-self: start !important;
+    height: var(--canasta-board-scroll-height) !important;
+    min-height: 170px !important;
+    max-height: var(--canasta-board-scroll-height) !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    align-items: stretch !important;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+  }
+
+  .game-page.responsive-board-ready .shared-board {
+    box-sizing: border-box;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior-y: contain;
+    scrollbar-gutter: stable;
+    scrollbar-width: auto;
+    scrollbar-color: #f0c85a #06231d;
+  }
+
+  .game-page.responsive-board-ready .shared-board::-webkit-scrollbar {
+    width: 13px;
+  }
+
+  .game-page.responsive-board-ready .shared-board::-webkit-scrollbar-track {
+    background: #06231d;
+    border-radius: 999px;
+  }
+
+  .game-page.responsive-board-ready .shared-board::-webkit-scrollbar-thumb {
+    border: 3px solid #06231d;
+    border-radius: 999px;
+    background: #f0c85a;
+  }
+
+  .game-page.responsive-board-ready .shared-board .board-title {
+    position: sticky !important;
+    top: 0;
+    z-index: 12;
+  }
+
+  .game-page.responsive-board-ready .shared-board .meld-slots,
+  .game-page.responsive-board-ready .shared-board .red-three-board-rack {
+    flex: 0 0 auto;
+  }
+
+  .game-page.responsive-board-ready .shared-board > :last-child {
+    margin-bottom: 18px;
+  }
+}
+
+@media (max-width: 850px) {
+  .game-page.responsive-board-ready .shared-boards,
+  .game-page.responsive-board-ready .shared-board {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+}
