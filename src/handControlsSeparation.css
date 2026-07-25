@@ -1,19 +1,33 @@
 /*
  * Keep the player's action controls and card rail in separate layout rows.
  * Controls may grow or wrap, but they must never cover or push the hand cards
- * below the viewport.
+ * below the viewport or under the score/table-actions sidebar.
  */
 
 :root {
   --canasta-hand-card-height: 178px;
   --canasta-hand-card-rail-height: 224px;
+  --canasta-sidebar-width: 300px;
+  --canasta-sidebar-gutter: 14px;
 }
 
 @media (min-width: 851px) {
+  .game-page.responsive-board-ready {
+    grid-template-columns: minmax(0, 1fr) var(--canasta-sidebar-width) !important;
+  }
+
+  .game-page.responsive-board-ready .table {
+    min-width: 0;
+  }
+
   .game-page.responsive-board-ready .hand {
+    position: fixed !important;
+    inset: auto calc(var(--canasta-sidebar-width) + var(--canasta-sidebar-gutter)) 0 0 !important;
     display: grid !important;
     grid-template-rows: auto auto var(--canasta-hand-card-rail-height) !important;
     align-content: end !important;
+    width: auto !important;
+    max-width: calc(100vw - var(--canasta-sidebar-width) - var(--canasta-sidebar-gutter)) !important;
     height: auto !important;
     min-height: 0 !important;
     max-height: min(74dvh, 620px) !important;
@@ -73,7 +87,7 @@
 @media (min-width: 851px) {
   .canasta-emote-dock {
     top: calc(70px + var(--canasta-draw-row-height, 156px) + 12px);
-    right: 312px;
+    right: calc(var(--canasta-sidebar-width) + var(--canasta-sidebar-gutter));
     bottom: auto;
     left: auto;
     transform: none;
@@ -81,7 +95,7 @@
 
   .canasta-emote-dock.collapsed {
     top: calc(70px + var(--canasta-draw-row-height, 156px) + 12px);
-    right: 312px;
+    right: calc(var(--canasta-sidebar-width) + var(--canasta-sidebar-gutter));
     bottom: auto;
     left: auto;
   }
