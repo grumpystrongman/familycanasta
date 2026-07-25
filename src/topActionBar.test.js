@@ -12,18 +12,20 @@ test("loads the top action bar and board layout styles", async () => {
   assert.match(source, /import "\.\/classicCanastaLayout\.css";/);
 });
 
-test("makes the draw row about ten percent of the game viewport", async () => {
+test("reserves a large, persistent draw row at the top of the table", async () => {
   const styles = await readFile(stylesUrl, "utf8");
-  assert.match(styles, /--canasta-draw-row-height:\s*clamp\(72px, 10vh, 120px\)/);
+  assert.match(styles, /--canasta-draw-row-height:\s*clamp\(156px, 20vh, 176px\)/);
   assert.match(styles, /\.enhanced-game \.center\s*\{[^}]*flex:\s*0 0 var\(--canasta-draw-row-height\)[^}]*height:\s*var\(--canasta-draw-row-height\)/s);
   assert.match(styles, /\.enhanced-game \.shared-boards\s*\{[^}]*order:\s*0/s);
 });
 
-test("uses larger, easier-to-hit stock and discard controls", async () => {
+test("doubles the visible stock and discard cards", async () => {
   const styles = await readFile(stylesUrl, "utf8");
-  assert.match(styles, /\.enhanced-game \.pile-action\s*\{[^}]*min-width:\s*190px[^}]*border-radius:\s*12px/s);
-  assert.match(styles, /\.enhanced-game \.pile-action \.pile\s*\{[^}]*width:\s*48px[^}]*height:\s*68px/s);
-  assert.match(styles, /\.enhanced-game \.pile-action > b\s*\{[^}]*font-size:\s*14px/s);
+  assert.match(styles, /\.enhanced-game \.pile-action\s*\{[^}]*min-width:\s*250px[^}]*border-radius:\s*12px/s);
+  assert.match(styles, /\.enhanced-game \.pile-action \.pile\s*\{[^}]*width:\s*96px[^}]*height:\s*136px[^}]*flex:\s*0 0 96px/s);
+  assert.match(styles, /\.enhanced-game \.pile-action \.real-card\.compact\s*\{[^}]*width:\s*96px[^}]*height:\s*136px/s);
+  assert.match(styles, /\.enhanced-game \.pile-action > b\s*\{[^}]*font-size:\s*16px/s);
+  assert.doesNotMatch(styles, /width:\s*42px;\s*\n\s*height:\s*59px/);
 });
 
 test("centers the discard pile in the top action bar", async () => {

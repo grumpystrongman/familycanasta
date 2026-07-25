@@ -1,5 +1,5 @@
 :root {
-  --canasta-draw-row-height: clamp(72px, 10vh, 120px);
+  --canasta-draw-row-height: clamp(156px, 20vh, 176px);
 }
 
 /* Keep draw controls immediately below the game header without consuming board space. */
@@ -21,8 +21,8 @@
   height: var(--canasta-draw-row-height);
   min-height: var(--canasta-draw-row-height);
   margin: 0 !important;
-  padding: 8px 16px;
-  gap: 14px;
+  padding: 10px 16px;
+  gap: 18px;
   background: linear-gradient(180deg, rgba(3, 27, 22, 0.98), rgba(5, 48, 40, 0.9));
   border-bottom: 1px solid rgba(255, 255, 255, 0.16);
   box-shadow: 0 8px 20px rgba(0, 20, 16, 0.24);
@@ -38,16 +38,16 @@
   flex: 1 1 auto;
 }
 
-/* Larger, easier-to-hit draw controls sized for the taller action row. */
+/* The stock and discard cards are intentionally double their former 48x68 size. */
 .enhanced-game .pile-action {
-  min-width: 190px;
+  min-width: 250px;
   min-height: calc(var(--canasta-draw-row-height) - 18px);
   display: flex;
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  padding: 8px 14px;
+  gap: 14px;
+  padding: 8px 16px;
   border: 1px solid rgba(255, 255, 255, 0.22);
   border-radius: 12px;
   background: rgba(0, 20, 16, 0.48);
@@ -61,7 +61,7 @@
 .enhanced-game .center > .pile-action:last-child {
   grid-area: discard;
   justify-self: center;
-  min-width: 210px;
+  min-width: 270px;
 }
 
 .enhanced-game .pile-action:disabled {
@@ -70,8 +70,8 @@
 
 .enhanced-game .pile-action > b {
   margin-top: 0;
-  max-width: 125px;
-  font-size: 14px;
+  max-width: 145px;
+  font-size: 16px;
   line-height: 1.2;
   font-weight: 900;
   text-align: left;
@@ -79,26 +79,46 @@
 }
 
 .enhanced-game .pile-action .pile {
-  width: 48px;
-  height: 68px;
-  flex: 0 0 48px;
-  border-radius: 7px;
-  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.5);
+  width: 96px;
+  height: 136px;
+  flex: 0 0 96px;
+  border-radius: 10px;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.54);
 }
 
 .enhanced-game .pile-action .real-card.compact {
-  width: 48px;
-  height: 68px;
-  border-radius: 7px;
+  width: 96px;
+  height: 136px;
+  border-radius: 10px;
 }
 
 .enhanced-game .pile-action .compact .card-corner b,
 .enhanced-game .pile-action .compact .card-corner i {
-  font-size: 9px;
+  font-size: 15px;
 }
 
 .enhanced-game .pile-action .compact .pip-field > span {
-  font-size: 12px;
+  font-size: 22px;
+}
+
+.enhanced-game .pile-action .compact .court-art {
+  inset: 20px 14px;
+}
+
+.enhanced-game .pile-action .compact .court-art b {
+  font-size: 36px;
+}
+
+.enhanced-game .pile-action .compact .court-art span {
+  font-size: 18px;
+}
+
+.enhanced-game .pile-action .compact .joker-art span {
+  font-size: 42px;
+}
+
+.enhanced-game .pile-action .compact .joker-art b {
+  font-size: 10px;
 }
 
 .enhanced-game .dealer-orb {
@@ -157,6 +177,10 @@
 }
 
 @media (max-width: 850px) {
+  :root {
+    --canasta-draw-row-height: auto;
+  }
+
   .enhanced-game .center {
     grid-template-columns: 1fr;
     grid-template-areas:
@@ -174,8 +198,8 @@
   .enhanced-game .center > .pile-action:first-child,
   .enhanced-game .center > .pile-action:last-child {
     justify-self: center;
-    width: min(100%, 320px);
-    min-height: 72px;
+    width: min(100%, 420px);
+    min-height: 152px;
   }
 
   .enhanced-game .dealer-orb {
@@ -185,29 +209,22 @@
 
   .enhanced-game .pile-action > b {
     max-width: none;
-    font-size: 13px;
+    font-size: 15px;
   }
 }
 
 @media (max-height: 620px) and (min-width: 851px) {
   :root {
-    --canasta-draw-row-height: 72px;
+    --canasta-draw-row-height: 156px;
   }
 
   .enhanced-game .center {
-    padding-block: 5px;
+    padding-block: 8px;
   }
 
   .enhanced-game .pile-action {
-    min-height: 62px;
+    min-height: 138px;
     padding-block: 4px;
-  }
-
-  .enhanced-game .pile-action .pile,
-  .enhanced-game .pile-action .real-card.compact {
-    width: 42px;
-    height: 59px;
-    flex-basis: 42px;
   }
 
   .enhanced-game .dealer-orb span {
