@@ -17,6 +17,7 @@
   .game-page.responsive-board-ready .shared-boards {
     box-sizing: border-box;
     flex: 0 0 var(--canasta-board-scroll-height) !important;
+    align-self: start !important;
     height: var(--canasta-board-scroll-height) !important;
     min-height: 170px !important;
     max-height: var(--canasta-board-scroll-height) !important;
@@ -62,7 +63,7 @@
   }
 
   .game-page.responsive-board-ready .shared-board .meld-slots,
-  .game-page.responsive-board-ready .shared-board .red-three-board {
+  .game-page.responsive-board-ready .shared-board .red-three-board-rack {
     flex: 0 0 auto;
   }
 
