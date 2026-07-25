@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import "./boardScrollViewport.css";
 
 const BOARD_GAP_PX = 12;
 const MIN_BOARD_HEIGHT_PX = 170;
