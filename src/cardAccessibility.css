@@ -57,6 +57,92 @@
   -webkit-text-fill-color: currentColor !important;
 }
 
+/*
+ * The player's hand is the primary play surface. Keep it large enough to read
+ * at normal browser zoom and when the game is being shared through Meet.
+ */
+.responsive-board-ready {
+  --canasta-hand-hover-height: clamp(350px, 38vh, 402px) !important;
+}
+
+.responsive-board-ready .hand .cards {
+  padding: 68px 28px 8px !important;
+}
+
+.responsive-board-ready .hand .hand-card-wrap {
+  margin-left: -38px;
+}
+
+.responsive-board-ready .hand .hand-card-wrap:first-child {
+  margin-left: 0;
+}
+
+.responsive-board-ready .hand .real-card {
+  width: 124px !important;
+  height: 178px !important;
+  border-width: 2px;
+  border-radius: 13px;
+  box-shadow: 0 10px 24px rgba(0,0,0,.58);
+}
+
+.responsive-board-ready .hand .real-card:hover {
+  transform: translateY(-11px);
+}
+
+.responsive-board-ready .hand .real-card.selected {
+  transform: translateY(-58px) !important;
+}
+
+.responsive-board-ready .hand .card-corner.top {
+  left: 8px;
+  top: 8px;
+}
+
+.responsive-board-ready .hand .card-corner.bottom {
+  right: 8px;
+  bottom: 8px;
+}
+
+.responsive-board-ready .hand .card-corner b {
+  font-size: 23px;
+}
+
+.responsive-board-ready .hand .card-corner i {
+  font-size: 22px;
+}
+
+.responsive-board-ready .hand .pip-field {
+  inset: 21px 18px;
+}
+
+.responsive-board-ready .hand .pip-field > span {
+  font-size: 34px;
+}
+
+.responsive-board-ready .hand .court-art {
+  inset: 28px 20px;
+}
+
+.responsive-board-ready .hand .court-art b {
+  font-size: 56px;
+}
+
+.responsive-board-ready .hand .court-art span {
+  font-size: 27px;
+}
+
+.responsive-board-ready .hand .joker-art {
+  inset: 24px 15px;
+}
+
+.responsive-board-ready .hand .joker-art span {
+  font-size: 60px;
+}
+
+.responsive-board-ready .hand .joker-art b {
+  font-size: 14px;
+}
+
 @media (max-width: 850px) {
   .board-meld .real-card,
   .shared-board .real-card.compact {
@@ -65,4 +151,13 @@
   }
 
   .board-meld > div { height: 83px !important; }
+
+  .responsive-board-ready .hand .real-card {
+    width: 112px !important;
+    height: 160px !important;
+  }
+
+  .responsive-board-ready .hand .hand-card-wrap {
+    margin-left: -34px;
+  }
 }
