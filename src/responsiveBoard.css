@@ -1,5 +1,6 @@
 .responsive-board-ready {
   --board-toolbar-height: 46px;
+  --canasta-hand-hover-height: clamp(288px, 31vh, 332px);
 }
 
 .board-view-bar {
@@ -197,27 +198,43 @@
   backdrop-filter: blur(12px);
 }
 
+/* The hand floats over the lower board instead of being pushed below it. */
 .responsive-board-ready .hand {
-  position: relative !important;
-  inset: auto !important;
-  z-index: 10;
-  min-height: 0;
-  padding: 12px 18px 10px !important;
-  background: linear-gradient(180deg, #08261ef0, #041812 42%);
+  position: absolute !important;
+  inset: auto 0 0 0 !important;
+  z-index: 120;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  width: 100%;
+  height: var(--canasta-hand-hover-height);
+  min-height: var(--canasta-hand-hover-height);
+  overflow: visible;
+  padding: 10px 18px 10px !important;
+  background: linear-gradient(180deg, transparent 0, #08261ef0 18%, #041812 48%);
   box-shadow: 0 -12px 28px #001b16aa;
   backdrop-filter: blur(14px);
 }
 
+.responsive-board-ready .identity {
+  position: relative;
+  z-index: 4;
+}
+
 .responsive-board-ready .selection-advisor {
+  position: relative;
+  z-index: 4;
   margin-bottom: 4px;
 }
 
 .responsive-board-ready .cards {
-  min-height: 145px !important;
-  max-height: 190px;
+  align-items: flex-end;
+  width: 100%;
+  height: 100%;
+  min-height: 0 !important;
+  max-height: none;
   padding: 54px 28px 6px !important;
   overflow-x: auto;
-  overflow-y: hidden !important;
+  overflow-y: visible !important;
   overscroll-behavior-x: contain;
   scroll-snap-type: x proximity;
 }
@@ -233,6 +250,10 @@
 }
 
 @media (max-height: 820px) and (min-width: 851px) {
+  .responsive-board-ready {
+    --canasta-hand-hover-height: clamp(264px, 36vh, 296px);
+  }
+
   .board-view-bar {
     top: calc(70px + var(--canasta-draw-row-height, 10vh) + 8px);
     transform: scale(.92);
@@ -257,8 +278,8 @@
   }
 
   .responsive-board-ready .pile {
-    width: 68px;
-    height: 96px;
+    width: 96px;
+    height: 136px;
   }
 
   .responsive-board-ready .hand {
@@ -270,18 +291,9 @@
   }
 
   .responsive-board-ready .cards {
-    min-height: 128px !important;
-    max-height: 150px;
+    min-height: 0 !important;
+    max-height: none;
     padding-top: 46px !important;
-  }
-
-  .responsive-board-ready .real-card {
-    width: 76px;
-    height: 109px;
-  }
-
-  .responsive-board-ready .real-card.selected {
-    transform: translateY(-48px) !important;
   }
 }
 
@@ -323,6 +335,18 @@
 
   .responsive-board-ready .hand {
     position: sticky !important;
+    inset: auto !important;
     bottom: 66px !important;
+    display: block;
+    width: auto;
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .responsive-board-ready .cards {
+    height: auto;
+    min-height: 145px !important;
+    max-height: 190px;
   }
 }
