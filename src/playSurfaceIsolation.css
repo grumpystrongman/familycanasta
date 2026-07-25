@@ -1,0 +1,110 @@
+/*
+ * Required play surfaces must not compete for space. The top stock/discard
+ * controls stay in a fixed-height row, while the player's hand is attached to
+ * the viewport and keeps readable card dimensions regardless of hand size.
+ */
+
+@media (min-width: 851px) {
+  .responsive-board-ready .center {
+    flex: 0 0 var(--canasta-draw-row-height) !important;
+    height: var(--canasta-draw-row-height) !important;
+    min-height: var(--canasta-draw-row-height) !important;
+    max-height: var(--canasta-draw-row-height) !important;
+    min-width: 0;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    scrollbar-gutter: stable;
+  }
+
+  .responsive-board-ready .center > .pile-action {
+    flex: 0 0 auto;
+    height: calc(var(--canasta-draw-row-height) - 18px);
+    min-height: 0;
+  }
+
+  .responsive-board-ready .center > .dealer-orb {
+    min-width: 280px;
+    flex: 0 0 280px;
+  }
+
+  .game-page.responsive-board-ready .hand {
+    position: fixed !important;
+    inset: auto 300px 0 0 !important;
+    z-index: 500;
+    width: auto !important;
+    height: clamp(350px, 38vh, 402px) !important;
+    min-height: clamp(350px, 38vh, 402px) !important;
+    max-height: clamp(350px, 38vh, 402px) !important;
+    flex: 0 0 auto !important;
+  }
+}
+
+/* Every hand size uses one non-wrapping horizontal rail. */
+.responsive-board-ready .hand .cards {
+  display: flex !important;
+  flex-flow: row nowrap !important;
+  justify-content: flex-start !important;
+  align-items: flex-end !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  overflow-x: auto !important;
+  overflow-y: visible !important;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  scrollbar-gutter: stable both-edges;
+  touch-action: pan-x;
+}
+
+.responsive-board-ready .hand .hand-card-wrap {
+  flex: 0 0 124px !important;
+  width: 124px !important;
+  min-width: 124px !important;
+  max-width: 124px !important;
+  margin-left: -38px !important;
+  scroll-snap-align: center;
+}
+
+.responsive-board-ready .hand .hand-card-wrap:first-child {
+  margin-left: 0 !important;
+}
+
+.responsive-board-ready .hand .real-card {
+  flex: 0 0 124px !important;
+  width: 124px !important;
+  min-width: 124px !important;
+  max-width: 124px !important;
+  height: 178px !important;
+  min-height: 178px !important;
+  max-height: 178px !important;
+}
+
+@media (max-width: 850px) {
+  .responsive-board-ready .center {
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .responsive-board-ready .hand .cards {
+    min-height: 190px !important;
+    max-height: none !important;
+    padding-top: 62px !important;
+  }
+
+  .responsive-board-ready .hand .hand-card-wrap {
+    flex-basis: 112px !important;
+    width: 112px !important;
+    min-width: 112px !important;
+    max-width: 112px !important;
+    margin-left: -34px !important;
+  }
+
+  .responsive-board-ready .hand .real-card {
+    flex-basis: 112px !important;
+    width: 112px !important;
+    min-width: 112px !important;
+    max-width: 112px !important;
+    height: 160px !important;
+    min-height: 160px !important;
+    max-height: 160px !important;
+  }
+}
