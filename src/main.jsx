@@ -125,6 +125,7 @@ const enhancementLoaders = [
   ["ChatBubbleEnhancer", () => import("./ChatBubbleEnhancer")],
   ["AutoSortEnhancer", () => import("./AutoSortEnhancer")],
   ["ResponsiveBoardEnhancer", () => import("./ResponsiveBoardEnhancer")],
+  ["BoardScrollViewport", () => import("./BoardScrollViewport")],
   ["ActionHistoryEnhancer", () => import("./ActionHistoryEnhancer")],
   ["TurnAwarenessEnhancer", () => import("./TurnAwarenessEnhancer")],
   ["RobotTurnWatchdog", () => import("./RobotTurnWatchdog")],
