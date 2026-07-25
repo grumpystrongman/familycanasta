@@ -1,0 +1,114 @@
+/*
+ * Keep the player's action controls and card rail in separate layout rows.
+ * Controls may grow or wrap, but they must never cover or push the hand cards
+ * below the viewport.
+ */
+
+:root {
+  --canasta-hand-card-height: 178px;
+  --canasta-hand-card-rail-height: 224px;
+}
+
+@media (min-width: 851px) {
+  .game-page.responsive-board-ready .hand {
+    display: grid !important;
+    grid-template-rows: auto auto var(--canasta-hand-card-rail-height) !important;
+    align-content: end !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: min(74dvh, 620px) !important;
+    overflow: visible !important;
+  }
+
+  .responsive-board-ready .hand .identity,
+  .responsive-board-ready .hand .selection-advisor {
+    min-height: 0;
+    flex: 0 0 auto !important;
+  }
+
+  .responsive-board-ready .hand .selection-advisor {
+    width: calc(100% - 32px) !important;
+    max-width: none !important;
+    max-height: min(260px, calc(74dvh - var(--canasta-hand-card-rail-height) - 54px));
+    overflow-x: hidden;
+    overflow-y: auto;
+    margin: 0 auto 8px !important;
+    scrollbar-gutter: stable;
+  }
+
+  .responsive-board-ready .hand .red-three-turn-control {
+    flex: 1 1 360px;
+    width: auto;
+    margin-top: 0;
+  }
+}
+
+/* The rail owns enough height for the entire card face plus its scrollbar. */
+.responsive-board-ready .hand .cards {
+  box-sizing: border-box;
+  height: var(--canasta-hand-card-rail-height) !important;
+  min-height: var(--canasta-hand-card-rail-height) !important;
+  max-height: var(--canasta-hand-card-rail-height) !important;
+  padding: 18px 28px 12px !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  isolation: isolate;
+}
+
+.responsive-board-ready .hand .hand-card-wrap,
+.responsive-board-ready .hand .real-card {
+  align-self: flex-end;
+}
+
+/* Selection remains obvious without lifting a card into the control row. */
+.responsive-board-ready .hand .real-card:hover {
+  transform: translateY(-8px);
+}
+
+.responsive-board-ready .hand .real-card.selected {
+  transform: translateY(-14px) !important;
+}
+
+/* The emote dock is optional chrome, so it must never sit over the hand. */
+@media (min-width: 851px) {
+  .canasta-emote-dock {
+    top: calc(70px + var(--canasta-draw-row-height, 156px) + 12px);
+    right: 312px;
+    bottom: auto;
+    left: auto;
+    transform: none;
+  }
+
+  .canasta-emote-dock.collapsed {
+    top: calc(70px + var(--canasta-draw-row-height, 156px) + 12px);
+    right: 312px;
+    bottom: auto;
+    left: auto;
+  }
+}
+
+@media (max-width: 850px) {
+  :root {
+    --canasta-hand-card-height: 160px;
+    --canasta-hand-card-rail-height: 208px;
+  }
+
+  .responsive-board-ready .hand {
+    display: grid !important;
+    grid-template-rows: auto auto var(--canasta-hand-card-rail-height) !important;
+  }
+
+  .responsive-board-ready .hand .selection-advisor {
+    width: 100% !important;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .responsive-board-ready .hand .cards {
+    padding: 16px 18px 12px !important;
+  }
+
+  .canasta-emote-dock {
+    bottom: calc(var(--canasta-hand-card-rail-height) + 74px);
+  }
+}
