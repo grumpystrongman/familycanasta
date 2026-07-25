@@ -26,6 +26,7 @@ import "./classicCanastaLayout.css";
 import "./actionHistory.css";
 import "./turnAwareness.css";
 import "./playSurfaceIsolation.css";
+import "./handControlsSeparation.css";
 
 const rootElement = document.getElementById("root");
 
@@ -126,6 +127,7 @@ const enhancementLoaders = [
   ["ResponsiveBoardEnhancer", () => import("./ResponsiveBoardEnhancer")],
   ["ActionHistoryEnhancer", () => import("./ActionHistoryEnhancer")],
   ["TurnAwarenessEnhancer", () => import("./TurnAwarenessEnhancer")],
+  ["RobotTurnWatchdog", () => import("./RobotTurnWatchdog")],
 ];
 
 async function mountEnhancement(name, load) {
