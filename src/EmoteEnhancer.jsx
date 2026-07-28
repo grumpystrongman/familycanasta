@@ -96,7 +96,9 @@ export default function EmoteEnhancer() {
   useEffect(() => {
     const refresh = () => {
       setRoomCode(findRoomCode());
-      setChatOpen(Boolean(document.querySelector(".score-chat-sidebar .sidebar-tabs button.active:nth-child(2)")));
+      const sidebar = document.querySelector(".score-chat-sidebar");
+      const chatTab = sidebar?.querySelector(".sidebar-tabs button:nth-child(2)");
+      setChatOpen(Boolean(chatTab?.classList.contains("active") && !sidebar?.classList.contains("table-actions-tab-open")));
       enhanceChatMessages();
     };
     refresh();

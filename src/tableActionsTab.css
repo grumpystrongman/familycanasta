@@ -1,0 +1,267 @@
+/* Table actions is a full sidebar tab, not a panel appended beneath the score. */
+.score-chat-sidebar {
+  min-height: 0;
+  overflow: hidden !important;
+}
+
+.score-chat-sidebar .sidebar-tabs {
+  position: relative;
+  z-index: 20;
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  flex: 0 0 auto;
+  width: 100%;
+  background: #ffffff;
+}
+
+.score-chat-sidebar .sidebar-tabs button {
+  min-width: 0;
+  min-height: 52px;
+  padding: 9px 5px !important;
+  overflow-wrap: anywhere;
+  color: #42554d;
+  background: #ffffff;
+  border-bottom: 3px solid transparent !important;
+  font-size: clamp(10px, 0.78vw, 13px);
+  font-weight: 850;
+  line-height: 1.15;
+  text-align: center;
+  white-space: normal;
+}
+
+.score-chat-sidebar .sidebar-tabs button.active {
+  color: #0c6b52;
+  border-bottom-color: #168267 !important;
+  background: #f5faf7;
+}
+
+.score-chat-sidebar.table-actions-tab-open .sidebar-tabs button.active:not(.table-actions-tab-button) {
+  color: #42554d;
+  border-bottom-color: transparent !important;
+  background: #ffffff;
+}
+
+.score-chat-sidebar.table-actions-tab-open > .score-sidebar-content,
+.score-chat-sidebar.table-actions-tab-open > .messages,
+.score-chat-sidebar.table-actions-tab-open > .compose {
+  display: none !important;
+}
+
+.table-actions-tab-pane {
+  display: none;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  max-width: 100%;
+  overflow: hidden;
+  color: #17221d;
+  background: #f8faf8;
+}
+
+.table-actions-tab-pane.active {
+  display: flex;
+  flex-direction: column;
+}
+
+.table-actions-tab-intro {
+  flex: 0 0 auto;
+  padding: 14px 14px 12px;
+  border-bottom: 1px solid #d9e2dd;
+  background: #ffffff;
+}
+
+.table-actions-tab-intro b,
+.table-actions-tab-intro span {
+  display: block;
+}
+
+.table-actions-tab-intro b {
+  color: #12271f;
+  font-size: 16px;
+}
+
+.table-actions-tab-intro span {
+  margin-top: 4px;
+  color: #62736c;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.table-actions-tab-content {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.table-actions-tab-pane .action-history-panel {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  min-height: 0 !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  margin: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  background: #edf3ef;
+  box-shadow: none;
+}
+
+.table-actions-tab-pane .action-history-heading {
+  flex: 0 0 auto;
+  padding: 11px 13px;
+  color: #1b3028;
+  border-bottom: 1px solid #d4dfd9;
+  background: #f8fbf9;
+}
+
+.table-actions-tab-pane .action-history-heading b {
+  color: #172a23;
+  font-size: 13px;
+}
+
+.table-actions-tab-pane .action-history-heading small {
+  color: #6b7a74;
+  font-size: 10px;
+}
+
+.table-actions-tab-pane .action-history-heading > span {
+  color: #ffffff;
+  background: #176f58;
+}
+
+.table-actions-tab-pane .action-history-list {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  max-height: 100%;
+  padding: 12px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  scrollbar-width: auto;
+  scrollbar-color: #176f58 #dbe5df;
+}
+
+.table-actions-tab-pane .action-history-list::-webkit-scrollbar {
+  width: 12px;
+}
+
+.table-actions-tab-pane .action-history-list::-webkit-scrollbar-track {
+  background: #dbe5df;
+}
+
+.table-actions-tab-pane .action-history-list::-webkit-scrollbar-thumb {
+  border: 3px solid #dbe5df;
+  border-radius: 999px;
+  background: #176f58;
+}
+
+.table-actions-tab-pane .action-history-entry {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 9px;
+  margin-bottom: 10px;
+  padding: 0 !important;
+  border: 0 !important;
+}
+
+.table-actions-tab-pane .action-history-avatar {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid #cbd8d1;
+  border-radius: 11px;
+  background: #ffffff;
+  font-size: 18px;
+}
+
+.table-actions-tab-pane .action-history-body {
+  min-width: 0;
+  padding: 9px 10px 10px;
+  border: 1px solid #d4dfd9;
+  border-radius: 3px 12px 12px 12px;
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgba(30, 55, 45, 0.08);
+}
+
+.table-actions-tab-pane .action-history-meta {
+  align-items: flex-start;
+}
+
+.table-actions-tab-pane .action-history-meta > span {
+  min-width: 0;
+}
+
+.table-actions-tab-pane .action-history-meta b {
+  display: block;
+  overflow: hidden;
+  color: #10271e;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.table-actions-tab-pane .action-history-kind {
+  display: inline-block;
+  margin-top: 3px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  color: #0c604a;
+  background: #dff2e9;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 850;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.table-actions-tab-pane .action-history-meta time {
+  flex: 0 0 auto;
+  color: #6c7b75;
+  font-size: 9px;
+}
+
+.table-actions-tab-pane .action-history-list .action-history-body p {
+  margin: 6px 0 0;
+  overflow-wrap: anywhere;
+  color: #24372f;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.table-actions-tab-pane .action-history-empty {
+  margin: auto !important;
+  padding: 24px 14px !important;
+  color: #677770 !important;
+  font-size: 12px !important;
+  line-height: 1.5 !important;
+}
+
+@media (min-width: 851px) {
+  .game-page .score-chat-sidebar {
+    height: calc(100dvh - 70px);
+    max-height: calc(100dvh - 70px);
+  }
+}
+
+@media (max-width: 850px) {
+  .game-page .score-chat-sidebar {
+    height: min(72dvh, 680px);
+    min-height: 420px;
+    max-height: min(72dvh, 680px);
+  }
+
+  .score-chat-sidebar .sidebar-tabs button {
+    min-height: 48px;
+    font-size: 11px;
+  }
+}
