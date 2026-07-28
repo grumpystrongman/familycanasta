@@ -48,6 +48,17 @@ function actorForMessage(room, message) {
   return members.find((member) => message.startsWith(member.nickname)) || null;
 }
 
+function actionKind(message) {
+  const value = String(message || "").toLowerCase();
+  if (value.includes("undo")) return "Undo";
+  if (value.includes("discard")) return "Discard";
+  if (value.includes("draw") || value.includes("stock")) return "Draw";
+  if (value.includes("meld") || value.includes("played") || value.includes("laid down")) return "Meld";
+  if (value.includes("round") || value.includes("hand over") || value.includes("went out")) return "Round";
+  if (value.includes("turn")) return "Turn";
+  return "Table";
+}
+
 function displayTime(createdAt) {
   const time = Number(createdAt || 0);
   if (!time) return "";
@@ -58,6 +69,7 @@ export default function ActionHistoryEnhancer() {
   const [roomCode, setRoomCode] = useState("");
   const [room, setRoom] = useState(null);
   const [scoreTarget, setScoreTarget] = useState(null);
+  const [actionTarget, setActionTarget] = useState(null);
   const logRef = useRef(null);
 
   useEffect(() => {
@@ -65,6 +77,7 @@ export default function ActionHistoryEnhancer() {
       const code = document.querySelector(".code b")?.textContent?.trim() || "";
       if (/^[A-Z0-9]{6}$/.test(code)) setRoomCode(code);
       setScoreTarget(document.querySelector(".score-sidebar-content"));
+      setActionTarget(document.querySelector(".table-actions-tab-content"));
     };
 
     scan();
@@ -116,49 +129,64 @@ export default function ActionHistoryEnhancer() {
   useEffect(() => {
     const element = logRef.current;
     if (element) element.scrollTop = element.scrollHeight;
-  }, [actions.length]);
+  }, [actions.length, actionTarget]);
 
-  if (!scoreTarget || !room) return null;
+  if (!room) return null;
 
-  return createPortal(
+  return (
     <>
-      <section className="public-hand-counts" aria-label="Public player hand counts">
-        <div className="public-hand-counts-heading">
-          <b>Cards in hand</b>
-          <small>Counts only — cards stay private</small>
-        </div>
-        <div className="public-hand-count-grid">
-          {members.map((member) => (
-            <article key={member.uid} className={activeUid === member.uid ? "active" : ""}>
-              <span className="public-hand-avatar">{member.avatar}</span>
-              <div>
-                <b>{member.nickname}</b>
-                <small>{TEAM_NAMES[member.team] || `Team ${Number(member.team) + 1}`}</small>
-              </div>
-              <strong>{Number(room.publicState?.handCounts?.[member.uid] || 0)}</strong>
-            </article>
-          ))}
-        </div>
-      </section>
+      {scoreTarget && createPortal(
+        <section className="public-hand-counts" aria-label="Public player hand counts">
+          <div className="public-hand-counts-heading">
+            <b>Cards in hand</b>
+            <small>Counts only — cards stay private</small>
+          </div>
+          <div className="public-hand-count-grid">
+            {members.map((member) => (
+              <article key={member.uid} className={activeUid === member.uid ? "active" : ""}>
+                <span className="public-hand-avatar">{member.avatar}</span>
+                <div>
+                  <b>{member.nickname}</b>
+                  <small>{TEAM_NAMES[member.team] || `Team ${Number(member.team) + 1}`}</small>
+                </div>
+                <strong>{Number(room.publicState?.handCounts?.[member.uid] || 0)}</strong>
+              </article>
+            ))}
+          </div>
+        </section>,
+        scoreTarget,
+      )}
 
-      <section className="action-history-panel" aria-label="All table actions">
-        <div className="action-history-heading">
-          <div><b>Table actions</b><small>All players · newest at bottom</small></div>
-          <span>{actions.length}</span>
-        </div>
-        <div className="action-history-list" ref={logRef} role="log" aria-live="polite">
-          {actions.length ? actions.map((action) => (
-            <article key={action.id || `${action.sequence}-${action.createdAt}`}>
-              <div className="action-history-meta">
-                <b>{action.actorName || "Table"}</b>
-                <time>{displayTime(action.createdAt)}</time>
-              </div>
-              <p>{action.message}</p>
-            </article>
-          )) : <p className="action-history-empty">Actions will appear here as players draw, meld, discard, undo, and complete turns.</p>}
-        </div>
-      </section>
-    </>,
-    scoreTarget,
+      {actionTarget && createPortal(
+        <section className="action-history-panel" aria-label="All table actions">
+          <div className="action-history-heading">
+            <div><b>Action timeline</b><small>Oldest at top · newest at bottom</small></div>
+            <span>{actions.length}</span>
+          </div>
+          <div className="action-history-list" ref={logRef} role="log" aria-live="polite">
+            {actions.length ? actions.map((action) => {
+              const actor = members.find((member) => member.uid === action.actorUid)
+                || members.find((member) => member.nickname === action.actorName);
+              return (
+                <article className="action-history-entry" key={action.id || `${action.sequence}-${action.createdAt}`}>
+                  <span className="action-history-avatar" aria-hidden="true">{actor?.avatar || "🃏"}</span>
+                  <div className="action-history-body">
+                    <div className="action-history-meta">
+                      <span>
+                        <b>{action.actorName || "Table"}</b>
+                        <em className="action-history-kind">{actionKind(action.message)}</em>
+                      </span>
+                      <time>{displayTime(action.createdAt)}</time>
+                    </div>
+                    <p>{action.message}</p>
+                  </div>
+                </article>
+              );
+            }) : <p className="action-history-empty">Actions will appear here as players draw, meld, discard, undo, and complete turns.</p>}
+          </div>
+        </section>,
+        actionTarget,
+      )}
+    </>
   );
 }
