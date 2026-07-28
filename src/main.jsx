@@ -27,6 +27,7 @@ import "./actionHistory.css";
 import "./turnAwareness.css";
 import "./playSurfaceIsolation.css";
 import "./handControlsSeparation.css";
+import "./tableActionsTab.css";
 
 const rootElement = document.getElementById("root");
 
@@ -126,6 +127,7 @@ const enhancementLoaders = [
   ["AutoSortEnhancer", () => import("./AutoSortEnhancer")],
   ["ResponsiveBoardEnhancer", () => import("./ResponsiveBoardEnhancer")],
   ["BoardScrollViewport", () => import("./BoardScrollViewport")],
+  ["TableActionsTabEnhancer", () => import("./TableActionsTabEnhancer")],
   ["ActionHistoryEnhancer", () => import("./ActionHistoryEnhancer")],
   ["TurnAwarenessEnhancer", () => import("./TurnAwarenessEnhancer")],
   ["RobotTurnWatchdog", () => import("./RobotTurnWatchdog")],
