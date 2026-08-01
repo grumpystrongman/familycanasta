@@ -50,7 +50,8 @@ import {
   TEAM_NAMES,
 } from "./game/engine";
 
-const AVATARS = ["🦊","🐻","🦉","🐙","🦁","🐼","🐯","🦄","🐸","🤠"];
+const NINJA_AVATAR = "/avatars/ninja-avatar.webp";
+const AVATARS = ["🦊","🐻","🦉","🐙","🦁","🐼","🐯","🦄","🐸","🤠",NINJA_AVATAR];
 const BACKS = ["midnight","emerald","ruby","royal","sunset","linen"];
 const PIPS = {
   A:[[50,50]], 2:[[50,22],[50,78]], 3:[[50,20],[50,50],[50,80]],
@@ -62,6 +63,27 @@ const PIPS = {
   9:[[28,16],[72,16],[28,36],[72,36],[50,50],[28,64],[72,64],[28,84],[72,84]],
   10:[[28,13],[72,13],[50,27],[28,37],[72,37],[28,63],[72,63],[50,73],[28,87],[72,87]],
 };
+
+function Avatar({ value, className = "", alt = "Player avatar" }) {
+  const imageAvatar = typeof value === "string" && value.startsWith("/avatars/");
+  if (imageAvatar) {
+    return (
+      <img
+        className={className}
+        src={value}
+        alt={alt}
+        style={{
+          ...(className ? {} : { width:"1.5em", height:"1.5em" }),
+          borderRadius:"50%",
+          objectFit:"cover",
+          verticalAlign:"middle",
+          flex:"0 0 auto",
+        }}
+      />
+    );
+  }
+  return <span className={className} role="img" aria-label={alt}>{value}</span>;
+}
 
 function CardFace({ card, selected = false, onClick, compact = false, dragProps = {} }) {
   const suit = SUIT_SYMBOLS[card.suit] || "★";
@@ -362,7 +384,10 @@ export default function App() {
           <label>Nickname</label>
           <input value={nickname} onChange={(event) => setNickname(event.target.value)}/>
           <label>Avatar</label>
-          <div className="avatars">{AVATARS.map((item) => <button className={avatar === item ? "chosen" : ""} onClick={() => setAvatar(item)} key={item}>{item}</button>)}</div>
+          <div className="avatars">{AVATARS.map((item) => {
+            const label = item === NINJA_AVATAR ? "Ninja avatar" : `${item} avatar`;
+            return <button type="button" className={avatar === item ? "chosen" : ""} onClick={() => setAvatar(item)} key={item} aria-label={label}><Avatar value={item} alt={label}/></button>;
+          })}</div>
 
           <button className="quick-robot" disabled={!user || busy} onClick={() => createGame({ versusRobot:true })}>
             <Bot/> Play against one robot
@@ -433,7 +458,7 @@ export default function App() {
                 <div className="team-members">
                   {teams[team].map((member) => (
                     <article key={member.uid}>
-                      <span className="avatar">{member.avatar}</span>
+                      <Avatar value={member.avatar} className="avatar" alt={`${member.nickname} avatar`}/>
                       <div><b>{member.nickname}</b><small>{member.isRobot ? "Robot" : "Connected"}</small></div>
                       {member.isHost && <Crown size={16}/>} {member.isRobot && <Bot size={16}/>} 
                       {member.uid === user.uid && <select value={member.team} onChange={(event) => updateMember(roomCode, user.uid, { team:Number(event.target.value) }).catch((failure) => setError(failure.message))}>{Array.from({ length:teamCount }, (_, index) => <option value={index} key={index}>{TEAM_NAMES[index]}</option>)}</select>}
@@ -477,7 +502,7 @@ export default function App() {
         <div className="opponents">
           {members.filter((member) => member.uid !== user.uid).map((member) => (
             <article className={active?.uid === member.uid ? "active-player" : ""} key={member.uid}>
-              <span>{member.avatar}</span><b>{member.nickname}{member.isRobot ? " 🤖" : ""}</b>
+              <Avatar value={member.avatar} alt={`${member.nickname} avatar`}/><b>{member.nickname}{member.isRobot ? " 🤖" : ""}</b>
               <small>{room.publicState?.handCounts?.[member.uid] || 0} cards · {TEAM_NAMES[member.team]}</small>
               {dealer?.uid === member.uid && <em><Crown size={12}/> Dealer</em>}
             </article>
@@ -522,7 +547,7 @@ export default function App() {
         </div>
 
         <div className={`hand ${isMyTurn ? "active-hand" : ""}`}>
-          <div className="identity"><span>{me?.avatar}</span><b>{me?.nickname}</b><small>Team {TEAM_NAMES[me?.team || 0]}</small>{isMyTurn && <strong>YOUR TURN</strong>}</div>
+          <div className="identity"><Avatar value={me?.avatar} alt={`${me?.nickname || "Player"} avatar`}/><b>{me?.nickname}</b><small>Team {TEAM_NAMES[me?.team || 0]}</small>{isMyTurn && <strong>YOUR TURN</strong>}</div>
           <div className="selection-advisor">
             <div>
               <b>{selectedCards.length} selected · {selectedPoints} points</b>
@@ -588,7 +613,7 @@ export default function App() {
           </div>
         ) : (
           <>
-            <div className="messages">{messages.map((item) => <article key={item.id}><span>{item.avatar}</span><div><b>{item.nickname}</b><p>{item.text}</p></div></article>)}</div>
+            <div className="messages">{messages.map((item) => <article key={item.id}><Avatar value={item.avatar} alt={`${item.nickname} avatar`}/><div><b>{item.nickname}</b><p>{item.text}</p></div></article>)}</div>
             <div className="compose"><input value={message} onChange={(event) => setMessage(event.target.value)} onKeyDown={(event) => event.key === "Enter" && submitMessage()} placeholder="Message the table"/><button onClick={submitMessage}><Send size={17}/></button></div>
           </>
         )}
