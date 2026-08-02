@@ -30,7 +30,7 @@ function Home({ user, nickname, setNickname, avatar, setAvatar, joinCode, setJoi
           <button type="button" className="secondary" onClick={navigateToHub}>All games</button>
         </div>
         <p className="game-summary">Basic family Rummy for two through six players. Draw one, play sets or suit runs, lay off cards after opening, and discard to end your turn.</p>
-        {firebaseMissing ? <p className="modular-error">Firebase is not configured for online rooms.</p> : null}
+        {firebaseMissing.length > 0 ? <p className="modular-error">Firebase is not configured for online rooms.</p> : null}
         {error ? <p className="modular-error">{error}</p> : null}
         <div className="modular-form-grid">
           <label>Display name<input value={nickname} maxLength={24} onChange={(event) => setNickname(event.target.value)} /></label>

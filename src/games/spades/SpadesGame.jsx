@@ -19,7 +19,7 @@ function Home({ user, nickname, setNickname, avatar, setAvatar, joinCode, setJoi
     <main className="modular-game-shell spades-shell"><section className="modular-game-panel">
       <div className="modular-game-toolbar"><div><p className="game-kicker">Bid with a partner</p><h1>Spades</h1></div><button type="button" className="secondary" onClick={navigateToHub}>All games</button></div>
       <p className="game-summary">Fixed partnerships, thirteen tricks, nil bids, bags, and spades as permanent trump. First team to 500 wins.</p>
-      {firebaseMissing ? <p className="modular-error">Firebase is not configured for online rooms.</p> : null}{error ? <p className="modular-error">{error}</p> : null}
+      {firebaseMissing.length > 0 ? <p className="modular-error">Firebase is not configured for online rooms.</p> : null}{error ? <p className="modular-error">{error}</p> : null}
       <div className="modular-form-grid"><label>Display name<input value={nickname} maxLength={24} onChange={(event) => setNickname(event.target.value)} /></label><label>Join code<input value={joinCode} maxLength={6} onChange={(event) => setJoinCode(event.target.value.toUpperCase())} placeholder="ABC123" /></label></div>
       <div className="avatar-picker">{MODULAR_AVATARS.map((value) => <button key={value} type="button" className={avatar === value ? "chosen" : ""} onClick={() => setAvatar(value)}>{value}</button>)}</div>
       <div className="modular-lobby-actions"><button type="button" className="action-button" disabled={!user || busy || !firebaseReady} onClick={createRoom}>Create Spades room</button><button type="button" className="action-button secondary" disabled={!user || busy || joinCode.length !== 6} onClick={joinRoom}>Join room</button></div>
