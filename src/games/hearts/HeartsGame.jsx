@@ -35,7 +35,7 @@ function Home({ user, nickname, setNickname, avatar, setAvatar, joinCode, setJoi
           <button type="button" className="secondary" onClick={navigateToHub}>All games</button>
         </div>
         <p className="game-summary">Four players. Pass three cards, follow suit, avoid hearts and the queen of spades, or take all 26 points and shoot the moon.</p>
-        {firebaseMissing ? <p className="modular-error">Firebase is not configured for online rooms.</p> : null}
+        {firebaseMissing.length > 0 ? <p className="modular-error">Firebase is not configured for online rooms.</p> : null}
         {error ? <p className="modular-error">{error}</p> : null}
         <div className="modular-form-grid">
           <label>Display name<input value={nickname} maxLength={24} onChange={(event) => setNickname(event.target.value)} /></label>
