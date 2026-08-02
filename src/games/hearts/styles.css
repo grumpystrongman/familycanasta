@@ -1,0 +1,17 @@
+.hearts-shell { --game-accent: #db5962; }
+.game-kicker { margin: 0 0 8px; color: #e4bd62; font-size: .75rem; font-weight: 850; letter-spacing: .14em; text-transform: uppercase; }
+.game-summary { max-width: 780px; color: #d5ceb9; font-size: 1.08rem; line-height: 1.6; }
+.avatar-picker { display: flex; flex-wrap: wrap; gap: 8px; margin: 20px 0; }
+.avatar-picker button { width: 44px; height: 44px; border: 1px solid rgba(255,255,255,.16); border-radius: 50%; background: rgba(255,255,255,.08); font-size: 1.35rem; cursor: pointer; }
+.avatar-picker button.chosen { box-shadow: 0 0 0 3px #e4bd62; }
+.hearts-scoreboard { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 16px; }
+.hearts-scoreboard article { display: grid; gap: 5px; padding: 12px; border: 1px solid rgba(255,255,255,.12); border-radius: 14px; background: rgba(255,255,255,.06); }
+.hearts-scoreboard article.active { border-color: #e4bd62; box-shadow: inset 0 0 0 1px #e4bd62; }
+.hearts-scoreboard strong { font: 800 1.65rem/1 Georgia, serif; }
+.hearts-scoreboard small { color: #bdb59e; }
+.hearts-trick { grid-auto-flow: column; grid-auto-columns: minmax(78px, auto); gap: 22px; }
+.hearts-trick > div { display: grid; justify-items: center; gap: 7px; }
+.hearts-action-box { margin: 16px 0; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 16px; border-radius: 14px; background: rgba(219, 89, 98, .16); }
+.hearts-action-box h2 { margin: 0; font-size: 1rem; }
+.player-hand-heading { display: flex; justify-content: space-between; gap: 14px; margin-top: 20px; color: #e7dfc6; }
+@media (max-width: 760px) { .hearts-scoreboard { grid-template-columns: repeat(2, minmax(0,1fr)); } .hearts-trick { grid-auto-flow: row; grid-template-columns: repeat(2, 1fr); } .hearts-action-box { align-items: stretch; flex-direction: column; } }
