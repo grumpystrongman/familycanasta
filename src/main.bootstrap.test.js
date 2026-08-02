@@ -4,20 +4,21 @@ import { readFile } from "node:fs/promises";
 
 const sourceUrl = new URL("./main.jsx", import.meta.url);
 
-test("loads the core application independently from optional controllers", async () => {
+test("loads the game hub independently from optional Canasta controllers", async () => {
   const source = await readFile(sourceUrl, "utf8");
 
-  assert.match(source, /await import\("\.\/App"\)/);
+  assert.match(source, /await import\("\.\/HubApp"\)/);
   assert.match(source, /mountEnhancement/);
+  assert.match(source, /selectedGameId\(\) === "canasta"/);
   assert.match(source, /ReactDOM\.createRoot\(container\)/);
-  assert.doesNotMatch(source, /import App from "\.\/App"/);
+  assert.doesNotMatch(source, /import HubApp from "\.\/HubApp"/);
   assert.doesNotMatch(source, /import GameStateEnhancer from/);
 });
 
-test("renders visible startup and failure states instead of a blank root", async () => {
+test("renders visible family card room startup and failure states instead of a blank root", async () => {
   const source = await readFile(sourceUrl, "utf8");
 
-  assert.match(source, /Loading Family Canasta/);
-  assert.match(source, /Family Canasta could not start/);
+  assert.match(source, /Loading the family card room/);
+  assert.match(source, /The family card room could not start/);
   assert.match(source, /AppErrorBoundary/);
 });

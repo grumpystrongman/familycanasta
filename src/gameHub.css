@@ -1,0 +1,260 @@
+:root {
+  --hub-ink: #f5f1df;
+  --hub-muted: #c8c1a8;
+  --hub-panel: rgba(13, 38, 31, 0.9);
+  --hub-line: rgba(255, 255, 255, 0.13);
+  --hub-gold: #e4bd62;
+}
+
+.family-game-hub,
+.hub-loading-screen {
+  min-height: 100vh;
+  color: var(--hub-ink);
+  background:
+    radial-gradient(circle at 18% 12%, rgba(56, 124, 87, 0.38), transparent 32rem),
+    radial-gradient(circle at 86% 88%, rgba(124, 52, 57, 0.27), transparent 30rem),
+    linear-gradient(145deg, #071b16 0%, #102d24 48%, #081712 100%);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.family-game-hub {
+  padding: clamp(24px, 4vw, 64px);
+}
+
+.hub-hero {
+  width: min(1180px, 100%);
+  margin: 0 auto 34px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 32px;
+  align-items: center;
+  padding: clamp(28px, 5vw, 62px);
+  border: 1px solid var(--hub-line);
+  border-radius: 30px;
+  background: linear-gradient(135deg, rgba(18, 58, 45, 0.96), rgba(8, 27, 22, 0.92));
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.34);
+  overflow: hidden;
+}
+
+.hub-kicker,
+.hub-game-eyebrow {
+  margin: 0 0 10px;
+  color: var(--hub-gold);
+  font-size: 0.76rem;
+  font-weight: 850;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.hub-hero h1,
+.hub-loading-screen h1 {
+  margin: 0;
+  max-width: 820px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(2.45rem, 6vw, 5.7rem);
+  line-height: 0.94;
+  letter-spacing: -0.045em;
+}
+
+.hub-intro {
+  max-width: 760px;
+  margin: 24px 0 0;
+  color: var(--hub-muted);
+  font-size: clamp(1rem, 1.6vw, 1.25rem);
+  line-height: 1.65;
+}
+
+.hub-deck-mark {
+  display: grid;
+  grid-template-columns: repeat(2, 78px);
+  gap: 9px;
+  transform: rotate(4deg);
+}
+
+.hub-deck-mark span {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 0.72;
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  border-radius: 12px;
+  background: #f7f1df;
+  color: #13251e;
+  font-family: Georgia, serif;
+  font-size: 2.4rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.24);
+}
+
+.hub-deck-mark span:nth-child(2),
+.hub-deck-mark span:nth-child(4) {
+  color: #a92832;
+}
+
+.hub-game-grid {
+  width: min(1180px, 100%);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.hub-game-card {
+  position: relative;
+  min-height: 310px;
+  display: flex;
+  flex-direction: column;
+  padding: 26px;
+  border: 1px solid var(--hub-line);
+  border-radius: 24px;
+  background: var(--hub-panel);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+}
+
+.hub-game-card::after {
+  content: "";
+  position: absolute;
+  width: 190px;
+  height: 190px;
+  right: -70px;
+  bottom: -70px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(228, 189, 98, 0.16), transparent 66%);
+  pointer-events: none;
+}
+
+.hub-game-card.available {
+  border-color: rgba(228, 189, 98, 0.42);
+}
+
+.hub-game-card-topline,
+.hub-game-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.hub-game-icon {
+  font-family: Georgia, serif;
+  font-size: 3.2rem;
+  line-height: 1;
+}
+
+.hub-game-hearts .hub-game-icon,
+.hub-game-rummy .hub-game-icon {
+  color: #e85e64;
+}
+
+.hub-game-status {
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.hub-game-status.ready {
+  color: #12271d;
+  background: #d8bd70;
+}
+
+.hub-game-status.planned {
+  color: #ddd5bc;
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.hub-game-eyebrow {
+  margin-top: 27px;
+}
+
+.hub-game-card h2 {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(2.1rem, 4vw, 3.45rem);
+  letter-spacing: -0.035em;
+}
+
+.hub-game-description {
+  max-width: 520px;
+  margin: 13px 0 26px;
+  color: var(--hub-muted);
+  line-height: 1.55;
+}
+
+.hub-game-card-footer {
+  margin-top: auto;
+  padding-top: 18px;
+  border-top: 1px solid var(--hub-line);
+  color: #ded6bd;
+  font-weight: 700;
+}
+
+.hub-game-card button,
+.hub-loading-screen button {
+  min-height: 44px;
+  padding: 10px 18px;
+  border: 0;
+  border-radius: 999px;
+  color: #10221b;
+  background: var(--hub-gold);
+  font: inherit;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.hub-game-card button:hover:not(:disabled),
+.hub-loading-screen button:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.06);
+}
+
+.hub-game-card button:disabled {
+  color: #bcb49f;
+  background: rgba(255, 255, 255, 0.08);
+  cursor: not-allowed;
+}
+
+.hub-footer {
+  width: min(1180px, 100%);
+  margin: 26px auto 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  color: #a9a18b;
+  font-size: 0.9rem;
+}
+
+.hub-loading-screen {
+  display: grid;
+  place-items: center;
+  padding: 30px;
+}
+
+.hub-loading-screen section {
+  width: min(760px, 100%);
+  padding: clamp(28px, 6vw, 60px);
+  border: 1px solid var(--hub-line);
+  border-radius: 28px;
+  background: rgba(8, 31, 24, 0.94);
+  box-shadow: 0 26px 80px rgba(0, 0, 0, 0.34);
+}
+
+.hub-loading-screen h1 {
+  font-size: clamp(2rem, 5vw, 4.2rem);
+}
+
+.hub-loading-screen p:not(.hub-kicker) {
+  margin: 20px 0;
+  color: var(--hub-muted);
+  line-height: 1.55;
+}
+
+@media (max-width: 760px) {
+  .family-game-hub { padding: 16px; }
+  .hub-hero { grid-template-columns: 1fr; border-radius: 22px; }
+  .hub-deck-mark { display: none; }
+  .hub-game-grid { grid-template-columns: 1fr; }
+  .hub-game-card { min-height: 285px; }
+  .hub-footer { flex-direction: column; }
+}
