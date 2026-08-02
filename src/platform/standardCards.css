@@ -1,0 +1,106 @@
+.standard-card {
+  position: relative;
+  width: 82px;
+  height: 116px;
+  flex: 0 0 auto;
+  border: 1px solid rgba(20, 24, 22, 0.28);
+  border-radius: 10px;
+  color: #151a17;
+  background: linear-gradient(145deg, #fffef8, #eee9da);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+.standard-card.red { color: #b3222d; }
+.standard-card:hover:not(:disabled) { transform: translateY(-5px); }
+.standard-card.selected { transform: translateY(-12px); box-shadow: 0 0 0 3px #e7be62, 0 13px 24px rgba(0, 0, 0, 0.25); }
+.standard-card:disabled { cursor: default; }
+.standard-card.compact { width: 58px; height: 82px; border-radius: 8px; }
+.standard-card.card-back {
+  display: grid;
+  place-items: center;
+  color: rgba(255, 255, 255, 0.78);
+  background:
+    repeating-linear-gradient(45deg, rgba(255,255,255,0.08) 0 5px, transparent 5px 10px),
+    #173d31;
+  border: 4px double rgba(255, 255, 255, 0.56);
+  font-size: 1.6rem;
+}
+
+.standard-card-corner {
+  position: absolute;
+  top: 7px;
+  left: 8px;
+  display: grid;
+  line-height: 1;
+  text-align: center;
+}
+
+.standard-card-corner b { font-size: 1rem; }
+.standard-card-corner i { margin-top: 2px; font-size: 0.9rem; font-style: normal; }
+.standard-card-corner.bottom { top: auto; left: auto; right: 8px; bottom: 7px; transform: rotate(180deg); }
+.standard-card-suit { position: absolute; inset: 0; display: grid; place-items: center; font: 2.6rem Georgia, serif; }
+.standard-card.compact .standard-card-suit { font-size: 1.8rem; }
+.standard-card.compact .standard-card-corner b { font-size: 0.78rem; }
+.standard-card.compact .standard-card-corner i { font-size: 0.68rem; }
+
+.modular-game-shell {
+  min-height: 100vh;
+  padding: clamp(16px, 3vw, 40px);
+  color: #f5f0dc;
+  background: radial-gradient(circle at top, #235c48, #0a231b 70%);
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+.modular-game-panel {
+  width: min(1120px, 100%);
+  margin: 0 auto;
+  padding: clamp(20px, 4vw, 38px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 24px;
+  background: rgba(7, 29, 22, 0.9);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.32);
+}
+
+.modular-game-toolbar,
+.modular-lobby-actions,
+.modular-member-row,
+.modular-table-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.modular-game-toolbar { margin-bottom: 24px; }
+.modular-game-toolbar h1 { margin: 0; font: clamp(2rem, 5vw, 4rem)/1 Georgia, serif; }
+.modular-game-toolbar button,
+.modular-game-panel button.action-button {
+  min-height: 42px;
+  padding: 9px 16px;
+  border: 0;
+  border-radius: 999px;
+  color: #12241c;
+  background: #e4bd62;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+.modular-game-panel button.secondary { color: #f5f0dc; background: rgba(255,255,255,0.12); }
+.modular-game-panel button:disabled { opacity: 0.45; cursor: not-allowed; }
+.modular-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.modular-form-grid label { display: grid; gap: 7px; font-weight: 750; }
+.modular-form-grid input { min-height: 44px; padding: 9px 12px; border: 1px solid rgba(255,255,255,0.2); border-radius: 10px; color: #16251f; background: #fffdf4; font: inherit; }
+.modular-room-code { font: 800 2rem/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.12em; color: #e4bd62; }
+.modular-members { display: grid; gap: 10px; margin: 20px 0; }
+.modular-member-row { padding: 12px 14px; border-radius: 12px; background: rgba(255,255,255,0.07); }
+.modular-error { padding: 11px 14px; border-radius: 10px; color: #ffe7e7; background: rgba(150, 30, 43, 0.4); }
+.modular-hand { display: flex; gap: 8px; padding: 18px 4px; overflow-x: auto; overflow-y: visible; }
+.modular-table-center { min-height: 260px; display: grid; place-items: center; padding: 22px; border-radius: 22px; background: rgba(15, 70, 51, 0.58); }
+
+@media (max-width: 680px) {
+  .modular-form-grid { grid-template-columns: 1fr; }
+  .standard-card { width: 68px; height: 97px; }
+}
