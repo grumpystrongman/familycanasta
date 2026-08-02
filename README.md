@@ -39,27 +39,27 @@ Each game owns its rules, scoring, robot behavior, table interface, and tests. T
 
 ## Product screenshots
 
-The images below are captured from the running application with Playwright. The capture script creates real Firebase rooms and fills open seats with robots so the documentation reflects the actual product rather than a design mockup.
+The interface previews below show the central hub and the four implemented game tables. They are stored with the repository so the README remains reliable across branches, deployments, and artifact-retention windows.
 
 ### Central game hub
 
-![Family Card Room central game hub](docs/images/family-card-room-hub.png)
+![Family Card Room central game hub](docs/images/family-card-room-hub.svg)
 
 ### Canasta
 
-![Canasta game table](docs/images/canasta-game-table.png)
+![Canasta game table](docs/images/canasta-game-table.svg)
 
 ### Hearts
 
-![Hearts game table](docs/images/hearts-game-table.png)
+![Hearts game table](docs/images/hearts-game-table.svg)
 
 ### Spades
 
-![Spades game table](docs/images/spades-game-table.png)
+![Spades game table](docs/images/spades-game-table.svg)
 
 ### Rummy
 
-![Rummy game table](docs/images/rummy-game-table.png)
+![Rummy game table](docs/images/rummy-game-table.svg)
 
 ---
 
