@@ -1,4 +1,4 @@
-import { createStandardDeck, shuffleCards, sortStandardHand } from "../../platform/StandardCard";
+import { createStandardDeck, shuffleCards, sortStandardHand } from "../../platform/standardDeck.js";
 
 export const RUMMY_RULES = Object.freeze({
   minimumPlayers: 2,
@@ -22,8 +22,12 @@ function copyHands(hands) {
   return Object.fromEntries(Object.entries(hands || {}).map(([uid, cards]) => [uid, [...cards]]));
 }
 
+function runValue(card) {
+  return card.rank === "A" ? 1 : card.value;
+}
+
 function sortedRun(cards) {
-  return [...cards].sort((a, b) => a.value - b.value);
+  return [...cards].sort((a, b) => runValue(a) - runValue(b));
 }
 
 export function classifyMeld(cards) {
@@ -37,7 +41,7 @@ export function classifyMeld(cards) {
   const sameSuit = new Set(cards.map((card) => card.suit)).size === 1;
   if (!sameSuit) return null;
   const ordered = sortedRun(cards);
-  const consecutive = ordered.every((card, index) => index === 0 || card.value === ordered[index - 1].value + 1);
+  const consecutive = ordered.every((card, index) => index === 0 || runValue(card) === runValue(ordered[index - 1]) + 1);
   if (!consecutive) return null;
   return { type: "run", cards: ordered };
 }
@@ -174,7 +178,7 @@ function createMeld(state, actorUid, cardIds, members) {
   const ids = new Set(cardIds);
   hands[actorUid] = hands[actorUid].filter((card) => !ids.has(card.id));
   const melds = [...(state.melds || []), {
-    id: `meld-${state.roundNumber}-${Date.now()}-${state.melds?.length || 0}`,
+    id: `meld-${state.roundNumber}-${actorUid}-${state.melds?.length || 0}-${classified.cards.map((card) => card.id).join("-")}`,
     type: classified.type,
     cards: classified.cards,
     ownerUid: actorUid,
@@ -256,8 +260,8 @@ export function findRummyMeld(hand) {
     for (let start = 0; start < ordered.length; start += 1) {
       const run = [ordered[start]];
       for (let index = start + 1; index < ordered.length; index += 1) {
-        if (ordered[index].value === run[run.length - 1].value + 1) run.push(ordered[index]);
-        else if (ordered[index].value > run[run.length - 1].value + 1) break;
+        if (runValue(ordered[index]) === runValue(run[run.length - 1]) + 1) run.push(ordered[index]);
+        else if (runValue(ordered[index]) > runValue(run[run.length - 1]) + 1) break;
       }
       if (run.length >= 3) return run;
     }
