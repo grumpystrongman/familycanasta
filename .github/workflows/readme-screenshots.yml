@@ -1,8 +1,12 @@
 name: Capture README screenshots
 
 on:
-  push:
-    branches: [agent/commercial-product-readme]
+  pull_request:
+    paths:
+      - README.md
+      - scripts/capture-readme-screenshots.mjs
+      - .github/workflows/readme-screenshots.yml
+      - src/**
   workflow_dispatch:
 
 jobs:
