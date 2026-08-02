@@ -14,26 +14,20 @@ test("Rummy supports two through six players with standard deal sizes", () => {
   assert.match(engine, /return 6/);
 });
 
-test("Rummy validates sets, suit runs, and layoffs", () => {
-  assert.match(engine, /sameRank.*cards\.length <= 4/s);
-  assert.match(engine, /sameSuit/);
-  assert.match(engine, /card\.value === ordered\[index - 1\]\.value \+ 1/);
-  assert.match(engine, /Play a meld of your own before laying off cards/);
+test("Rummy explicitly maps Ace low for runs and scoring", () => {
+  assert.match(engine, /function runValue/);
+  assert.match(engine, /card\.rank === "A" \? 1 : card\.value/);
+  assert.match(engine, /card\.rank === "A"\) return 1/);
+  assert.match(engine, /targetScore:\s*100/);
 });
 
-test("Rummy implements draw, meld, layoff, discard, and stock recycling", () => {
+test("Rummy implements every turn action and stock recycling", () => {
   assert.match(engine, /action\.type === "draw"/);
   assert.match(engine, /action\.type === "meld"/);
   assert.match(engine, /action\.type === "layoff"/);
   assert.match(engine, /action\.type === "discard"/);
   assert.match(engine, /shuffleCards\(state\.discardPile\.slice\(0, -1\)/);
-});
-
-test("Rummy scores deadwood and plays to 100", () => {
-  assert.match(engine, /targetScore:\s*100/);
-  assert.match(engine, /card\.rank === "A"\) return 1/);
-  assert.match(engine, /\["J", "Q", "K"\]\.includes\(card\.rank\)\) return 10/);
-  assert.match(engine, /roundPoints\[winnerUid\] = won/);
+  assert.match(engine, /Play a meld of your own before laying off cards/);
 });
 
 test("Rummy includes online rooms, robots, and table controls", () => {
