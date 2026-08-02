@@ -1,0 +1,48 @@
+name: Apply Firebase warning fix
+
+on:
+  push:
+    branches: [fix/firebase-config-warning]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/firebase-config-warning
+          fetch-depth: 0
+
+      - name: Fix empty-array Firebase warning condition
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          files = [
+              Path('src/games/hearts/HeartsGame.jsx'),
+              Path('src/games/spades/SpadesGame.jsx'),
+              Path('src/games/rummy/RummyGame.jsx'),
+          ]
+          for path in files:
+              text = path.read_text()
+              old = '{firebaseMissing ? '
+              new = '{firebaseMissing.length > 0 ? '
+              if old not in text:
+                  raise SystemExit(f'Missing Firebase warning condition in {path}')
+              path.write_text(text.replace(old, new, 1))
+
+          Path('src/games/firebaseWarning.test.js').write_text('''import assert from "node:assert/strict";\nimport fs from "node:fs";\nimport test from "node:test";\n\nconst gameFiles = [\n  "src/games/hearts/HeartsGame.jsx",\n  "src/games/spades/SpadesGame.jsx",\n  "src/games/rummy/RummyGame.jsx",\n];\n\ntest("configured Firebase does not display the missing-configuration warning", () => {\n  for (const file of gameFiles) {\n    const source = fs.readFileSync(file, "utf8");\n    assert.match(source, /firebaseMissing\\.length > 0/);\n    assert.doesNotMatch(source, /\\{firebaseMissing \\?/);\n  }\n});\n''')
+          PY
+
+          rm .github/workflows/apply-firebase-warning-fix.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add src/games/hearts/HeartsGame.jsx src/games/spades/SpadesGame.jsx src/games/rummy/RummyGame.jsx src/games/firebaseWarning.test.js .github/workflows/apply-firebase-warning-fix.yml
+          git commit -m "Fix false Firebase configuration warning"
+          git push origin HEAD:fix/firebase-config-warning
