@@ -1,4 +1,4 @@
-import { createStandardDeck, shuffleCards, sortStandardHand } from "../../platform/StandardCard";
+import { createStandardDeck, shuffleCards, sortStandardHand } from "../../platform/standardDeck.js";
 
 export const SPADES_RULES = Object.freeze({
   players: 4,
