@@ -1,0 +1,20 @@
+.spades-shell { --game-accent: #8da9ff; }
+.game-kicker { margin: 0 0 8px; color: #e4bd62; font-size: .75rem; font-weight: 850; letter-spacing: .14em; text-transform: uppercase; }
+.game-summary { max-width: 780px; color: #d5ceb9; font-size: 1.08rem; line-height: 1.6; }
+.avatar-picker { display: flex; flex-wrap: wrap; gap: 8px; margin: 20px 0; }
+.avatar-picker button { width: 44px; height: 44px; border: 1px solid rgba(255,255,255,.16); border-radius: 50%; background: rgba(255,255,255,.08); font-size: 1.35rem; cursor: pointer; }
+.avatar-picker button.chosen { box-shadow: 0 0 0 3px #e4bd62; }
+.spades-teams, .spades-scoreboard { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin: 18px 0; }
+.spades-teams section, .spades-scoreboard article { display: grid; gap: 10px; padding: 14px; border: 1px solid rgba(255,255,255,.12); border-radius: 14px; background: rgba(255,255,255,.06); }
+.spades-scoreboard strong { font: 800 2rem/1 Georgia, serif; }
+.spades-scoreboard small { color: #c8c0a8; }
+.spades-bids { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 14px 0; }
+.spades-bids span { padding: 9px 11px; border-radius: 10px; background: rgba(255,255,255,.06); }
+.spades-trick { grid-auto-flow: column; grid-auto-columns: minmax(78px, auto); gap: 22px; }
+.spades-trick > div { display: grid; justify-items: center; gap: 7px; }
+.spades-action-box { margin: 16px 0; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 16px; border-radius: 14px; background: rgba(67, 87, 153, .32); }
+.spades-action-box h2 { margin: 0; font-size: 1rem; }
+.spades-action-box label { display: flex; align-items: center; gap: 12px; font-weight: 800; }
+.spades-action-box select { min-height: 40px; padding: 7px 12px; border-radius: 9px; font: inherit; }
+.player-hand-heading { display: flex; justify-content: space-between; gap: 14px; margin-top: 20px; color: #e7dfc6; }
+@media (max-width: 700px) { .spades-teams, .spades-scoreboard, .spades-bids { grid-template-columns: 1fr; } .spades-trick { grid-auto-flow: row; grid-template-columns: repeat(2, 1fr); } .spades-action-box { align-items: stretch; flex-direction: column; } }
