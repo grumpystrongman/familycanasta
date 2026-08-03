@@ -1,0 +1,377 @@
+/*
+ * Tablet/phone play surface refinements.
+ * The Hand view keeps the player's active board visible and gives cards the
+ * remaining viewport instead of spending that space on disabled draw piles.
+ */
+
+.adaptive-canasta-navigation {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.adaptive-canasta-navigation .adaptive-fullscreen-button.attention {
+  color: #ffe58d;
+  background: rgba(240, 200, 90, .12);
+  box-shadow: inset 0 0 0 1px rgba(240, 200, 90, .42);
+}
+
+.adaptive-canasta-navigation .adaptive-fullscreen-button:disabled {
+  cursor: default;
+  opacity: .72;
+}
+
+/* Hand view is now draw/status + My Board + playable hand. */
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .table {
+  display: grid !important;
+  grid-template-rows: 154px 118px minmax(0, 1fr) !important;
+  min-height: 0 !important;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"][data-adaptive-draw-state="complete"] .table {
+  grid-template-rows: 44px 118px minmax(0, 1fr) !important;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .center {
+  grid-row: 1 !important;
+  margin: 7px 10px 5px !important;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"][data-adaptive-draw-state="complete"] .center {
+  display: flex !important;
+  align-items: center !important;
+  width: calc(100% - 20px) !important;
+  min-height: 0 !important;
+  margin: 4px 10px !important;
+  padding: 4px 8px !important;
+  overflow: hidden !important;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"][data-adaptive-draw-state="complete"] .center > .pile-action {
+  display: none !important;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"][data-adaptive-draw-state="complete"] .dealer-orb {
+  display: grid !important;
+  grid-template-columns: auto auto minmax(0, 1fr) !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  gap: 3px 8px !important;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"][data-adaptive-draw-state="complete"] .dealer-orb span {
+  min-height: 28px !important;
+  margin: 0 !important;
+  padding: 5px 8px !important;
+  overflow: hidden !important;
+  font-size: 11px !important;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Always-visible compact player board. ResponsiveBoardEnhancer switches to My Board. */
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .shared-boards {
+  grid-row: 2 !important;
+  order: 1 !important;
+  display: flex !important;
+  align-items: stretch !important;
+  width: calc(100% - 20px) !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  height: auto !important;
+  max-height: none !important;
+  margin: 0 10px 5px !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .shared-board.board-collapsed {
+  display: none !important;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .shared-board.board-expanded {
+  display: grid !important;
+  grid-template-rows: auto minmax(0, 1fr) !important;
+  flex: 1 1 auto !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  height: 100% !important;
+  max-height: none !important;
+  padding: 6px 9px !important;
+  overflow: hidden !important;
+  border-style: solid !important;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .shared-board .board-title {
+  position: relative !important;
+  top: auto !important;
+  display: grid !important;
+  grid-template-columns: auto minmax(0, 1fr) auto !important;
+  min-height: 28px;
+  padding: 2px 4px !important;
+  pointer-events: none;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .shared-board .board-title::after {
+  display: none !important;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .shared-board .board-title small {
+  display: none !important;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .shared-board .board-title strong {
+  grid-column: 3 !important;
+  grid-row: 1 !important;
+  align-self: center;
+  font-size: 10px !important;
+  white-space: nowrap;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .shared-board .meld-slots {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  gap: 6px !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  margin: 2px 0 0 !important;
+  padding: 2px 3px 4px !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .shared-board .meld-slots > span {
+  flex: 0 0 auto;
+  padding: 7px 10px !important;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .shared-board .board-meld {
+  flex: 0 0 auto;
+  min-width: 82px !important;
+  min-height: 64px !important;
+  padding: 4px 6px !important;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .shared-board .board-meld > div {
+  height: 48px !important;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .shared-board .board-meld .real-card {
+  width: 36px !important;
+  height: 51px !important;
+  margin-left: -12px !important;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .shared-board .board-meld .real-card:first-child {
+  margin-left: 0 !important;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .shared-board .board-meld small {
+  display: none !important;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .board-view-bar {
+  display: none !important;
+}
+
+/* The hand owns all space below the compact board. */
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .hand {
+  grid-row: 3 !important;
+  order: 2 !important;
+  min-height: 0 !important;
+  padding: 3px 10px 0 !important;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .hand .identity {
+  min-height: 27px !important;
+  margin-bottom: 2px !important;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .hand .selection-advisor {
+  gap: 6px !important;
+  margin-bottom: 2px !important;
+  padding: 6px !important;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .hand .selection-advisor > div:first-child {
+  min-height: 36px;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .hand .selection-advisor button,
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .hand .selection-advisor label {
+  min-height: 38px !important;
+  padding: 5px 7px !important;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .hand .cards {
+  align-items: center !important;
+  min-height: 170px !important;
+  padding: 26px 18px 14px !important;
+  scroll-padding-inline: 18px;
+  touch-action: pan-x;
+  -webkit-overflow-scrolling: touch;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .hand .hand-card-wrap {
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .hand .real-card {
+  width: 98px !important;
+  height: 140px !important;
+  touch-action: manipulation;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .hand .real-card.selected {
+  transform: translateY(-18px) !important;
+}
+
+/* Fullscreen / install guidance. */
+.adaptive-fullscreen-help-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20000;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(0, 12, 9, .72);
+  backdrop-filter: blur(8px);
+}
+
+.adaptive-fullscreen-help {
+  position: relative;
+  width: min(500px, 100%);
+  padding: 25px;
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: 22px;
+  color: #17271f;
+  background: #fffdf4;
+  box-shadow: 0 30px 90px rgba(0,0,0,.55);
+}
+
+.adaptive-fullscreen-help > p {
+  margin: 0 0 6px;
+  color: #9a6c13;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.adaptive-fullscreen-help h2 {
+  margin: 0 42px 16px 0;
+  font: 700 28px/1.05 Georgia, serif;
+}
+
+.adaptive-fullscreen-help ol {
+  margin: 0 0 16px;
+  padding-left: 22px;
+}
+
+.adaptive-fullscreen-help li {
+  margin-bottom: 10px;
+  line-height: 1.4;
+}
+
+.adaptive-fullscreen-help > span {
+  display: block;
+  color: #586861;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.adaptive-fullscreen-close {
+  position: absolute;
+  top: 13px;
+  right: 13px;
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 50%;
+  color: #17271f;
+  background: #e7ede9;
+  font-size: 24px;
+}
+
+.adaptive-fullscreen-done {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 19px;
+  border: 0;
+  border-radius: 12px;
+  color: #173027;
+  background: #f0c85a;
+  font-weight: 900;
+}
+
+.game-page:fullscreen,
+.game-page:-webkit-full-screen {
+  width: 100vw !important;
+  height: 100dvh !important;
+  background: #071c16;
+}
+
+@media (max-width: 760px) {
+  .adaptive-canasta-navigation button b {
+    font-size: 10px;
+  }
+
+  html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .table {
+    grid-template-rows: 132px 96px minmax(0, 1fr) !important;
+  }
+
+  html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"][data-adaptive-draw-state="complete"] .table {
+    grid-template-rows: 40px 96px minmax(0, 1fr) !important;
+  }
+
+  html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .pile-action .pile,
+  html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .pile-action .real-card.compact {
+    width: 54px !important;
+    height: 76px !important;
+    flex-basis: 54px !important;
+  }
+
+  html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .hand .selection-advisor {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    max-height: 126px !important;
+    overflow-y: auto !important;
+  }
+
+  html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .hand .selection-advisor > div:first-child {
+    grid-column: 1 / -1;
+  }
+
+  html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .hand .cards {
+    min-height: 142px !important;
+    padding: 22px 12px 12px !important;
+  }
+
+  html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .hand .real-card {
+    width: 76px !important;
+    height: 109px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .adaptive-canasta-navigation {
+    overflow-x: auto;
+    grid-template-columns: repeat(6, minmax(62px, 1fr));
+  }
+
+  .adaptive-canasta-navigation .adaptive-fullscreen-button b {
+    font-size: 9px;
+  }
+
+  .adaptive-fullscreen-help {
+    padding: 21px;
+  }
+
+  .adaptive-fullscreen-help h2 {
+    font-size: 24px;
+  }
+}
