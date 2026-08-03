@@ -1,0 +1,491 @@
+html.adaptive-canasta-navigation-active,
+html.adaptive-canasta-navigation-active body {
+  height: 100%;
+  overflow: hidden;
+}
+
+html[data-game-layout="adaptive"] .game-page.adaptive-canasta-navigation-ready {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  grid-template-rows: 70px minmax(0, 1fr) !important;
+  width: 100% !important;
+  height: 100dvh !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+}
+
+html[data-game-layout="adaptive"] .game-page.adaptive-canasta-navigation-ready > header {
+  position: relative !important;
+  top: auto !important;
+  z-index: 7200;
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  min-width: 0;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready .table {
+  grid-column: 1 !important;
+  grid-row: 2 !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  height: auto !important;
+  overflow: hidden !important;
+  padding: 0 0 calc(68px + env(safe-area-inset-bottom)) !important;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready .score-chat-sidebar {
+  display: none !important;
+  grid-column: 1 !important;
+  grid-row: 2 !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  height: auto !important;
+  max-height: none !important;
+  overflow: hidden !important;
+  padding-bottom: calc(68px + env(safe-area-inset-bottom));
+}
+
+.adaptive-canasta-navigation {
+  position: fixed;
+  z-index: 11000;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  min-height: calc(62px + env(safe-area-inset-bottom));
+  padding: 5px max(8px, env(safe-area-inset-right)) max(5px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+  border-top: 1px solid rgba(255,255,255,.18);
+  background: rgba(4, 25, 19, .98);
+  box-shadow: 0 -12px 32px rgba(0,0,0,.42);
+  backdrop-filter: blur(16px);
+}
+
+.adaptive-canasta-navigation button {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 2px;
+  min-width: 0;
+  min-height: 50px;
+  border: 0;
+  border-radius: 12px;
+  color: #b9cbc4;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+
+.adaptive-canasta-navigation button span {
+  min-height: 17px;
+  font-size: 17px;
+  line-height: 1;
+}
+
+.adaptive-canasta-navigation button b {
+  font-size: 11px;
+  line-height: 1;
+}
+
+.adaptive-canasta-navigation button.active {
+  color: #173027;
+  background: #f0c85a;
+  box-shadow: 0 0 0 1px rgba(255,255,255,.18), 0 5px 16px rgba(0,0,0,.28);
+}
+
+/* Hand view: current action and the complete hand own the viewport. */
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .table {
+  display: grid !important;
+  grid-template-rows: minmax(160px, 29%) minmax(0, 1fr) !important;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .shared-boards,
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .board-view-bar {
+  display: none !important;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .center {
+  order: 0 !important;
+  position: relative !important;
+  inset: auto !important;
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  grid-template-rows: minmax(116px, 1fr) 34px !important;
+  grid-template-areas: "stock discard" "status status" !important;
+  width: calc(100% - 20px) !important;
+  max-width: none !important;
+  height: auto !important;
+  min-height: 0 !important;
+  margin: 10px !important;
+  padding: 8px !important;
+  gap: 8px !important;
+  overflow: hidden;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .center > .pile-action {
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  height: 100% !important;
+  padding: 6px 10px !important;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .pile-action .pile,
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .pile-action .real-card.compact {
+  width: 64px !important;
+  height: 91px !important;
+  flex-basis: 64px !important;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .pile-action > b {
+  max-width: 190px;
+  font-size: 14px !important;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .dealer-orb {
+  grid-area: status !important;
+  display: grid !important;
+  grid-template-columns: auto auto minmax(0, 1fr) !important;
+  min-height: 0 !important;
+  max-width: none !important;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .dealer-orb span {
+  min-height: 28px !important;
+  padding: 6px 9px !important;
+  overflow: hidden !important;
+  font-size: 11px !important;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .hand {
+  order: 1 !important;
+  position: relative !important;
+  inset: auto !important;
+  display: grid !important;
+  grid-template-rows: auto auto minmax(0, 1fr) !important;
+  width: 100% !important;
+  max-width: none !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow: hidden !important;
+  padding: 5px 10px 0 !important;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready .hand .identity {
+  min-height: 32px;
+  margin: 0 4px 4px !important;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready .hand .selection-advisor {
+  display: grid !important;
+  grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+  gap: 7px !important;
+  width: 100% !important;
+  max-width: none !important;
+  max-height: none !important;
+  margin: 0 0 5px !important;
+  padding: 8px !important;
+  overflow: visible !important;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready .hand .selection-advisor > div:first-child {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready .hand .selection-advisor button,
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready .hand .selection-advisor label {
+  min-width: 0;
+  min-height: 42px;
+  margin: 0 !important;
+  padding: 7px 8px !important;
+  justify-content: center;
+  white-space: normal !important;
+  text-align: center;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready .hand .cards {
+  display: flex !important;
+  align-items: flex-end !important;
+  justify-content: flex-start !important;
+  gap: 8px !important;
+  width: 100% !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  padding: 10px 18px 8px !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  scroll-snap-type: x proximity;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready .hand .hand-card-wrap {
+  flex: 0 0 auto;
+  margin-left: 0 !important;
+  scroll-snap-align: center;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready .hand .real-card {
+  width: 88px;
+  height: 126px;
+}
+
+/* Board view: keep draw choices visible while boards fill the remaining area. */
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="board"] .table {
+  display: grid !important;
+  grid-template-rows: 145px 48px minmax(0, 1fr) !important;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="board"] .hand {
+  display: none !important;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="board"] .center {
+  order: 0 !important;
+  position: relative !important;
+  inset: auto !important;
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  grid-template-areas: "stock discard" !important;
+  width: calc(100% - 16px) !important;
+  max-width: none !important;
+  height: auto !important;
+  min-height: 0 !important;
+  margin: 8px !important;
+  padding: 7px !important;
+  gap: 8px !important;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="board"] .center > .pile-action {
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  height: 100% !important;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="board"] .center .pile,
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="board"] .center .real-card.compact {
+  width: 58px !important;
+  height: 82px !important;
+  flex-basis: 58px !important;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="board"] .dealer-orb {
+  display: none !important;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="board"] .board-view-bar {
+  order: 1 !important;
+  position: relative !important;
+  inset: auto !important;
+  display: flex !important;
+  justify-content: center;
+  width: calc(100% - 16px) !important;
+  min-height: 42px;
+  margin: 0 8px 6px !important;
+  transform: none !important;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="board"] .shared-boards {
+  order: 2 !important;
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  align-content: start;
+  gap: 10px !important;
+  width: calc(100% - 16px) !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  height: auto !important;
+  max-height: none !important;
+  margin: 0 8px !important;
+  padding: 0 0 10px !important;
+  overflow: auto !important;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="board"] .shared-board,
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="board"] .shared-board.board-collapsed {
+  min-width: 0 !important;
+  min-height: 86px !important;
+  height: auto !important;
+  max-height: none !important;
+  flex-basis: auto !important;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="board"] .meld-slots {
+  min-height: 0 !important;
+}
+
+/* Score, chat, and table actions replace the play surface instead of extending the page. */
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="score"] .table,
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="chat"] .table,
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="more"] .table {
+  display: none !important;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="score"] .score-chat-sidebar,
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="chat"] .score-chat-sidebar,
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="more"] .score-chat-sidebar {
+  display: flex !important;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready .score-chat-sidebar .sidebar-tabs {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+  clip: rect(0,0,0,0) !important;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="score"] .score-sidebar-content {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: start;
+  gap: 10px;
+  width: 100%;
+  min-height: 0;
+  padding: 12px;
+  overflow: auto;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready .score-target,
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready .meld-guide {
+  grid-column: 1 / -1;
+  margin: 0 !important;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready .score-team-card {
+  min-width: 0;
+  margin: 0 !important;
+  padding: 11px !important;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready .score-lines {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 14px;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready .score-lines span {
+  min-width: 0;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="chat"] .messages {
+  min-height: 0;
+}
+
+html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="more"] .table-actions-tab-pane.active {
+  min-height: 0;
+}
+
+@media (max-width: 620px) {
+  html[data-game-layout="adaptive"] .game-page.adaptive-canasta-navigation-ready {
+    grid-template-rows: 62px minmax(0, 1fr) !important;
+  }
+
+  html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready .table,
+  html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready .score-chat-sidebar {
+    padding-bottom: calc(62px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .adaptive-canasta-navigation {
+    min-height: calc(58px + env(safe-area-inset-bottom));
+    padding-top: 4px;
+  }
+
+  .adaptive-canasta-navigation button {
+    min-height: 46px;
+    border-radius: 10px;
+  }
+
+  .adaptive-canasta-navigation button span { font-size: 15px; }
+  .adaptive-canasta-navigation button b { font-size: 10px; }
+
+  html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .table {
+    grid-template-rows: 122px minmax(0, 1fr) !important;
+  }
+
+  html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .center {
+    grid-template-rows: minmax(0, 1fr) !important;
+    grid-template-areas: "stock discard" !important;
+    width: calc(100% - 12px) !important;
+    margin: 6px !important;
+    padding: 5px !important;
+    gap: 5px !important;
+  }
+
+  html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .dealer-orb {
+    display: none !important;
+  }
+
+  html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .center > .pile-action {
+    flex-direction: column !important;
+    gap: 3px !important;
+    padding: 4px !important;
+  }
+
+  html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .pile-action .pile,
+  html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .pile-action .real-card.compact {
+    width: 50px !important;
+    height: 71px !important;
+    flex-basis: 50px !important;
+  }
+
+  html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .pile-action > b {
+    font-size: 11px !important;
+    text-align: center !important;
+  }
+
+  html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready .hand {
+    padding-inline: 6px !important;
+  }
+
+  html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready .hand .identity {
+    min-height: 28px;
+    font-size: 12px;
+  }
+
+  html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready .hand .selection-advisor {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 5px !important;
+    padding: 6px !important;
+  }
+
+  html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready .hand .selection-advisor button,
+  html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready .hand .selection-advisor label {
+    min-height: 38px;
+    padding: 5px !important;
+    font-size: 11px;
+  }
+
+  html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready .hand .cards {
+    gap: 6px !important;
+    padding: 8px 10px 6px !important;
+  }
+
+  html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready .hand .real-card {
+    width: 68px;
+    height: 97px;
+  }
+
+  html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="board"] .table {
+    grid-template-rows: 118px 44px minmax(0, 1fr) !important;
+  }
+
+  html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="board"] .shared-boards {
+    grid-template-columns: 1fr !important;
+  }
+
+  html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready[data-adaptive-view="score"] .score-sidebar-content {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 8px;
+  }
+
+  html[data-game-layout="adaptive"] .adaptive-canasta-navigation-ready .score-lines {
+    grid-template-columns: 1fr;
+  }
+}
