@@ -130,6 +130,7 @@ const enhancementLoaders = [
   ["ResponsiveBoardEnhancer", () => import("./ResponsiveBoardEnhancer")],
   ["BoardScrollViewport", () => import("./BoardScrollViewport")],
   ["TableActionsTabEnhancer", () => import("./TableActionsTabEnhancer")],
+  ["AdaptiveCanastaNavigation", () => import("./platform/AdaptiveCanastaNavigation")],
   ["ActionHistoryEnhancer", () => import("./ActionHistoryEnhancer")],
   ["TurnAwarenessEnhancer", () => import("./TurnAwarenessEnhancer")],
   ["RobotTurnWatchdog", () => import("./RobotTurnWatchdog")],
