@@ -29,6 +29,7 @@ import "./playSurfaceIsolation.css";
 import "./handControlsSeparation.css";
 import "./tableActionsTab.css";
 import "./gameHub.css";
+import "./platform/layoutMode.css";
 
 const rootElement = document.getElementById("root");
 
