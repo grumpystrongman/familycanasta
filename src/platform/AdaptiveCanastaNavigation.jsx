@@ -21,13 +21,15 @@ function adaptiveEnabled() {
 function clickSidebarTab(view) {
   const sidebar = document.querySelector(".score-chat-sidebar");
   const tabs = sidebar?.querySelector(".sidebar-tabs");
-  if (!tabs) return;
+  if (!tabs) return false;
 
   let target = null;
   if (view === "score") target = tabs.querySelector("button:not(.table-actions-tab-button):nth-child(1)");
   if (view === "chat") target = tabs.querySelector("button:not(.table-actions-tab-button):nth-child(2)");
   if (view === "more") target = tabs.querySelector(".table-actions-tab-button");
-  target?.click();
+  if (!target) return false;
+  target.click();
+  return true;
 }
 
 export default function AdaptiveCanastaNavigation() {
@@ -63,11 +65,18 @@ export default function AdaptiveCanastaNavigation() {
     game.classList.add("adaptive-canasta-navigation-ready");
     game.dataset.adaptiveView = view;
 
+    let timer = null;
     if (["score", "chat", "more"].includes(view)) {
-      window.requestAnimationFrame(() => clickSidebarTab(view));
+      let attempts = 0;
+      const activate = () => {
+        attempts += 1;
+        if (!clickSidebarTab(view) && attempts < 20) timer = window.setTimeout(activate, 50);
+      };
+      timer = window.setTimeout(activate, 0);
     }
 
     return () => {
+      if (timer) window.clearTimeout(timer);
       root.classList.remove("adaptive-canasta-navigation-active");
       game.classList.remove("adaptive-canasta-navigation-ready");
       delete game.dataset.adaptiveView;
