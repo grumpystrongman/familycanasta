@@ -149,6 +149,8 @@ export default function ResponsiveBoardEnhancer() {
 
   if (!game) return null;
 
+  const portalTarget = game.querySelector(".table") || document.body;
+
   return createPortal(
     <nav className="board-view-bar" aria-label="Board view controls">
       <span>Board view</span>
@@ -165,6 +167,6 @@ export default function ResponsiveBoardEnhancer() {
         </button>
       ))}
     </nav>,
-    document.body,
+    portalTarget,
   );
 }

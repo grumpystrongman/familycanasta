@@ -15,6 +15,13 @@ const EMOTE_SUFFIX = "]]";
 const ACTIVE_LIFETIME_MS = 6500;
 export const TABLE_FLIP_DURATION_MS = 1500;
 
+function shouldCollapseEmoteDock() {
+  if (typeof window === "undefined") return false;
+  const adaptive = document.documentElement.dataset.gameLayout === "adaptive";
+  const compact = Boolean(window.matchMedia?.("(max-width: 900px)")?.matches);
+  return adaptive || compact;
+}
+
 function findRoomCode() {
   const code = document.querySelector(".game-page .code b")?.textContent?.trim();
   return code && /^[A-Z0-9]{6}$/.test(code) ? code : "";
@@ -91,7 +98,25 @@ export default function EmoteEnhancer() {
   const [room, setRoom] = useState(null);
   const [activeEmote, setActiveEmote] = useState(null);
   const [chatOpen, setChatOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(shouldCollapseEmoteDock);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const collapseWhenConstrained = () => {
+      if (shouldCollapseEmoteDock()) setCollapsed(true);
+    };
+    collapseWhenConstrained();
+
+    const observer = new MutationObserver(collapseWhenConstrained);
+    observer.observe(root, { attributes: true, attributeFilter: ["data-game-layout"] });
+    const compactQuery = window.matchMedia?.("(max-width: 900px)");
+    compactQuery?.addEventListener?.("change", collapseWhenConstrained);
+
+    return () => {
+      observer.disconnect();
+      compactQuery?.removeEventListener?.("change", collapseWhenConstrained);
+    };
+  }, []);
 
   useEffect(() => {
     const refresh = () => {
