@@ -1,0 +1,328 @@
+/*
+ * iPad viewport compositions
+ *
+ * These profiles use the available visual viewport rather than model or user
+ * agent detection. That keeps the game correct when Safari chrome is visible,
+ * the iPad is in Split View, or Stage Manager changes the window size.
+ */
+
+html[data-adaptive-viewport-profile="ipad-mini-landscape"] {
+  --ipad-header-height: 52px;
+  --ipad-navigation-height: 46px;
+  --ipad-draw-height: 116px;
+  --ipad-status-height: 34px;
+  --ipad-board-height: 82px;
+  --ipad-action-width: 272px;
+  --ipad-card-width: 84px;
+  --ipad-card-height: 120px;
+  --ipad-board-card-width: 31px;
+  --ipad-board-card-height: 44px;
+}
+
+html[data-adaptive-viewport-profile="ipad-standard-landscape"] {
+  --ipad-header-height: 56px;
+  --ipad-navigation-height: 48px;
+  --ipad-draw-height: 126px;
+  --ipad-status-height: 36px;
+  --ipad-board-height: 98px;
+  --ipad-action-width: 312px;
+  --ipad-card-width: 96px;
+  --ipad-card-height: 137px;
+  --ipad-board-card-width: 35px;
+  --ipad-board-card-height: 50px;
+}
+
+html[data-adaptive-viewport-profile="ipad-large-landscape"] {
+  --ipad-header-height: 58px;
+  --ipad-navigation-height: 50px;
+  --ipad-draw-height: 136px;
+  --ipad-status-height: 38px;
+  --ipad-board-height: 116px;
+  --ipad-action-width: 356px;
+  --ipad-card-width: 108px;
+  --ipad-card-height: 154px;
+  --ipad-board-card-width: 40px;
+  --ipad-board-card-height: 57px;
+}
+
+html[data-adaptive-viewport-profile="ipad-mini-portrait"] {
+  --ipad-header-height: 58px;
+  --ipad-navigation-height: 56px;
+  --ipad-draw-height: 128px;
+  --ipad-status-height: 38px;
+  --ipad-board-height: 92px;
+  --ipad-card-width: 72px;
+  --ipad-card-height: 103px;
+}
+
+html[data-adaptive-viewport-profile="ipad-standard-portrait"] {
+  --ipad-header-height: 62px;
+  --ipad-navigation-height: 58px;
+  --ipad-draw-height: 142px;
+  --ipad-status-height: 40px;
+  --ipad-board-height: 112px;
+  --ipad-card-width: 84px;
+  --ipad-card-height: 120px;
+}
+
+html[data-adaptive-viewport-profile="ipad-large-portrait"] {
+  --ipad-header-height: 66px;
+  --ipad-navigation-height: 60px;
+  --ipad-draw-height: 152px;
+  --ipad-status-height: 42px;
+  --ipad-board-height: 128px;
+  --ipad-card-width: 94px;
+  --ipad-card-height: 134px;
+}
+
+/* Use the viewport Safari actually exposes, not a nominal 100vh. */
+html[data-adaptive-viewport-profile^="ipad-"] .game-page.adaptive-canasta-navigation-ready {
+  grid-template-rows: var(--ipad-header-height) minmax(0, 1fr) !important;
+  height: var(--adaptive-visual-height, 100dvh) !important;
+  max-height: var(--adaptive-visual-height, 100dvh) !important;
+}
+
+html[data-adaptive-viewport-profile^="ipad-"] .game-page.adaptive-canasta-navigation-ready > header {
+  height: var(--ipad-header-height) !important;
+  min-height: var(--ipad-header-height) !important;
+}
+
+html[data-adaptive-viewport-profile^="ipad-"] .adaptive-canasta-navigation-ready .table,
+html[data-adaptive-viewport-profile^="ipad-"] .adaptive-canasta-navigation-ready .score-chat-sidebar {
+  padding-bottom: calc(var(--ipad-navigation-height) + env(safe-area-inset-bottom)) !important;
+}
+
+html[data-adaptive-viewport-profile^="ipad-"] .adaptive-canasta-navigation {
+  min-height: calc(var(--ipad-navigation-height) + env(safe-area-inset-bottom));
+  padding-top: 3px;
+  padding-bottom: max(3px, env(safe-area-inset-bottom));
+}
+
+html[data-adaptive-viewport-profile^="ipad-"] .adaptive-canasta-navigation button {
+  min-height: calc(var(--ipad-navigation-height) - 6px);
+  border-radius: 10px;
+}
+
+/*
+ * Landscape iPads have abundant width and constrained height. Move the action
+ * controls beside the cards instead of stacking them above the hand.
+ */
+html[data-adaptive-viewport-orientation="landscape"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .table {
+  grid-template-rows: var(--ipad-draw-height) var(--ipad-board-height) minmax(0, 1fr) !important;
+}
+
+html[data-adaptive-viewport-orientation="landscape"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"][data-adaptive-draw-state="complete"] .table {
+  grid-template-rows: var(--ipad-status-height) var(--ipad-board-height) minmax(0, 1fr) !important;
+}
+
+html[data-adaptive-viewport-orientation="landscape"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .shared-boards {
+  height: calc(var(--ipad-board-height) - 4px) !important;
+  margin: 0 8px 4px !important;
+  width: calc(100% - 16px) !important;
+}
+
+html[data-adaptive-viewport-orientation="landscape"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .shared-board.board-expanded {
+  grid-template-rows: 27px minmax(0, 1fr) !important;
+  padding: 4px 8px !important;
+}
+
+html[data-adaptive-viewport-orientation="landscape"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .shared-board .board-title {
+  min-height: 24px !important;
+  padding: 0 3px !important;
+}
+
+html[data-adaptive-viewport-orientation="landscape"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .shared-board .meld-slots {
+  gap: 5px !important;
+  padding: 0 2px 3px !important;
+}
+
+html[data-adaptive-viewport-orientation="landscape"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .shared-board .meld-slots > span {
+  padding: 5px 8px !important;
+  white-space: nowrap;
+}
+
+html[data-adaptive-viewport-orientation="landscape"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .shared-board .board-meld {
+  min-width: 72px !important;
+  min-height: calc(var(--ipad-board-card-height) + 8px) !important;
+  padding: 3px 5px !important;
+}
+
+html[data-adaptive-viewport-orientation="landscape"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .shared-board .board-meld > div {
+  height: var(--ipad-board-card-height) !important;
+}
+
+html[data-adaptive-viewport-orientation="landscape"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .shared-board .board-meld .real-card,
+html[data-adaptive-viewport-orientation="landscape"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .red-three-rack .real-card {
+  width: var(--ipad-board-card-width) !important;
+  height: var(--ipad-board-card-height) !important;
+}
+
+html[data-adaptive-viewport-orientation="landscape"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .hand {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) var(--ipad-action-width) !important;
+  grid-template-rows: 30px minmax(0, 1fr) !important;
+  align-content: start !important;
+  align-items: start !important;
+  gap: 4px 10px !important;
+  padding: 2px 8px 6px !important;
+  overflow: hidden !important;
+}
+
+html[data-adaptive-viewport-orientation="landscape"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .hand .identity {
+  grid-column: 1 / -1 !important;
+  grid-row: 1 !important;
+  min-height: 28px !important;
+  margin: 0 4px !important;
+}
+
+html[data-adaptive-viewport-orientation="landscape"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .hand .selection-advisor {
+  grid-column: 2 !important;
+  grid-row: 2 !important;
+  align-self: start !important;
+  align-content: start !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 6px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-height: 100% !important;
+  margin: 0 !important;
+  padding: 7px !important;
+  overflow-y: auto !important;
+}
+
+html[data-adaptive-viewport-orientation="landscape"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .hand .selection-advisor > div:first-child {
+  grid-column: 1 / -1 !important;
+  min-height: 42px !important;
+}
+
+html[data-adaptive-viewport-orientation="landscape"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .hand .selection-advisor button,
+html[data-adaptive-viewport-orientation="landscape"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .hand .selection-advisor label {
+  min-height: 42px !important;
+  padding: 6px !important;
+  line-height: 1.15;
+}
+
+html[data-adaptive-viewport-orientation="landscape"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .hand .selection-advisor > button:last-child {
+  grid-column: 1 / -1;
+}
+
+html[data-adaptive-viewport-orientation="landscape"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .hand .cards {
+  grid-column: 1 !important;
+  grid-row: 2 !important;
+  align-self: start !important;
+  align-items: flex-end !important;
+  width: 100% !important;
+  height: calc(var(--ipad-card-height) + 42px) !important;
+  min-height: calc(var(--ipad-card-height) + 42px) !important;
+  max-height: calc(var(--ipad-card-height) + 42px) !important;
+  margin: 0 !important;
+  padding: 24px 12px 8px !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  scroll-padding-inline: 12px;
+  scroll-snap-type: x proximity;
+}
+
+html[data-adaptive-viewport-orientation="landscape"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .hand .real-card {
+  width: var(--ipad-card-width) !important;
+  height: var(--ipad-card-height) !important;
+}
+
+html[data-adaptive-viewport-orientation="landscape"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .hand .real-card.selected {
+  transform: translateY(-14px) !important;
+}
+
+/* Mini landscape needs labels and secondary controls to be especially dense. */
+html[data-adaptive-viewport-profile="ipad-mini-landscape"] .adaptive-canasta-navigation button b {
+  font-size: 9px;
+}
+
+html[data-adaptive-viewport-profile="ipad-mini-landscape"] .adaptive-canasta-navigation button span {
+  min-height: 14px;
+  font-size: 14px;
+}
+
+html[data-adaptive-viewport-profile="ipad-mini-landscape"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .hand .selection-advisor {
+  gap: 4px !important;
+  padding: 5px !important;
+}
+
+html[data-adaptive-viewport-profile="ipad-mini-landscape"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .hand .selection-advisor button,
+html[data-adaptive-viewport-profile="ipad-mini-landscape"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .hand .selection-advisor label {
+  min-height: 36px !important;
+  font-size: 11px;
+}
+
+/* Large iPads can show a little more board context and larger touch cards. */
+html[data-adaptive-viewport-profile="ipad-large-landscape"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .hand .selection-advisor {
+  padding: 9px !important;
+  gap: 8px !important;
+}
+
+html[data-adaptive-viewport-profile="ipad-large-landscape"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .hand .selection-advisor button,
+html[data-adaptive-viewport-profile="ipad-large-landscape"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .hand .selection-advisor label {
+  min-height: 48px !important;
+}
+
+/* Portrait keeps a vertical composition, but cards follow controls immediately. */
+html[data-adaptive-viewport-orientation="portrait"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .table {
+  grid-template-rows: var(--ipad-draw-height) var(--ipad-board-height) minmax(0, 1fr) !important;
+}
+
+html[data-adaptive-viewport-orientation="portrait"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"][data-adaptive-draw-state="complete"] .table {
+  grid-template-rows: var(--ipad-status-height) var(--ipad-board-height) minmax(0, 1fr) !important;
+}
+
+html[data-adaptive-viewport-orientation="portrait"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .hand {
+  display: grid !important;
+  grid-template-rows: 30px auto auto !important;
+  align-content: start !important;
+  gap: 4px !important;
+  padding: 2px 8px 6px !important;
+}
+
+html[data-adaptive-viewport-orientation="portrait"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .hand .identity {
+  grid-row: 1 !important;
+}
+
+html[data-adaptive-viewport-orientation="portrait"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .hand .selection-advisor {
+  grid-row: 2 !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  margin: 0 !important;
+}
+
+html[data-adaptive-viewport-profile="ipad-large-portrait"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .hand .selection-advisor,
+html[data-adaptive-viewport-profile="ipad-standard-portrait"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .hand .selection-advisor {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+}
+
+html[data-adaptive-viewport-orientation="portrait"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .hand .cards {
+  grid-row: 3 !important;
+  align-items: flex-end !important;
+  height: calc(var(--ipad-card-height) + 40px) !important;
+  min-height: calc(var(--ipad-card-height) + 40px) !important;
+  max-height: calc(var(--ipad-card-height) + 40px) !important;
+  padding: 22px 12px 8px !important;
+}
+
+html[data-adaptive-viewport-orientation="portrait"] .adaptive-canasta-navigation-ready[data-adaptive-view="hand"] .hand .real-card {
+  width: var(--ipad-card-width) !important;
+  height: var(--ipad-card-height) !important;
+}
+
+/* Fullscreen the complete app so navigation remains available. */
+html:fullscreen,
+html:-webkit-full-screen,
+html:fullscreen body,
+html:-webkit-full-screen body {
+  width: 100vw !important;
+  height: 100dvh !important;
+  background: #071c16;
+}
+
+html:fullscreen .layout-mode-control,
+html:-webkit-full-screen .layout-mode-control,
+html:fullscreen .game-rules-tab,
+html:-webkit-full-screen .game-rules-tab {
+  display: none !important;
+}
