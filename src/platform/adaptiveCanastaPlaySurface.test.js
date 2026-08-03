@@ -27,8 +27,9 @@ test("tablet cards are fully visible and touch selectable", () => {
   assert.match(css, /\.hand \.real-card\.selected\s*\{\s*transform:\s*translateY\(-18px\) !important;/);
 });
 
-test("fullscreen control uses browser fullscreen and iPad app guidance", () => {
-  assert.match(component, /game\.requestFullscreen \|\| game\.webkitRequestFullscreen/);
+test("fullscreen control keeps the complete adaptive app and iPad guidance available", () => {
+  assert.match(component, /const target = document\.documentElement/);
+  assert.match(component, /target\.requestFullscreen \|\| target\.webkitRequestFullscreen/);
   assert.match(component, /Add to Home Screen/);
   assert.match(component, /adaptive-fullscreen-button/);
   assert.match(css, /grid-template-columns:\s*repeat\(6, minmax\(0, 1fr\)\)/);

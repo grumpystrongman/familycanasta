@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import "./adaptiveCanastaNavigation.css";
 import "./adaptiveCanastaPlaySurface.css";
+import "./adaptiveCanastaIpadProfiles.css";
+import { readAdaptiveViewportMetrics } from "./adaptiveViewportProfile";
 
 const VIEWS = [
   ["hand", "Hand"],
@@ -66,6 +68,31 @@ function updateDrawState(game) {
   game.dataset.adaptiveDrawState = drawAvailable ? "available" : "complete";
 }
 
+function applyViewportProfile(game) {
+  if (!game || typeof window === "undefined") return;
+  const root = document.documentElement;
+  const metrics = readAdaptiveViewportMetrics(window);
+
+  root.dataset.adaptiveViewportProfile = metrics.profile;
+  root.dataset.adaptiveViewportOrientation = metrics.orientation;
+  game.dataset.adaptiveViewportProfile = metrics.profile;
+  game.dataset.adaptiveViewportOrientation = metrics.orientation;
+  root.style.setProperty("--adaptive-visual-width", `${metrics.width}px`);
+  root.style.setProperty("--adaptive-visual-height", `${metrics.height}px`);
+}
+
+function clearViewportProfile(game) {
+  const root = document.documentElement;
+  delete root.dataset.adaptiveViewportProfile;
+  delete root.dataset.adaptiveViewportOrientation;
+  root.style.removeProperty("--adaptive-visual-width");
+  root.style.removeProperty("--adaptive-visual-height");
+  if (game) {
+    delete game.dataset.adaptiveViewportProfile;
+    delete game.dataset.adaptiveViewportOrientation;
+  }
+}
+
 export default function AdaptiveCanastaNavigation() {
   const [game, setGame] = useState(null);
   const [adaptive, setAdaptive] = useState(adaptiveEnabled);
@@ -103,6 +130,35 @@ export default function AdaptiveCanastaNavigation() {
   }, []);
 
   useEffect(() => {
+    if (!game || !adaptive) {
+      clearViewportProfile(game);
+      return undefined;
+    }
+
+    let frame = 0;
+    const refresh = () => applyViewportProfile(game);
+    const scheduleRefresh = () => {
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(refresh);
+    };
+
+    refresh();
+    window.addEventListener("resize", scheduleRefresh);
+    window.addEventListener("orientationchange", scheduleRefresh);
+    window.visualViewport?.addEventListener?.("resize", scheduleRefresh);
+    window.visualViewport?.addEventListener?.("scroll", scheduleRefresh);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("resize", scheduleRefresh);
+      window.removeEventListener("orientationchange", scheduleRefresh);
+      window.visualViewport?.removeEventListener?.("resize", scheduleRefresh);
+      window.visualViewport?.removeEventListener?.("scroll", scheduleRefresh);
+      clearViewportProfile(game);
+    };
+  }, [adaptive, game]);
+
+  useEffect(() => {
     if (!game || !adaptive) return undefined;
     const refresh = () => updateDrawState(game);
     refresh();
@@ -135,6 +191,7 @@ export default function AdaptiveCanastaNavigation() {
     game.classList.add("adaptive-canasta-navigation-ready");
     game.dataset.adaptiveView = view;
     updateDrawState(game);
+    applyViewportProfile(game);
 
     let timer = null;
     if (view === "hand") {
@@ -196,14 +253,17 @@ export default function AdaptiveCanastaNavigation() {
     }
     if (standaloneEnabled()) return;
 
-    const request = game.requestFullscreen || game.webkitRequestFullscreen;
+    // Fullscreen the document rather than only the game node. The navigation,
+    // rules, and other portal-mounted controls then remain inside the surface.
+    const target = document.documentElement;
+    const request = target.requestFullscreen || target.webkitRequestFullscreen;
     if (!request) {
       setShowFullscreenHelp(true);
       return;
     }
 
     try {
-      await request.call(game, { navigationUI: "hide" });
+      await request.call(target, { navigationUI: "hide" });
     } catch {
       setShowFullscreenHelp(true);
     }
