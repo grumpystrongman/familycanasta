@@ -18,6 +18,13 @@ export function recommendLayoutMode({ width = Number.POSITIVE_INFINITY, coarsePo
   return compactViewport || tabletLikeTouchScreen ? LAYOUT_MODES.ADAPTIVE : LAYOUT_MODES.CLASSIC;
 }
 
+export function resolveLayoutMode({ preference = null, width, coarsePointer = false } = {}) {
+  const usableWidth = Number.isFinite(Number(width)) ? Number(width) : Number.POSITIVE_INFINITY;
+  if (usableWidth <= 900) return LAYOUT_MODES.ADAPTIVE;
+  if (isLayoutMode(preference)) return preference;
+  return recommendLayoutMode({ width: usableWidth, coarsePointer });
+}
+
 export function viewportLayoutSignals(targetWindow = globalThis.window) {
   const width = Number(
     targetWindow?.innerWidth
