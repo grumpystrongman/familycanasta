@@ -185,7 +185,13 @@ export default function AdaptiveCanastaNavigation() {
     if (!game) return;
     if (browserFullscreenEnabled()) {
       const exit = document.exitFullscreen || document.webkitExitFullscreen;
-      if (exit) await exit.call(document).catch?.(() => {});
+      if (exit) {
+        try {
+          await exit.call(document);
+        } catch {
+          // The browser may already have left fullscreen through system chrome.
+        }
+      }
       return;
     }
     if (standaloneEnabled()) return;
