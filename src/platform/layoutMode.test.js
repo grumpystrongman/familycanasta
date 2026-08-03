@@ -4,6 +4,7 @@ import {
   LAYOUT_MODES,
   readLayoutPreference,
   recommendLayoutMode,
+  resolveLayoutMode,
   writeLayoutPreference,
 } from "./layoutMode.js";
 
@@ -40,7 +41,25 @@ test("large desktop screens preserve the classic layout", () => {
   );
 });
 
-test("a saved player choice overrides automatic detection", () => {
+test("a saved player choice overrides automatic detection on usable screens", () => {
+  assert.equal(
+    resolveLayoutMode({ preference: LAYOUT_MODES.ADAPTIVE, width: 1440, coarsePointer: false }),
+    LAYOUT_MODES.ADAPTIVE,
+  );
+  assert.equal(
+    resolveLayoutMode({ preference: LAYOUT_MODES.CLASSIC, width: 1024, coarsePointer: true }),
+    LAYOUT_MODES.CLASSIC,
+  );
+});
+
+test("compact screens stay adaptive even when classic was saved elsewhere", () => {
+  assert.equal(
+    resolveLayoutMode({ preference: LAYOUT_MODES.CLASSIC, width: 390, coarsePointer: true }),
+    LAYOUT_MODES.ADAPTIVE,
+  );
+});
+
+test("layout preferences persist safely", () => {
   const storage = memoryStorage();
   assert.equal(writeLayoutPreference(LAYOUT_MODES.ADAPTIVE, storage), true);
   assert.equal(readLayoutPreference(storage), LAYOUT_MODES.ADAPTIVE);
