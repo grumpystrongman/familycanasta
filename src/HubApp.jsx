@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import GameGuidance from "./platform/GameGuidance";
 import LayoutModeControl from "./platform/LayoutModeControl";
 
 const GAME_CATALOG = [
@@ -183,6 +184,7 @@ export default function HubApp() {
   return (
     <>
       <LayoutModeControl gameId={gameId} />
+      <GameGuidance gameId={gameId} />
       <SelectedGame />
     </>
   );
