@@ -97,10 +97,36 @@
 .modular-members { display: grid; gap: 10px; margin: 20px 0; }
 .modular-member-row { padding: 12px 14px; border-radius: 12px; background: rgba(255,255,255,0.07); }
 .modular-error { padding: 11px 14px; border-radius: 10px; color: #ffe7e7; background: rgba(150, 30, 43, 0.4); }
-.modular-hand { display: flex; gap: 8px; padding: 18px 4px; overflow-x: auto; overflow-y: visible; }
+
+/*
+ * Hands in Hearts, Spades, and Rummy must never hide a card just beyond the
+ * right edge. Let the hand reflow into as many readable columns/rows as the
+ * viewport allows instead of requiring a horizontal scroll to discover the
+ * final card. This keeps all 13 opening cards visible in Hearts/Spades and
+ * handles Rummy hands that temporarily grow after a draw.
+ */
+.modular-hand {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
+  align-items: end;
+  gap: 8px;
+  width: 100%;
+  padding: 18px 4px;
+  overflow: visible;
+}
+
+.modular-hand .standard-card {
+  width: 100%;
+  max-width: 82px;
+  height: auto;
+  aspect-ratio: 82 / 116;
+  justify-self: center;
+}
+
 .modular-table-center { min-height: 260px; display: grid; place-items: center; padding: 22px; border-radius: 22px; background: rgba(15, 70, 51, 0.58); }
 
 @media (max-width: 680px) {
   .modular-form-grid { grid-template-columns: 1fr; }
   .standard-card { width: 68px; height: 97px; }
+  .modular-hand { grid-template-columns: repeat(auto-fit, minmax(58px, 1fr)); gap: 7px; padding-inline: 0; }
 }
