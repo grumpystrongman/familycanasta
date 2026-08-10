@@ -1,0 +1,24 @@
+.golf-table { max-width: 1040px; }
+.golf-center { min-height: 245px; display: grid; grid-template-columns: auto minmax(0,1fr); align-items: center; gap: 28px; margin: 15px 0; padding: 22px; border-radius: 22px; background: rgba(15,70,51,.58); }
+.golf-piles { display: flex; gap: 14px; align-items: end; }
+.golf-stock, .golf-discard { min-width: 98px; min-height: 146px; display: grid; place-items: center; align-content: center; gap: 8px; border: 1px solid rgba(255,255,255,.18); border-radius: 14px; color: #f5f0dc; background: rgba(255,255,255,.07); cursor: pointer; }
+.golf-stock > span { font-size: 2.5rem; }
+.golf-stock small, .golf-discard small { color: #cbd8d1; }
+.golf-stock:disabled, .golf-discard:disabled { opacity: .5; cursor: not-allowed; }
+.golf-discard-card { position: relative; display: grid; place-items: center; width: 70px; height: 99px; border: 1px solid rgba(20,24,22,.28); border-radius: 9px; color: #151a17; background: linear-gradient(145deg,#fffef8,#eee9da); box-shadow: 0 7px 15px rgba(0,0,0,.22); }
+.golf-discard-card.red { color: #b3222d; }
+.golf-discard-card b { position: absolute; top: 6px; left: 8px; font-size: .92rem; line-height: 1; }
+.golf-discard-card i { position: absolute; top: 22px; left: 9px; font-size: .82rem; font-style: normal; line-height: 1; }
+.golf-discard-card strong { font: 2.25rem/1 Georgia,serif; }
+.golf-discard-empty { color: #cbd8d1; font-weight: 800; }
+.golf-drawn { display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap; text-align: center; }
+.golf-drawn > small { width: 100%; color: #cbd8d1; }
+.golf-drawn > strong { color: #f1cc72; }
+.golf-drawn > button { min-height: 40px; padding: 9px 14px; border: 0; border-radius: 999px; color: #f5f0dc; background: rgba(255,255,255,.12); font: inherit; font-weight: 800; cursor: pointer; }
+.golf-grid { display: grid; grid-template-columns: repeat(3,minmax(70px,1fr)); gap: 12px; width: min(390px,100%); margin: 8px auto 0; }
+.golf-grid .standard-card { width: 100%; max-width: 108px; height: auto; aspect-ratio: 82/116; justify-self: center; }
+.golf-hidden-card { width: 100%; max-width: 108px; aspect-ratio: 82/116; justify-self: center; border: 4px double rgba(255,255,255,.55); border-radius: 11px; color: rgba(255,255,255,.8); background: repeating-linear-gradient(45deg,rgba(255,255,255,.08) 0 5px,transparent 5px 10px),#173d31; font-size: 2rem; cursor: pointer; box-shadow: 0 8px 18px rgba(0,0,0,.2); }
+.golf-hidden-card.selected { transform: translateY(-8px); box-shadow: 0 0 0 3px #e7be62,0 13px 24px rgba(0,0,0,.25); }
+.golf-hidden-card:disabled { cursor: default; opacity: .82; }
+.golf-reveal-box { display: flex; justify-content: center; align-items: center; gap: 14px; flex-wrap: wrap; margin: 16px 0; padding: 14px; border-radius: 15px; background: rgba(255,255,255,.07); text-align: center; }
+@media (max-width:680px) { .golf-center { grid-template-columns: 1fr; gap: 14px; } .golf-piles { justify-content: center; } .golf-grid { gap: 8px; } }

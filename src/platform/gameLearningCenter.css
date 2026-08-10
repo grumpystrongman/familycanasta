@@ -1,0 +1,30 @@
+.game-learning-center { position: fixed; inset: 0; z-index: 10015; pointer-events: none; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+.learning-launch { position: fixed; top: 58px; left: 14px; min-height: 40px; padding: 9px 14px; border: 1px solid rgba(255,255,255,0.2); border-radius: 999px; color: #f7f1dc; background: rgba(4,24,18,0.95); box-shadow: 0 9px 28px rgba(0,0,0,0.36); font: 800 12px/1 inherit; cursor: pointer; pointer-events: auto; }
+.learning-launch:hover, .learning-launch:focus-visible { color: #18261f; background: #f0c966; outline: none; }
+.learning-panel { position: fixed; top: 106px; left: 14px; display: flex; flex-direction: column; width: min(470px, calc(100vw - 28px)); max-height: calc(100vh - 122px); overflow: hidden; border: 1px solid rgba(255,255,255,0.18); border-radius: 22px; color: #17241d; background: #fffdf5; box-shadow: 0 24px 80px rgba(0,0,0,0.45); pointer-events: auto; }
+.learning-panel > header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 20px 16px; color: #f5efd8; background: linear-gradient(135deg,#143e30,#0a261d); }
+.learning-panel header small { display: block; color: #efc867; font-size: .67rem; font-weight: 900; letter-spacing: .14em; }
+.learning-panel header h2 { margin: 3px 0 4px; font: 2rem/1 Georgia,serif; }
+.learning-panel header span { color: #d6dfd9; font-size: .8rem; }
+.learning-panel header > button { width: 38px; height: 38px; border: 0; border-radius: 50%; color: inherit; background: rgba(255,255,255,.12); font-size: 1.6rem; cursor: pointer; }
+.learning-panel > nav { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1px solid #ddd7c7; background: #f3efe2; }
+.learning-panel > nav button { padding: 12px 10px; border: 0; border-bottom: 3px solid transparent; color: #536159; background: transparent; font: 800 .84rem/1 inherit; cursor: pointer; }
+.learning-panel > nav button.active { border-bottom-color: #b88220; color: #183c2f; background: #fffdf5; }
+.learning-tutorial, .learning-rules { min-height: 0; padding: 18px 20px 20px; overflow-y: auto; }
+.learning-objective { margin: 0 0 16px; padding: 12px 14px; border-left: 4px solid #c18d2c; border-radius: 8px; background: #f3ead3; font-weight: 750; line-height: 1.45; }
+.learning-progress { height: 7px; margin: 4px 0 18px; overflow: hidden; border-radius: 99px; background: #e5dfcf; }
+.learning-progress span { display: block; height: 100%; border-radius: inherit; background: #b88220; transition: width 180ms ease; }
+.learning-step-card { min-height: 210px; padding: 20px; border: 1px solid #ddd7c8; border-radius: 18px; background: #faf7ed; }
+.learning-step-card > small { color: #8b6420; font-weight: 900; letter-spacing: .1em; }
+.learning-step-card h3 { margin: 8px 0 12px; color: #173c2f; font: 1.55rem/1.15 Georgia,serif; }
+.learning-step-card p { margin: 0; color: #3f4d45; font-size: 1rem; line-height: 1.55; }
+.learning-tip { margin-top: 18px; padding: 11px 13px; border-radius: 11px; background: #e9f0e9; color: #244235; line-height: 1.4; }
+.learning-step-actions { display: flex; justify-content: space-between; gap: 12px; margin-top: 16px; }
+.learning-step-actions button { min-width: 96px; min-height: 42px; padding: 9px 16px; border: 1px solid #bdb5a5; border-radius: 999px; color: #26372f; background: #f5f1e7; font: 800 .86rem/1 inherit; cursor: pointer; }
+.learning-step-actions button.primary { border-color: #b88220; color: #fffaf0; background: #855d18; }
+.learning-step-actions button:disabled { opacity: .4; cursor: not-allowed; }
+.learning-rules section + section { margin-top: 20px; padding-top: 16px; border-top: 1px solid #e2dccd; }
+.learning-rules h3 { margin: 0 0 9px; color: #173c2f; font-size: 1rem; }
+.learning-rules ul { margin: 0; padding-left: 20px; }
+.learning-rules li { margin-bottom: 8px; line-height: 1.48; }
+@media (max-width: 680px) { .learning-launch { top: 54px; left: 8px; } .learning-panel { top: 100px; left: 8px; width: calc(100vw - 16px); max-height: calc(100vh - 108px); } .learning-step-card { min-height: 190px; padding: 17px; } }

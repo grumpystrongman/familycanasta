@@ -1,0 +1,15 @@
+.indians-table { max-width: 1120px; }
+.indians-progress { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 7px 16px; margin: 8px 0 16px; padding: 13px 15px; border-radius: 14px; background: rgba(255,255,255,.07); }
+.indians-progress strong { color: #f1cc72; }
+.indians-progress > div { grid-column: 1 / -1; height: 7px; overflow: hidden; border-radius: 99px; background: rgba(255,255,255,.12); }
+.indians-progress i { display: block; height: 100%; border-radius: inherit; background: #e4bd62; }
+.indians-scoreboard { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; margin-bottom: 12px; }
+.indians-scoreboard article { display: grid; gap: 4px; padding: 14px; border-radius: 15px; background: rgba(255,255,255,.08); }
+.indians-scoreboard strong { font-size: 1.8rem; color: #f1cc72; }
+.indians-scoreboard small { color: #cbd8d1; }
+.indians-trick { grid-template-columns: repeat(4,minmax(70px,1fr)); gap: 12px; }
+.indians-trick > div { display: grid; justify-items: center; gap: 7px; }
+.indians-action-box { display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap; margin: 16px 0; padding: 16px; border-radius: 16px; background: rgba(255,255,255,.07); text-align: center; }
+.indians-action-box label { display: flex; align-items: center; gap: 10px; font-weight: 800; }
+.indians-action-box select { min-height: 42px; padding: 8px 34px 8px 12px; border-radius: 9px; font: inherit; }
+@media (max-width:680px) { .indians-scoreboard { grid-template-columns: 1fr; } .indians-trick { grid-template-columns: repeat(2,minmax(70px,1fr)); } }

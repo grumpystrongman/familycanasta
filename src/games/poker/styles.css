@@ -1,0 +1,17 @@
+.poker-table { max-width: 1120px; }
+.poker-pot { display: grid; justify-items: center; gap: 3px; margin: 8px auto 14px; padding: 12px 24px; width: fit-content; min-width: 180px; border: 1px solid rgba(228,189,98,.3); border-radius: 18px; background: rgba(228,189,98,.09); }
+.poker-pot span, .poker-pot small { color: #cbd8d1; }
+.poker-pot strong { color: #f1cc72; font-size: 1.65rem; }
+.poker-center { min-height: 230px; display: grid; place-items: center; margin: 14px 0; padding: 18px; border-radius: 22px; background: rgba(15,70,51,.58); }
+.poker-ranking { display: grid; gap: 12px; max-width: 780px; text-align: center; }
+.poker-ranking strong { color: #f1cc72; font: 1.3rem Georgia,serif; }
+.poker-ranking span { line-height: 1.65; }
+.poker-showdown { display: grid; grid-template-columns: repeat(auto-fit,minmax(200px,1fr)); gap: 14px; width: 100%; }
+.poker-showdown article { display: grid; justify-items: center; gap: 9px; padding: 13px; border-radius: 14px; background: rgba(255,255,255,.07); }
+.poker-showdown article > div { display: flex; justify-content: center; gap: 4px; flex-wrap: wrap; }
+.poker-showdown small { color: #f1cc72; font-weight: 800; }
+.poker-actions { padding: 12px; border-radius: 15px; background: rgba(255,255,255,.06); }
+.poker-draw-box { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; margin: 15px 0; padding: 14px; border-radius: 15px; background: rgba(255,255,255,.07); }
+.poker-draw-box span { color: #f1cc72; }
+.poker-hand { max-width: 620px; margin-inline: auto; grid-template-columns: repeat(5,minmax(60px,1fr)); }
+@media (max-width:680px) { .poker-hand { grid-template-columns: repeat(5,minmax(48px,1fr)); gap: 5px; } }

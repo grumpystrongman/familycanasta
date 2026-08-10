@@ -1,0 +1,8 @@
+.spoons-table { max-width: 1040px; }
+.spoons-center { min-height: 250px; display: grid; place-items: center; align-content: center; gap: 18px; margin: 16px 0; padding: 26px; border-radius: 24px; background: rgba(15,70,51,.58); text-align: center; }
+.spoons-center.scramble { box-shadow: inset 0 0 0 3px rgba(228,189,98,.5); }
+.spoon-row { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px; font-size: clamp(2.1rem,6vw,4.2rem); line-height: 1; }
+.spoon-grab { min-width: min(420px,100%); min-height: 72px; border: 0; border-radius: 18px; color: #102218; background: #f1c55e; font: 950 clamp(1.15rem,3vw,1.75rem)/1 inherit; letter-spacing: .05em; cursor: pointer; box-shadow: 0 12px 28px rgba(0,0,0,.3); }
+.spoon-grab:disabled { opacity: .45; cursor: not-allowed; }
+.spoons-instruction { margin: 0; color: #cbd8d1; text-align: center; }
+.spoons-hand { max-width: 650px; margin-inline: auto; grid-template-columns: repeat(auto-fit,minmax(70px,1fr)); }
