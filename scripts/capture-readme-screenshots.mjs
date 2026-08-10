@@ -65,6 +65,15 @@ async function captureTabletopEntry(gameId, name) {
   await capture(name, ".game-start-panel");
 }
 
+async function captureChompageddon() {
+  await open("/?game=chompageddon", ".chomp-launchpad");
+  await capture("chompageddon-entry", ".chompageddon-page");
+  await page.getByRole("button", { name: /release the ballz/i }).click();
+  await page.locator(".chomp-arena-frame canvas").waitFor({ state: "visible" });
+  await page.waitForTimeout(1200);
+  await capture("chompageddon-gameplay", ".chompageddon-page");
+}
+
 try {
   await captureHub();
   await captureCanasta();
@@ -75,6 +84,7 @@ try {
   await captureTabletopEntry("connect4", "connect4-entry");
   await captureTabletopEntry("battleship", "battleship-entry");
   await captureTabletopEntry("gofish", "gofish-entry");
+  await captureChompageddon();
 } finally {
   await browser.close();
 }
