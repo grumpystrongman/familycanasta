@@ -16,16 +16,17 @@ const GUIDES = Object.freeze({
     ],
   },
   gofyourself: {
-    name: "Go F' Yourself", age: "18+ only", objective: "Play standard Go Fish while the table turns every rank and miss into an adult joke.",
+    name: "Go F' Yourself", age: "18+ only", objective: "Collect complete four-card comedy sets while making everyone at the table question their life choices.",
     rules: [
-      ["Same bones as Go Fish", ["Ask another adult for a themed rank you already hold.", "If they have it, they hand over every matching card and you keep asking."]],
-      ["The answer", ["If they have none, the official table response is: Go F' Yourself.", "You draw from the pile of bad decisions; drawing the rank you asked for keeps your turn."]],
-      ["Adult table", ["This room is 18+ and uses profanity, crude humor, dating jokes, and sexual innuendo.", "The game does not require explicit sexual imagery or descriptions; the comedy is the point."]],
+      ["The matching is real Go Fish", ["Each named set — like Total Regrets, Biological Horrors, Dating Disasters, or Sexual Misadventures — contains exactly four different joke cards.", "On your turn, ask another adult for a set you already hold. If they have any cards from that set, they hand over all of them and you ask again."]],
+      ["Go F' Yourself", ["If they have none of that set, the official answer is: Go F' Yourself.", "You draw one card from the pile of bad decisions. Drawing the set you asked for keeps your turn; otherwise play moves on."]],
+      ["Complete the disaster", ["Collect all four different cards from one set and it becomes a completed book.", "The 52-card deck contains thirteen four-card sets, so the player with the most completed disasters wins."]],
+      ["Adult deck packs", ["The adult card copy is separated from the Go Fish engine, so future 52-card expansion decks can swap in new thirteen-set themes without changing the matching rules.", "Every expansion keeps four different punchlines per set; expansions add comedy, not new matching mechanics."]],
     ],
     tutorial: [
-      ["Pick a bad decision", "Your ranks have names like Red Flags, Booty Calls, Toxic Exes, and Regrets, but the underlying rank still controls matching.", "The dirty label changes the joke, not the rules."],
-      ["Pick a victim", "Choose another player with cards and ask for the themed rank you selected.", "Success means they hand over all matches; failure earns the title phrase."],
-      ["Lose with dignity", "Four matching cards still make a book automatically. The most books wins.", "Dignity is not scored and may not survive the room."],
+      ["Read the damn card", "Every card has a set name plus its own punchline. Four different cards share that set name.", "The punchlines are different; the set name is what matches."],
+      ["Ask for the set", "If you hold any Dating Disasters, you can ask another player: ‘Got any Dating Disasters?’ If they do, you get every Dating Disasters card in their hand.", "You never ask for the individual punchline."],
+      ["Finish the train wreck", "Get all four cards in a set and the table books them automatically. The most books wins.", "Dignity, healthy relationships, and browser history are not scored."],
     ],
   },
   connect4: {

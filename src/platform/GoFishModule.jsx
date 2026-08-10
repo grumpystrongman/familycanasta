@@ -14,14 +14,25 @@ function formatRank(theme, rank) {
   return theme.rankLabels?.[rank] || titleCaseRank(rank);
 }
 
+function formatCard(theme, card) {
+  return theme.cardLabel?.(card) || formatRank(theme, card?.rank);
+}
+
+function adultMissRoast(theme, rank) {
+  const lines = theme.missLines || [];
+  if (!lines.length) return "Take the L and fish from the pile of consequences.";
+  const index = Math.max(0, RANKS.indexOf(rank));
+  return lines[index % lines.length];
+}
+
 function AdultGate({ title, onEnter }) {
   return (
     <main className="modular-game-shell fish-adult-shell">
       <section className="modular-game-panel fish-adult-gate">
         <p className="game-kicker">18+ table · adults only</p>
         <h1>{title}</h1>
-        <p>This game contains profanity, raunchy jokes, sexual innuendo, terrible dating choices, and aggressively immature humor.</p>
-        <p><strong>No explicit sexual imagery is part of the game.</strong> The point is to make your friends laugh and regret inviting you.</p>
+        <p>This game contains profanity, raunchy jokes, sexual innuendo, terrible dating choices, biological betrayals, and aggressively immature adult humor.</p>
+        <p><strong>The matching still works exactly like Go Fish:</strong> four different joke cards belong to each named set. Ask for the set, collect all four, and complete the book.</p>
         <div className="modular-lobby-actions">
           <button type="button" className="action-button" onClick={onEnter}>I’m 18+ · deal the bad decisions</button>
           <button type="button" className="action-button secondary" onClick={navigateToHub}>Nope · back to the respectable games</button>
@@ -39,11 +50,13 @@ function actionText(state, members, theme) {
   const label = formatRank(theme, action.rank);
   if (theme.adult) {
     if (action.result === "hit") {
-      const book = action.completedBooks?.length ? ` Then ${actor} completed a filthy little book of ${formatRank(theme, action.completedBooks[0])}.` : "";
-      return `${actor} asked ${target} for ${label}. Jackpot: ${action.count} card${action.count === 1 ? "" : "s"} changed hands.${book}`;
+      const book = action.completedBooks?.length
+        ? ` Then ${actor} completed the whole disgusting set of ${formatRank(theme, action.completedBooks[0])}. Somewhere, their mother just sighed and doesn't know why.`
+        : "";
+      return `${actor} asked ${target}, “Got any ${label}?” ${target} had ${action.count}. That's either good luck or deeply concerning evidence.${book}`;
     }
-    const draw = action.drewRank ? `${actor} drew from the pile of bad decisions.` : "The pond was bone dry.";
-    return `${actor} asked ${target} for ${label}. ${target}: “Go F' Yourself.” ${draw}`;
+    const draw = action.drewRank ? `${actor} fishes from the pile of bad decisions.` : "The pile is empty, much like everyone's remaining dignity.";
+    return `${actor} asked ${target}, “Got any ${label}?” ${target}: “Go F' Yourself.” ${adultMissRoast(theme, action.rank)} ${draw}`;
   }
   if (action.result === "hit") {
     const book = action.completedBooks?.length ? ` ${actor} also completed a book of ${formatRank(theme, action.completedBooks[0])}.` : "";
@@ -80,7 +93,7 @@ function FishTable({ controller, theme }) {
     <main className={`modular-game-shell fish-shell ${theme.adult ? "fish-after-dark" : ""}`}>
       <section className="modular-game-panel fish-table">
         <div className="modular-game-toolbar">
-          <div><p className="game-kicker">{theme.tableKicker}</p><h1>{theme.title}</h1></div>
+          <div><p className="game-kicker">{theme.tableKicker}</p><h1>{theme.title}</h1>{theme.deckTagline ? <small className="fish-deck-tagline">{theme.deckTagline}</small> : null}</div>
           <button type="button" className="secondary" onClick={navigateToHub}>All games</button>
         </div>
         {error ? <p className="modular-error">{error}</p> : null}
@@ -109,7 +122,7 @@ function FishTable({ controller, theme }) {
         {state.phase === "playing" ? (
           <section className="fish-ask-panel">
             <div>
-              <span className="fish-control-label">1 · Pick what you’re asking for</span>
+              <span className="fish-control-label">1 · Pick the set you’re asking for</span>
               <div className="fish-rank-picker">
                 {ranksInHand.map((value) => (
                   <button key={value} type="button" className={rank === value ? "selected" : ""} onClick={() => setRank(value)} disabled={!myTurn || busy}>
@@ -119,7 +132,7 @@ function FishTable({ controller, theme }) {
               </div>
             </div>
             <div>
-              <span className="fish-control-label">2 · Pick your victim{theme.adult ? "... politely, obviously" : ""}</span>
+              <span className="fish-control-label">2 · Pick your victim{theme.adult ? "... consensually, you animal" : ""}</span>
               <div className="fish-target-picker">
                 {targets.map((member) => (
                   <button key={member.uid} type="button" className={targetUid === member.uid ? "selected" : ""} onClick={() => setTargetUid(member.uid)} disabled={!myTurn || busy}>
@@ -134,7 +147,7 @@ function FishTable({ controller, theme }) {
               disabled={!myTurn || busy || !rank || !targetUid}
               onClick={() => act({ type: "ask", rank, targetUid })}
             >
-              {myTurn ? (theme.askButton || `Ask for ${formatRank(theme, rank)}`) : `Waiting for ${current?.nickname || "another player"}`}
+              {myTurn ? (theme.adult ? `GOT ANY ${formatRank(theme, rank).toUpperCase()}?` : (theme.askButton || `Ask for ${formatRank(theme, rank)}`)) : `Waiting for ${current?.nickname || "another player"}`}
             </button>
           </section>
         ) : null}
@@ -143,9 +156,9 @@ function FishTable({ controller, theme }) {
           <div className="fish-hand-heading"><span>Your hand</span><strong>{hand.length} cards</strong></div>
           <div className="fish-hand">
             {hand.length ? hand.map((card) => (
-              <div key={card.id} className="fish-card-wrap">
+              <div key={card.id} className={`fish-card-wrap ${theme.adult ? "fish-adult-card-wrap" : ""}`}>
                 <StandardCard card={card} compact disabled={!myTurn} selected={rank === card.rank} onClick={() => myTurn && setRank(card.rank)} />
-                {theme.adult ? <small>{formatRank(theme, card.rank)}</small> : null}
+                {theme.adult ? <div className="fish-card-copy"><strong>{formatRank(theme, card.rank)}</strong><small>{formatCard(theme, card)}</small></div> : null}
               </div>
             )) : <p className="fish-empty-hand">No cards in hand. {state.stock?.length ? "You’ll draw when your turn reaches you." : "Watch the last books land."}</p>}
           </div>
@@ -154,7 +167,7 @@ function FishTable({ controller, theme }) {
         {state.phase === "game-over" ? (
           <div className="fish-game-over">
             <h2>{winners.length > 1 ? `${winners.join(" & ")} tied` : `${winners[0] || "Winner"} wins`}</h2>
-            <p>{theme.adult ? "The table is out of cards and dignity." : "Most completed books wins the pond."}</p>
+            <p>{theme.adult ? "The table is out of cards, shame, and plausible deniability." : "Most completed books wins the pond."}</p>
             <button type="button" className="action-button" onClick={navigateToHub}>Return to all games</button>
           </div>
         ) : null}

@@ -2,32 +2,32 @@ import "../../platform/standardCards.css";
 import "../../platform/goFishStyles.css";
 import React from "react";
 import GoFishModule from "../../platform/GoFishModule";
+import { cardLabelForDeck, DEFAULT_ADULT_DECK, rankLabelsForDeck } from "./deckPacks";
 
 const theme = Object.freeze({
   gameId: "gofyourself",
   title: "Go F' Yourself",
   adult: true,
   homeKicker: "Go Fish after dark · 18+",
-  tableKicker: "Adult Go Fish · bad decisions score points",
-  summary: "The Go Fish you learned as a kid, except the table has profanity, terrible dating choices, crude innuendo, and absolutely no dignity. Adults only.",
+  tableKicker: `${DEFAULT_ADULT_DECK.name} · bad decisions score points`,
+  summary: "Real Go Fish matching, except every four-card set is a category of adult humiliation and every card is its own filthy little punchline. Adults only.",
   startLabel: "Deal the bad decisions",
   askButton: "ASK THE DAMN QUESTION",
-  openingLine: "Pick one of your terrible life choices, pick a victim, and ask. If they have none, expect the only correct answer: Go F' Yourself.",
-  rankLabels: Object.freeze({
-    "2": "Bad Decisions",
-    "3": "Booty Calls",
-    "4": "Walks of Shame",
-    "5": "Red Flags",
-    "6": "Drunk Texts",
-    "7": "Kinky Secrets",
-    "8": "Hot Messes",
-    "9": "Toxic Exes",
-    "10": "Morning-After Alibis",
-    J: "Questionable DMs",
-    Q: "Thirst Traps",
-    K: "One-Night Disasters",
-    A: "Regrets",
-  }),
+  openingLine: "Pick a matching set you already hold, pick a victim, and ask. If they have none, there is only one respectable answer: Go F' Yourself.",
+  rankLabels: rankLabelsForDeck(DEFAULT_ADULT_DECK),
+  cardLabel: (card) => cardLabelForDeck(DEFAULT_ADULT_DECK, card),
+  deckName: DEFAULT_ADULT_DECK.name,
+  deckTagline: DEFAULT_ADULT_DECK.tagline,
+  missLines: Object.freeze([
+    "Take the L and fish from the pile of consequences.",
+    "Congratulations. You asked confidently and were wrong in public.",
+    "Nothing. Just like your ex promised you would amount to.",
+    "Denied. Somewhere, a therapist just felt a disturbance in the Force.",
+    "Nope. Reach into the deck like you reach for your phone after three drinks.",
+    "Absolutely not. The table has reviewed your request and chosen violence.",
+    "Strikeout. Even the cards think your standards are too low.",
+    "Rejected harder than a shirtless bathroom-mirror selfie on LinkedIn.",
+  ]),
 });
 
 export default function GoFYourselfGame() { return <GoFishModule theme={theme} />; }
