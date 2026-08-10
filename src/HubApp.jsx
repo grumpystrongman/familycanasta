@@ -18,12 +18,13 @@ const GAME_CATALOG = [
   { id: "indians", name: "Indians", icon: "♠", eyebrow: "Progressive Spades", description: "Play partnership Spades while another complete low rank disappears every hand.", players: "4 players", status: "Planned" },
   { id: "poker", name: "Five-Card Draw", icon: "★", eyebrow: "Family poker points", description: "Classic draw poker with game points only: bet, draw, bluff, and compare hands.", players: "2–6 players", status: "Planned" },
   { id: "golf", name: "Six Card Golf", icon: "⛳", eyebrow: "Low score wins", description: "Improve a six-card grid across nine holes and cancel matching columns to zero.", players: "2–4 players", status: "Planned" },
+  { id: "chompageddon", name: "Chompageddon!", icon: "👹", eyebrow: "Physics party arcade", description: "Outrageous monsters lunge into a bouncing ball pit. Time your chomps, steal the clusters, and become the greediest creature at the table.", players: "1–4 local players", status: "Planned" },
   { id: "gofyourself", name: "Go F' Yourself", icon: "😈", eyebrow: "Go Fish after dark · 18+", description: "Go Fish with profanity, raunchy innuendo, toxic exes, bad decisions, and absolutely no dignity.", players: "2–6 adults", status: "Planned" },
 ];
 
 const gameLoaders = import.meta.glob("./games/*/index.jsx");
 const LEGACY_GUIDANCE_GAMES = new Set(["canasta", "hearts", "spades", "rummy"]);
-const TABLETOP_GUIDANCE_GAMES = new Set(["gofish", "gofyourself", "connect4", "battleship", "hnefatafl"]);
+const TABLETOP_GUIDANCE_GAMES = new Set(["gofish", "gofyourself", "connect4", "battleship", "hnefatafl", "chompageddon"]);
 
 function selectedGameId() { return new URLSearchParams(window.location.search).get("game") || ""; }
 function gameModulePath(gameId) { return `./games/${gameId}/index.jsx`; }
