@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import StandardCard from "../../platform/StandardCard";
+import StandardCard, { SUIT_SYMBOLS } from "../../platform/StandardCard";
 import useModularTable from "../../platform/useModularTable";
 import { GameHome, GameLobby, PlayerChips } from "../../platform/ModularGameChrome";
 import { navigateToHub } from "../../HubApp";
@@ -17,6 +17,11 @@ function GolfGrid({ state, uid, interactive, onSwap, revealSelected, toggleRevea
     if (!visible) return <HiddenGridCard key={card.id} selected={revealSelected?.includes(index)} disabled={!interactive} onClick={() => toggleReveal ? toggleReveal(index) : onSwap?.(index)} />;
     return <StandardCard key={card.id} card={card} disabled={!interactive || Boolean(toggleReveal)} onClick={() => onSwap?.(index)} />;
   })}</div>;
+}
+
+function DiscardPreview({ card }) {
+  if (!card) return <span className="golf-discard-empty">Empty</span>;
+  return <span className={`golf-discard-card ${card.color || "black"}`}><b>{card.rank}</b><i>{SUIT_SYMBOLS[card.suit]}</i><strong>{SUIT_SYMBOLS[card.suit]}</strong></span>;
 }
 
 function GolfTable({ controller }) {
@@ -42,7 +47,7 @@ function GolfTable({ controller }) {
       <div className="golf-center">
         <div className="golf-piles">
           <button type="button" className="golf-stock" disabled={busy || !myTurn || Boolean(state.drawnCard)} onClick={() => act({ type: "draw", source: "stock" })}><span>◆</span><small>Stock · {state.stock?.length || 0}</small></button>
-          <button type="button" className="golf-discard" disabled={busy || !myTurn || Boolean(state.drawnCard) || !topDiscard} onClick={() => act({ type: "draw", source: "discard" })}>{topDiscard ? <StandardCard card={topDiscard} compact disabled /> : null}<small>Discard</small></button>
+          <button type="button" className="golf-discard" disabled={busy || !myTurn || Boolean(state.drawnCard) || !topDiscard} onClick={() => act({ type: "draw", source: "discard" })}><DiscardPreview card={topDiscard} /><small>Take discard</small></button>
         </div>
         {state.drawnCard ? <div className="golf-drawn"><small>You drew</small><StandardCard card={state.drawnCard} disabled /><strong>Choose a grid card to replace, or discard the draw.</strong><button type="button" disabled={busy} onClick={() => act({ type: "discard-drawn" })}>Discard this card</button></div> : <p className="new-game-empty">Draw from the stock or visible discard, then decide whether it improves your six-card grid.</p>}
       </div>
