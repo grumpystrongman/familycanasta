@@ -68,6 +68,20 @@ const GUIDES = Object.freeze({
       ["Think in sandwiches", "Before moving, check the square on the far side of nearby enemy pieces.", "A single move can trap and remove an exposed piece."],
     ],
   },
+  chompageddon: {
+    name: "Chompageddon!", age: "Party arcade", objective: "Lunge at the right moment and swallow more bouncing balls than every other monster.",
+    rules: [
+      ["Players", ["Choose one to four local human players before the round starts.", "Any empty monster seats are filled by bots, so every round always has four chomping monsters."]],
+      ["Controls", ["Player 1 uses Space and can also click or tap the arena.", "Player 2 uses W, Player 3 uses A, and Player 4 uses D. Every human also gets a large on-screen CHOMP button."]],
+      ["Physics", ["Balls keep momentum, bounce around the bowl, and collide with one another.", "A monster only captures balls when its head reaches full extension, so timing a cluster matters more than button mashing."]],
+      ["Winning", ["One lunge can swallow multiple balls if several are inside the mouth radius.", "The round ends when the timer expires or every ball is gone. Highest score wins; ties share the Ball Throne."]],
+    ],
+    tutorial: [
+      ["Watch before chomping", "Follow a cluster for a moment and notice where the ricochets are carrying it.", "The best bite happens where the balls are going, not where they were."],
+      ["Commit to the lunge", "Press your control and the monster snaps forward, bites at maximum reach, then retracts.", "You cannot immediately fire again while the head is still moving."],
+      ["Steal the pile", "Wait for collisions to stack several balls near your lane, then attack the whole group at once.", "Multi-ball chomps are how you turn a close round into a ridiculous win."],
+    ],
+  },
 });
 
 function StepCard({ step, index, total }) {
