@@ -12,6 +12,27 @@ function indexOf(row, column) { return row * SIZE + column; }
 function rowOf(index) { return Math.floor(index / SIZE); }
 function colOf(index) { return index % SIZE; }
 
+function collectionValues(value) {
+  if (Array.isArray(value)) return value.filter((entry) => entry != null);
+  if (!value || typeof value !== "object") return [];
+  return Object.entries(value)
+    .sort(([a], [b]) => Number(a) - Number(b))
+    .map(([, entry]) => entry)
+    .filter((entry) => entry != null);
+}
+
+function numberCollection(value) {
+  return collectionValues(value).map(Number).filter(Number.isFinite);
+}
+
+export function normalizeBattleshipFleet(fleet) {
+  return collectionValues(fleet).map((ship) => ({
+    ...ship,
+    cells: numberCollection(ship?.cells),
+    hits: numberCollection(ship?.hits),
+  }));
+}
+
 export function cellLabel(index) {
   return `${String.fromCharCode(65 + colOf(index))}${rowOf(index) + 1}`;
 }
@@ -73,9 +94,10 @@ export function reduceBattleship(state, actorUid, action, members) {
   if (!target) throw new Error("No enemy fleet is available.");
   if (state.shots?.[actorUid]?.[cell] != null) throw new Error("You already fired at that square.");
 
-  const fleets = Object.fromEntries(Object.entries(state.fleets || {}).map(([uid, fleet]) => [uid, fleet.map((ship) => ({ ...ship, cells: [...ship.cells], hits: [...ship.hits] }))]));
-  const shots = Object.fromEntries(Object.entries(state.shots || {}).map(([uid, fired]) => [uid, { ...fired }]));
-  const targetFleet = fleets[target.uid];
+  const fleets = Object.fromEntries(Object.entries(state.fleets || {}).map(([uid, fleet]) => [uid, normalizeBattleshipFleet(fleet)]));
+  const shots = Object.fromEntries(Object.entries(state.shots || {}).map(([uid, fired]) => [uid, { ...(fired || {}) }]));
+  if (!shots[actorUid]) shots[actorUid] = {};
+  const targetFleet = fleets[target.uid] || [];
   const ship = shipAt(targetFleet, cell);
   let result = "miss";
   let sunkName = null;
