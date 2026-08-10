@@ -129,3 +129,14 @@ test("new game styles do not introduce horizontal hand scrolling", async () => {
     assert.doesNotMatch(styles, /overflow-x\s*:\s*auto/);
   }
 });
+
+test("ERS shows one active card and a separate non-overlapping recent-card row", async () => {
+  const source = await readFile(new URL("./ers/ERSGame.jsx", import.meta.url), "utf8");
+  const styles = await readFile(new URL("./ers/styles.css", import.meta.url), "utf8");
+  assert.match(source, /ers-active-card/);
+  assert.match(source, /ers-recent-row/);
+  assert.match(source, /Reveal top card/);
+  assert.match(source, /chooseRobotMove:\s*chooseERSRobotMove/);
+  assert.doesNotMatch(source, /ers-depth-/);
+  assert.doesNotMatch(styles, /\.ers-pile-card/);
+});
