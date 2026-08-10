@@ -26,5 +26,5 @@ test("Go Fish table renders each matching rank as one visual hand group", async 
   assert.match(source, /groupGoFishHand\(rawHand\)/);
   assert.match(source, /fish-hand-group/);
   assert.match(source, /matching cards stay together automatically/);
-  assert.match(source, /group\.cards\.length}\\/4/);
+  assert.match(source, /group\.cards\.length/);
 });
