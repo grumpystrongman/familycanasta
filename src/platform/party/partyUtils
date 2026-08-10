@@ -1,0 +1,4 @@
+// Node's native ESM test runner does not add file extensions to relative imports.
+// Vite resolves the game models in-browser; this compatibility module keeps the
+// same extensionless import specifier valid during `node --test` as well.
+export * from "./partyUtils.js";

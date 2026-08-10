@@ -6,6 +6,9 @@ import LayoutModeControl from "./platform/LayoutModeControl";
 
 const GAME_CATALOG = [
   { id: "canasta", name: "Canasta", icon: "♣", eyebrow: "Meld strategy", description: "The complete family Canasta table, preserved exactly as it plays today.", players: "2–6 players", status: "Ready" },
+  { id: "punchline", name: "Punchline", icon: "🎤", eyebrow: "Write it · vote it", description: "A big-screen comedy show where every phone writes the punchlines and the room decides what lands.", players: "3–12 phones", status: "Ready" },
+  { id: "lastonealive", name: "Last One Alive", icon: "👻", eyebrow: "Trivia · traps · escape", description: "Horror-comedy trivia with six survival micro-games, ghosts, resurrection, and a final race for the exit.", players: "3–12 phones", status: "Ready" },
+  { id: "doodlealibi", name: "Doodle Alibi", icon: "🖍️", eyebrow: "Draw · accuse · deceive", description: "Draw secret assignments on your phone, study the TV evidence wall, and expose the altered prompt.", players: "4–12 phones", status: "Ready" },
   { id: "hearts", name: "Hearts", icon: "♥", eyebrow: "Avoid the points", description: "Pass three cards, dodge penalty tricks, and try to shoot the moon.", players: "4 players", status: "Planned" },
   { id: "spades", name: "Spades", icon: "♠", eyebrow: "Bid with a partner", description: "Call your contract, manage bags, protect nil bids, and race to 500.", players: "4 players", status: "Planned" },
   { id: "rummy", name: "Rummy", icon: "♦", eyebrow: "Sets and runs", description: "Draw, meld, lay off, and be the first player to empty your hand.", players: "2–6 players", status: "Planned" },
@@ -25,11 +28,12 @@ const GAME_CATALOG = [
 const gameLoaders = import.meta.glob("./games/*/index.jsx");
 const LEGACY_GUIDANCE_GAMES = new Set(["canasta", "hearts", "spades", "rummy"]);
 const TABLETOP_GUIDANCE_GAMES = new Set(["gofish", "gofyourself", "connect4", "battleship", "hnefatafl", "chompageddon"]);
+const PARTY_STAGE_GAMES = new Set(["punchline", "lastonealive", "doodlealibi"]);
 
 function selectedGameId() { return new URLSearchParams(window.location.search).get("game") || ""; }
 function gameModulePath(gameId) { return `./games/${gameId}/index.jsx`; }
-function navigateToGame(gameId) { const next = new URL(window.location.href); next.searchParams.set("game", gameId); window.location.assign(next.toString()); }
-function navigateToHub() { const next = new URL(window.location.href); next.searchParams.delete("game"); window.location.assign(next.toString()); }
+function navigateToGame(gameId) { const next = new URL(window.location.href); next.searchParams.set("game", gameId); next.searchParams.delete("room"); next.searchParams.delete("role"); window.location.assign(next.toString()); }
+function navigateToHub() { const next = new URL(window.location.href); next.searchParams.delete("game"); next.searchParams.delete("room"); next.searchParams.delete("role"); window.location.assign(next.toString()); }
 
 function HubCard({ game }) {
   const available = Boolean(gameLoaders[gameModulePath(game.id)]);
@@ -48,10 +52,10 @@ function GameHub() {
   return (
     <main className="family-game-hub">
       <section className="hub-hero">
-        <div><p className="hub-kicker">Family game night</p><h1>Pick a table. Start a game.</h1><p className="hub-intro">One home for the games people actually play together—cards, boards, strategy, party chaos, and one clearly marked adults-only table. Every game keeps its own rules, state, table, and tests while sharing the same front door.</p></div>
-        <div className="hub-deck-mark" aria-hidden="true"><span>♠</span><span>⚓</span><span>♔</span><span>🔴</span></div>
+        <div><p className="hub-kicker">Family game night</p><h1>Pick a table. Start a game.</h1><p className="hub-intro">One home for the games people actually play together—cards, boards, strategy, phone-controlled party shows, and one clearly marked adults-only table. Every game keeps its own rules, state, table, and tests while sharing the same front door.</p></div>
+        <div className="hub-deck-mark" aria-hidden="true"><span>♠</span><span>🎤</span><span>👻</span><span>🖍️</span></div>
       </section>
-      <section className="hub-game-grid" aria-label="Available tabletop games">{GAME_CATALOG.map((game) => <HubCard key={game.id} game={game} />)}</section>
+      <section className="hub-game-grid" aria-label="Available family games">{GAME_CATALOG.map((game) => <HubCard key={game.id} game={game} />)}</section>
       <footer className="hub-footer"><strong>Family Game Room</strong><span>Card games, board games, party games, and strategy tables—each isolated behind its own rules engine.</span></footer>
     </main>
   );
@@ -84,7 +88,9 @@ export default function HubApp() {
   if (!loadedGame.Component) return <main className="hub-loading-screen"><section><p className="hub-kicker">Setting the table</p><h1>Opening the game…</h1></section></main>;
 
   const SelectedGame = loadedGame.Component;
+  if (PARTY_STAGE_GAMES.has(gameId)) return <SelectedGame />;
+
   return <><LayoutModeControl gameId={gameId} />{LEGACY_GUIDANCE_GAMES.has(gameId) ? <GameGuidance gameId={gameId} /> : null}{TABLETOP_GUIDANCE_GAMES.has(gameId) ? <TabletopLearningCenter gameId={gameId} /> : <GameLearningCenter gameId={gameId} />}<SelectedGame /></>;
 }
 
-export { GAME_CATALOG, gameModulePath, navigateToHub };
+export { GAME_CATALOG, PARTY_STAGE_GAMES, gameModulePath, navigateToHub };
