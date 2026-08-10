@@ -1,0 +1,21 @@
+.ers-table { max-width: 1040px; }
+.ers-center { min-height: 390px; display: grid; grid-template-columns: minmax(190px,1fr) minmax(220px,1fr); align-items: center; gap: 24px; margin: 16px 0; padding: 28px; border-radius: 24px; background: rgba(15,70,51,.58); }
+.ers-pile { position: relative; width: 150px; height: 205px; justify-self: center; }
+.ers-pile-card { position: absolute; inset: 0; display: grid; place-items: center; }
+.ers-pile-card .standard-card { width: 126px; height: 178px; }
+.ers-pile-card.ers-depth-3 { transform: rotate(-5deg) translate(-9px,4px); opacity: .72; }
+.ers-pile-card.ers-depth-2 { transform: rotate(4deg) translate(8px,2px); opacity: .86; }
+.ers-pile-card.ers-depth-1 { z-index: 3; }
+.ers-empty-pile { width: 126px; height: 178px; display: grid; place-items: center; margin: auto; border: 2px dashed rgba(255,255,255,.25); border-radius: 12px; color: #aebdb5; }
+.ers-controls { display: grid; gap: 12px; }
+.ers-controls button { min-height: 52px; border: 0; border-radius: 16px; font: 900 1rem/1 inherit; cursor: pointer; }
+.ers-controls button:disabled { opacity: .42; cursor: not-allowed; }
+.ers-slap { min-height: 92px !important; color: #16241c; background: #f1c55e; font-size: 1.55rem !important; letter-spacing: .08em; box-shadow: 0 12px 28px rgba(0,0,0,.3); }
+.ers-flip { color: #f5f0dc; background: rgba(255,255,255,.14); }
+.ers-claim { color: #fff7e7; background: #7d5b1d; }
+.ers-patterns { grid-column: 1 / -1; display: grid; gap: 6px; padding: 12px 14px; border-radius: 13px; background: rgba(255,255,255,.06); text-align: center; }
+.ers-patterns strong { color: #f1cc72; }
+.ers-patterns span { color: #cbd8d1; line-height: 1.45; }
+.ers-patterns em { color: #ffe7a5; font-style: normal; font-weight: 850; }
+.ers-my-stack { display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap; margin-top: 14px; }
+@media (max-width:680px) { .ers-center { grid-template-columns: 1fr; min-height: 0; padding: 20px; } .ers-patterns { grid-column: 1; } .ers-controls { width: 100%; } }
