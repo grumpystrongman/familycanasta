@@ -2,6 +2,7 @@ import React from "react";
 import { firebaseMissing, firebaseReady } from "../firebase";
 import { MODULAR_AVATARS } from "./modularRoomService";
 import { navigateToHub } from "../HubApp";
+import "./newGameChrome.css";
 
 export function GameHome({ controller, title, kicker, summary, maxPlayers }) {
   const { user, nickname, setNickname, avatar, setAvatar, joinCode, setJoinCode, createRoom, joinRoom, error, busy } = controller;
