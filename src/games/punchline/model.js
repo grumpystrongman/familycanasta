@@ -133,13 +133,14 @@ function hasAllAnswers(state, players) {
   return players.every((player) => (state.assignments?.[player.uid] || []).every((promptId) => state.submissions?.[player.uid]?.[promptId]));
 }
 function currentMatchup(state) { return state.matchups?.[state.matchupIndex] || null; }
+function isDuelMode(players) { return players.length === 2; }
 
 function finishVote(state, players) {
   const matchup = currentMatchup(state);
   if (!matchup) return state;
   const counts = Object.fromEntries(matchup.authors.map((uid) => [uid, 0]));
   Object.values(state.votes || {}).forEach((uid) => { if (counts[uid] != null) counts[uid] += 1; });
-  const eligible = Math.max(1, players.filter((p) => !matchup.authors.includes(p.uid)).length);
+  const eligible = isDuelMode(players) ? 1 : Math.max(1, players.filter((p) => !matchup.authors.includes(p.uid)).length);
   const nextScores = structuredClone(state.scores);
   matchup.authors.forEach((uid) => {
     const count = counts[uid] || 0;
@@ -182,6 +183,7 @@ function scoreFinale(state) {
 export function reducePunchlineGameState(state, actor, action, players, settings, hostUid) {
   if (!state || !action?.type) throw new Error("Invalid action.");
   const profanityFilter = settings?.profanityFilter !== false;
+  const duelMode = isDuelMode(players);
 
   if (action.type === "submitAnswer") {
     if (state.phase !== "answer") throw new Error("Answers are closed.");
@@ -203,7 +205,11 @@ export function reducePunchlineGameState(state, actor, action, players, settings
     if (state.phase !== "vote") throw new Error("Voting is closed.");
     const matchup = currentMatchup(state);
     if (!matchup?.authors.includes(action.choice)) throw new Error("That answer is not in this matchup.");
-    if (matchup.authors.includes(actor.uid)) throw new Error("You cannot vote in your own matchup.");
+    if (duelMode) {
+      if (actor.uid !== hostUid) throw new Error("In 2-player Duel Mode, the TV host judges each matchup.");
+    } else if (matchup.authors.includes(actor.uid)) {
+      throw new Error("You cannot vote in your own matchup.");
+    }
     if (state.votes?.[actor.uid]) throw new Error("Your vote is already locked.");
     return { ...state, votes: { ...state.votes, [actor.uid]: action.choice } };
   }
@@ -218,8 +224,10 @@ export function reducePunchlineGameState(state, actor, action, players, settings
 
   if (action.type === "rankFinale") {
     if (state.phase !== "finaleVote") throw new Error("Final voting is closed.");
+    if (duelMode && actor.uid !== hostUid) throw new Error("In 2-player Duel Mode, the TV host picks the Crowd Pleaser winner.");
     if (state.rankings?.[actor.uid]) throw new Error("Your ranking is already locked.");
-    const ranking = [...new Set(action.ranking || [])].filter((uid) => uid !== actor.uid && state.submissions?.[uid]).slice(0, 3);
+    const maxChoices = duelMode ? 1 : 3;
+    const ranking = [...new Set(action.ranking || [])].filter((uid) => uid !== actor.uid && state.submissions?.[uid]).slice(0, maxChoices);
     if (!ranking.length) throw new Error("Choose at least one favorite.");
     return { ...state, rankings: { ...state.rankings, [actor.uid]: ranking } };
   }
@@ -238,8 +246,8 @@ export function reducePunchlineGameState(state, actor, action, players, settings
     if (state.phase === "vote") {
       const matchup = currentMatchup(state);
       const eligible = players.filter((p) => !matchup.authors.includes(p.uid));
-      const allVotes = eligible.every((p) => state.votes?.[p.uid]);
-      if (!allVotes && Date.now() < state.deadline && !action.force) throw new Error("Players are still voting.");
+      const allVotes = duelMode ? Boolean(state.votes?.[hostUid]) : eligible.every((p) => state.votes?.[p.uid]);
+      if (!allVotes && Date.now() < state.deadline && !action.force) throw new Error(duelMode ? "The TV host is still judging." : "Players are still voting.");
       return finishVote(state, players);
     }
     if (state.phase === "result") return beginNextMatchupOrRound(state, players);
@@ -251,8 +259,8 @@ export function reducePunchlineGameState(state, actor, action, players, settings
       return { ...state, submissions, phase: "finaleVote", rankings: {}, deadline: nowPlus(28000) };
     }
     if (state.phase === "finaleVote") {
-      const all = players.every((p) => state.rankings?.[p.uid]);
-      if (!all && Date.now() < state.deadline && !action.force) throw new Error("Players are still ranking answers.");
+      const all = duelMode ? Boolean(state.rankings?.[hostUid]) : players.every((p) => state.rankings?.[p.uid]);
+      if (!all && Date.now() < state.deadline && !action.force) throw new Error(duelMode ? "The TV host is still choosing the winner." : "Players are still ranking answers.");
       return scoreFinale(state);
     }
     throw new Error("There is nothing to advance right now.");
@@ -266,7 +274,7 @@ export const punchlineDefinition = {
   name: "Punchline",
   eyebrow: "Write it. Vote it. Regret it.",
   description: "Fast comedy prompts, anonymous head-to-head voting, and a crowd-pleaser finale.",
-  minPlayers: 3,
+  minPlayers: 2,
   maxPlayers: 12,
   introVideo: "/media/punchline-intro.mp4",
   music: "punchline",
