@@ -84,7 +84,7 @@ function ERSTable({ controller }) {
 }
 
 export default function ERSGame() {
-  const controller = useModularTable({ gameId: "ers", maxPlayers: ERS_RULES.playersMax, minimumPlayers: ERS_RULES.playersMin, rules: { incorrectSlapPenalty: ERS_RULES.incorrectSlapPenalty }, createGameState: createERSGame, reduceGameState: reduceERS, chooseRobotMove: chooseERSRobotRobotMove, robotDelay: 620 });
+  const controller = useModularTable({ gameId: "ers", maxPlayers: ERS_RULES.playersMax, minimumPlayers: ERS_RULES.playersMin, rules: { incorrectSlapPenalty: ERS_RULES.incorrectSlapPenalty }, createGameState: createERSGame, reduceGameState: reduceERS, chooseRobotMove: chooseERSRobotMove, robotDelay: 620 });
   if (!controller.roomCode) return <GameHome controller={controller} title="Egyptian Rat Screw" kicker="Flip, challenge, react" summary="Reveal from a face-down stack, survive J/Q/K/A challenges, and be the first to slap doubles, sandwiches, tens, marriages, and other valid patterns." maxPlayers={ERS_RULES.playersMax} />;
   if (!controller.room) return <main className="modular-game-shell"><section className="modular-game-panel"><h1>Opening ERS room…</h1></section></main>;
   if (controller.room.status === "lobby") return <GameLobby controller={controller} title="Egyptian Rat Screw" minimumPlayers={ERS_RULES.playersMin} maxPlayers={ERS_RULES.playersMax} startLabel="Deal the deck" />;
