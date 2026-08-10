@@ -5,6 +5,10 @@ export const CHOMP_RULES = Object.freeze({
   roundSeconds: 60,
   minHumans: 1,
   maxHumans: 4,
+  arenaRadius: 302,
+  ballRestitution: 0.96,
+  wallRestitution: 0.92,
+  maxBallSpeed: 340,
 });
 
 export const CHOMPERS = Object.freeze([
@@ -17,18 +21,27 @@ export const CHOMPERS = Object.freeze([
 function clamp(value, min, max) { return Math.max(min, Math.min(max, value)); }
 function randomBetween(random, min, max) { return min + random() * (max - min); }
 
+function capVelocity(ball) {
+  const speed = Math.hypot(ball.vx, ball.vy);
+  if (speed <= CHOMP_RULES.maxBallSpeed || speed === 0) return;
+  const scale = CHOMP_RULES.maxBallSpeed / speed;
+  ball.vx *= scale;
+  ball.vy *= scale;
+}
+
 export function createBalls(random = Math.random, count = CHOMP_RULES.ballCount) {
   const center = CHOMP_RULES.arenaSize / 2;
   return Array.from({ length: count }, (_, id) => {
-    const angle = random() * Math.PI * 2;
-    const radius = randomBetween(random, 54, 230);
-    const speed = randomBetween(random, 88, 176);
+    const positionAngle = random() * Math.PI * 2;
+    const radius = Math.sqrt(random()) * 224;
+    const heading = random() * Math.PI * 2;
+    const speed = randomBetween(random, 125, 225);
     return {
       id,
-      x: center + Math.cos(angle) * radius,
-      y: center + Math.sin(angle) * radius,
-      vx: Math.cos(angle + Math.PI / 2) * speed + randomBetween(random, -54, 54),
-      vy: Math.sin(angle + Math.PI / 2) * speed + randomBetween(random, -54, 54),
+      x: center + Math.cos(positionAngle) * radius,
+      y: center + Math.sin(positionAngle) * radius,
+      vx: Math.cos(heading) * speed,
+      vy: Math.sin(heading) * speed,
       hue: (id * 47 + 18) % 360,
       capturedBy: null,
     };
@@ -58,6 +71,7 @@ export function createRound({ humanCount = 1, random = Math.random, ballCount = 
     finished: false,
     flash: 0,
     lastCapture: null,
+    rattleClock: randomBetween(random, 0.55, 0.95),
   };
 }
 
@@ -89,80 +103,186 @@ export function triggerChomp(round, index) {
   return true;
 }
 
-function stepBall(ball, dt) {
-  if (ball.capturedBy != null) return;
-  const size = CHOMP_RULES.arenaSize;
-  const r = CHOMP_RULES.ballRadius;
-  const inner = 64;
-  const outer = size - 64;
-
-  ball.x += ball.vx * dt;
-  ball.y += ball.vy * dt;
-  const damping = Math.pow(0.997, dt * 60);
-  ball.vx *= damping;
-  ball.vy *= damping;
-
-  if (ball.x < inner + r) { ball.x = inner + r; ball.vx = Math.abs(ball.vx) * 0.94; }
-  if (ball.x > outer - r) { ball.x = outer - r; ball.vx = -Math.abs(ball.vx) * 0.94; }
-  if (ball.y < inner + r) { ball.y = inner + r; ball.vy = Math.abs(ball.vy) * 0.94; }
-  if (ball.y > outer - r) { ball.y = outer - r; ball.vy = -Math.abs(ball.vy) * 0.94; }
-
-  const center = size / 2;
+function bounceOffArena(ball, random) {
+  const center = CHOMP_RULES.arenaSize / 2;
+  const limit = CHOMP_RULES.arenaRadius - CHOMP_RULES.ballRadius;
   const dx = ball.x - center;
   const dy = ball.y - center;
   const distance = Math.hypot(dx, dy) || 1;
-  const maxRadius = 302;
-  if (distance > maxRadius) {
-    const nx = dx / distance;
-    const ny = dy / distance;
-    ball.x = center + nx * maxRadius;
-    ball.y = center + ny * maxRadius;
-    const outward = ball.vx * nx + ball.vy * ny;
-    if (outward > 0) {
-      ball.vx -= 1.88 * outward * nx;
-      ball.vy -= 1.88 * outward * ny;
-    }
+  if (distance <= limit) return false;
+
+  const nx = dx / distance;
+  const ny = dy / distance;
+  ball.x = center + nx * limit;
+  ball.y = center + ny * limit;
+
+  const outward = ball.vx * nx + ball.vy * ny;
+  if (outward > 0) {
+    ball.vx -= (1 + CHOMP_RULES.wallRestitution) * outward * nx;
+    ball.vy -= (1 + CHOMP_RULES.wallRestitution) * outward * ny;
   }
 
-  const speed = Math.hypot(ball.vx, ball.vy);
-  if (speed < 48) {
-    const tangent = Math.atan2(dy, dx) + Math.PI / 2;
-    ball.vx += Math.cos(tangent) * 26 * dt;
-    ball.vy += Math.sin(tangent) * 26 * dt;
+  // A molded plastic rim is not a mathematically perfect circle. Give each rim
+  // impact a small rough deflection so a tangential graze cannot become an orbit.
+  const angle = randomBetween(random, -0.18, 0.18);
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  const nextVx = ball.vx * cos - ball.vy * sin;
+  const nextVy = ball.vx * sin + ball.vy * cos;
+  ball.vx = nextVx;
+  ball.vy = nextVy;
+
+  // Guarantee some motion back into the bowl instead of allowing edge-gliding.
+  const inward = ball.vx * nx + ball.vy * ny;
+  if (inward > -18) {
+    const correction = inward + 18;
+    ball.vx -= correction * nx;
+    ball.vy -= correction * ny;
   }
+  capVelocity(ball);
+  return true;
+}
+
+function stepBall(ball, dt, random) {
+  if (ball.capturedBy != null) return;
+  ball.x += ball.vx * dt;
+  ball.y += ball.vy * dt;
+
+  // Very light rolling resistance: enough to feel physical without killing the
+  // party-game motion halfway through a round.
+  const damping = Math.pow(0.9992, dt * 60);
+  ball.vx *= damping;
+  ball.vy *= damping;
+  bounceOffArena(ball, random);
 }
 
 export function resolveBallCollisions(balls) {
-  const minDist = CHOMP_RULES.ballRadius * 2;
-  const minDistSq = minDist * minDist;
+  const diameter = CHOMP_RULES.ballRadius * 2;
+  const diameterSq = diameter * diameter;
+  let collisions = 0;
+
   for (let i = 0; i < balls.length; i += 1) {
     const a = balls[i];
     if (a.capturedBy != null) continue;
     for (let j = i + 1; j < balls.length; j += 1) {
       const b = balls[j];
       if (b.capturedBy != null) continue;
-      const dx = b.x - a.x;
-      const dy = b.y - a.y;
-      const distSq = dx * dx + dy * dy;
-      if (distSq <= 0 || distSq >= minDistSq) continue;
+
+      let dx = b.x - a.x;
+      let dy = b.y - a.y;
+      let distSq = dx * dx + dy * dy;
+      if (distSq >= diameterSq) continue;
+
+      // Perfectly coincident centers still need a usable collision normal.
+      if (distSq < 0.000001) {
+        const angle = ((a.id * 37 + b.id * 71) % 360) * Math.PI / 180;
+        dx = Math.cos(angle) * 0.001;
+        dy = Math.sin(angle) * 0.001;
+        distSq = dx * dx + dy * dy;
+      }
+
       const dist = Math.sqrt(distSq);
       const nx = dx / dist;
       const ny = dy / dist;
-      const overlap = minDist - dist;
-      a.x -= nx * overlap * 0.5;
-      a.y -= ny * overlap * 0.5;
-      b.x += nx * overlap * 0.5;
-      b.y += ny * overlap * 0.5;
-      const rvx = b.vx - a.vx;
-      const rvy = b.vy - a.vy;
-      const normalVelocity = rvx * nx + rvy * ny;
-      if (normalVelocity > 0) continue;
-      const impulse = -(1.82 * normalVelocity) / 2;
-      a.vx -= impulse * nx;
-      a.vy -= impulse * ny;
-      b.vx += impulse * nx;
-      b.vy += impulse * ny;
+      const overlap = diameter - dist;
+
+      // Positional correction prevents balls from remaining interpenetrated and
+      // repeatedly receiving fake impulses on following frames.
+      const correction = Math.max(0, overlap - 0.01) * 0.5;
+      a.x -= nx * correction;
+      a.y -= ny * correction;
+      b.x += nx * correction;
+      b.y += ny * correction;
+
+      const relativeVx = b.vx - a.vx;
+      const relativeVy = b.vy - a.vy;
+      const closingSpeed = relativeVx * nx + relativeVy * ny;
+      if (closingSpeed >= 0) continue;
+
+      // Equal-mass 2D impulse. Tangential velocity is preserved while the normal
+      // component is exchanged, which makes glancing collisions actually glance.
+      const impulse = -(1 + CHOMP_RULES.ballRestitution) * closingSpeed / 2;
+      const impulseX = impulse * nx;
+      const impulseY = impulse * ny;
+      a.vx -= impulseX;
+      a.vy -= impulseY;
+      b.vx += impulseX;
+      b.vy += impulseY;
+      capVelocity(a);
+      capVelocity(b);
+      collisions += 1;
     }
+  }
+  return collisions;
+}
+
+export function resolveChomperBallCollisions(round) {
+  let hits = 0;
+  const ballRadius = CHOMP_RULES.ballRadius;
+
+  round.chompers.forEach((chomper, index) => {
+    const extension = extensionFor(chomper);
+    if (extension <= 0.08 || chomper.phase === "idle") return;
+
+    const pose = chomperPose(index, extension);
+    const headRadius = 45;
+    const combined = headRadius + ballRadius;
+    const combinedSq = combined * combined;
+    const launchSpeed = chomper.phase === "launch" ? 155 : chomper.phase === "retract" ? 70 : 35;
+    const travelX = Math.cos(pose.angle);
+    const travelY = Math.sin(pose.angle);
+
+    for (const ball of round.balls) {
+      if (ball.capturedBy != null) continue;
+      let dx = ball.x - pose.x;
+      let dy = ball.y - pose.y;
+      let distSq = dx * dx + dy * dy;
+      if (distSq >= combinedSq) continue;
+      if (distSq < 0.000001) {
+        dx = travelX;
+        dy = travelY;
+        distSq = 1;
+      }
+
+      const dist = Math.sqrt(distSq);
+      const nx = dx / dist;
+      const ny = dy / dist;
+      const overlap = combined - dist;
+      ball.x += nx * (overlap + 0.5);
+      ball.y += ny * (overlap + 0.5);
+
+      // The moving monster head transfers momentum to whatever it fails to eat.
+      // A small lateral component makes pileups explode instead of forming lanes.
+      const side = ((ball.id + index) % 2 === 0 ? 1 : -1);
+      ball.vx += nx * launchSpeed + travelX * 48 - travelY * side * 24;
+      ball.vy += ny * launchSpeed + travelY * 48 + travelX * side * 24;
+      capVelocity(ball);
+      hits += 1;
+    }
+  });
+
+  return hits;
+}
+
+function rattleTable(round, random) {
+  const center = CHOMP_RULES.arenaSize / 2;
+  for (const ball of round.balls) {
+    if (ball.capturedBy != null) continue;
+    const speed = Math.hypot(ball.vx, ball.vy);
+    const angle = random() * Math.PI * 2;
+    const kick = speed < 80 ? randomBetween(random, 24, 42) : randomBetween(random, 7, 18);
+    ball.vx += Math.cos(angle) * kick;
+    ball.vy += Math.sin(angle) * kick;
+
+    // Balls living near the rim get a gentle inward bias during a table rattle.
+    const dx = center - ball.x;
+    const dy = center - ball.y;
+    const distance = Math.hypot(dx, dy) || 1;
+    if (distance > 225) {
+      ball.vx += (dx / distance) * 16;
+      ball.vy += (dy / distance) * 16;
+    }
+    capVelocity(ball);
   }
 }
 
@@ -235,10 +355,24 @@ export function stepRound(round, dt, random = Math.random) {
   if (!round || round.finished) return round;
   const safeDt = clamp(dt, 0, 0.033);
   round.elapsed += safeDt;
-  for (const ball of round.balls) stepBall(ball, safeDt);
-  resolveBallCollisions(round.balls);
+  round.rattleClock = Number.isFinite(round.rattleClock) ? round.rattleClock - safeDt : 0;
   updateBots(round, safeDt, random);
-  updateChompAnimations(round, safeDt);
+
+  // Sub-step at roughly 120 Hz so fast balls do not tunnel through one another.
+  const substeps = Math.max(1, Math.ceil(safeDt / (1 / 120)));
+  const subDt = safeDt / substeps;
+  for (let step = 0; step < substeps; step += 1) {
+    updateChompAnimations(round, subDt);
+    for (const ball of round.balls) stepBall(ball, subDt, random);
+    resolveBallCollisions(round.balls);
+    resolveChomperBallCollisions(round);
+  }
+
+  if (round.rattleClock <= 0) {
+    rattleTable(round, random);
+    round.rattleClock = randomBetween(random, 0.65, 1.05);
+  }
+
   round.flash = Math.max(0, round.flash - safeDt * 4.5);
   const remaining = round.balls.filter((ball) => ball.capturedBy == null).length;
   if (round.elapsed >= CHOMP_RULES.roundSeconds || remaining === 0) round.finished = true;
