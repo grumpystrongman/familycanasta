@@ -4,11 +4,28 @@ function cellIndex(row, column) {
   return row * CONNECT4_RULES.columns + column;
 }
 
+export function normalizeConnect4Board(board) {
+  const size = CONNECT4_RULES.rows * CONNECT4_RULES.columns;
+  const dense = Array(size).fill(null);
+  if (Array.isArray(board)) {
+    for (let index = 0; index < size; index += 1) dense[index] = board[index] ?? null;
+    return dense;
+  }
+  if (board && typeof board === "object") {
+    for (const [key, value] of Object.entries(board)) {
+      const index = Number(key);
+      if (Number.isInteger(index) && index >= 0 && index < size) dense[index] = value ?? null;
+    }
+  }
+  return dense;
+}
+
 function winningLine(board, uid) {
+  const denseBoard = normalizeConnect4Board(board);
   const directions = [[0, 1], [1, 0], [1, 1], [1, -1]];
   for (let row = 0; row < CONNECT4_RULES.rows; row += 1) {
     for (let column = 0; column < CONNECT4_RULES.columns; column += 1) {
-      if (board[cellIndex(row, column)] !== uid) continue;
+      if (denseBoard[cellIndex(row, column)] !== uid) continue;
       for (const [dr, dc] of directions) {
         const cells = [];
         for (let step = 0; step < 4; step += 1) {
@@ -16,7 +33,7 @@ function winningLine(board, uid) {
           const nextColumn = column + dc * step;
           if (nextRow < 0 || nextRow >= CONNECT4_RULES.rows || nextColumn < 0 || nextColumn >= CONNECT4_RULES.columns) break;
           const index = cellIndex(nextRow, nextColumn);
-          if (board[index] !== uid) break;
+          if (denseBoard[index] !== uid) break;
           cells.push(index);
         }
         if (cells.length === 4) return cells;
@@ -27,15 +44,17 @@ function winningLine(board, uid) {
 }
 
 export function availableConnect4Columns(board) {
+  const denseBoard = normalizeConnect4Board(board);
   return Array.from({ length: CONNECT4_RULES.columns }, (_, column) => column)
-    .filter((column) => board[cellIndex(0, column)] == null);
+    .filter((column) => denseBoard[cellIndex(0, column)] == null);
 }
 
 function dropIntoBoard(board, column, uid) {
+  const denseBoard = normalizeConnect4Board(board);
   for (let row = CONNECT4_RULES.rows - 1; row >= 0; row -= 1) {
     const index = cellIndex(row, column);
-    if (board[index] == null) {
-      const next = [...board];
+    if (denseBoard[index] == null) {
+      const next = [...denseBoard];
       next[index] = uid;
       return { board: next, index };
     }
@@ -65,7 +84,7 @@ export function reduceConnect4(state, actorUid, action, members) {
   const column = Number(action.column);
   if (!Number.isInteger(column) || column < 0 || column >= CONNECT4_RULES.columns) throw new Error("Choose a valid column.");
 
-  const dropped = dropIntoBoard(state.board || [], column, actorUid);
+  const dropped = dropIntoBoard(state.board, column, actorUid);
   const line = winningLine(dropped.board, actorUid);
   if (line.length) {
     return {
@@ -114,13 +133,14 @@ export function chooseConnect4RobotMove(state, members) {
   if (state?.phase !== "playing") return null;
   const current = members[Number(state.currentPlayerIndex || 0)];
   if (!current?.isRobot) return null;
-  const options = availableConnect4Columns(state.board || []);
+  const board = normalizeConnect4Board(state.board);
+  const options = availableConnect4Columns(board);
   if (!options.length) return null;
   const opponent = members.find((member) => member.uid !== current.uid);
-  const winning = options.find((column) => wouldWin(state.board, column, current.uid));
+  const winning = options.find((column) => wouldWin(board, column, current.uid));
   if (winning != null) return { uid: current.uid, action: { type: "drop", column: winning } };
-  const block = opponent ? options.find((column) => wouldWin(state.board, column, opponent.uid)) : null;
+  const block = opponent ? options.find((column) => wouldWin(board, column, opponent.uid)) : null;
   const priorities = [3, 2, 4, 1, 5, 0, 6];
   const column = block ?? priorities.find((candidate) => options.includes(candidate)) ?? options[0];
-  return { uid: current.uid, action: { type: "drop", column }, key: `${state.board.filter(Boolean).length}:${current.uid}:${column}` };
+  return { uid: current.uid, action: { type: "drop", column }, key: `${board.filter(Boolean).length}:${current.uid}:${column}` };
 }
