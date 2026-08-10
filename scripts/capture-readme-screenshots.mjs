@@ -65,6 +65,11 @@ async function captureTabletopEntry(gameId, name) {
   await capture(name, ".game-start-panel");
 }
 
+async function capturePartyEntry(gameId, name) {
+  await open(`/?game=${gameId}`, ".party-entry-card");
+  await capture(name, ".party-entry-card");
+}
+
 async function captureChompageddon() {
   await open("/?game=chompageddon", ".chomp-launchpad");
   await capture("chompageddon-entry", ".chompageddon-page");
@@ -80,6 +85,9 @@ try {
   await captureHearts();
   await captureSpades();
   await captureRummy();
+  await capturePartyEntry("punchline", "punchline-entry");
+  await capturePartyEntry("lastonealive", "last-one-alive-entry");
+  await capturePartyEntry("doodlealibi", "doodle-alibi-entry");
   await captureTabletopEntry("hnefatafl", "hnefatafl-entry");
   await captureTabletopEntry("connect4", "connect4-entry");
   await captureTabletopEntry("battleship", "battleship-entry");
