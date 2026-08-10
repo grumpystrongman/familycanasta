@@ -50,8 +50,10 @@ export default function usePartyRoom(definition) {
     ensureAnonymousAuth().then(setUser).catch((event) => setError(event.message));
   }, []);
 
+  // Existing Firebase room rules require membership. On refresh, wait for
+  // anonymous auth to restore the same uid before attaching the room listener.
   useEffect(() => {
-    if (!roomCode) return undefined;
+    if (!roomCode || !user) return undefined;
     return watchPartyRoom(roomCode, (nextRoom) => {
       setRoom(nextRoom);
       if (!nextRoom) {
@@ -60,7 +62,7 @@ export default function usePartyRoom(definition) {
         setMode(deepLinkRoom ? "join" : "choose");
       }
     });
-  }, [roomCode, definition.id, deepLinkRoom]);
+  }, [roomCode, user?.uid, definition.id, deepLinkRoom]);
 
   const players = useMemo(() => partyPlayers(room), [room]);
   const me = user ? room?.members?.[user.uid] || null : null;
