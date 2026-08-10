@@ -21,30 +21,16 @@ function dealRound(members, roundNumber, previous = {}, random = Math.random) {
   }
   const deck = shuffleCards(createStandardDeck(`spoons-${roundNumber}`), random);
   const hands = Object.fromEntries(members.map((member) => [member.uid, []]));
-  for (let cardIndex = 0; cardIndex < 4; cardIndex += 1) {
-    active.forEach((member) => hands[member.uid].push(deck.shift()));
-  }
+  for (let cardIndex = 0; cardIndex < 4; cardIndex += 1) active.forEach((member) => hands[member.uid].push(deck.shift()));
   active.forEach((member) => { hands[member.uid] = sortStandardHand(hands[member.uid]); });
   const dealerOffset = previous.dealerOffset == null ? 0 : (Number(previous.dealerOffset) + 1) % active.length;
   const flowOrder = [...active.slice(dealerOffset), ...active.slice(0, dealerOffset)].map((member) => member.uid);
   const incomingCard = deck.shift();
   return {
-    phase: "passing",
-    roundNumber,
-    hands,
-    drawPile: deck,
-    trash: [],
-    flowOrder,
-    passPosition: 0,
-    currentPlayerIndex: members.findIndex((member) => member.uid === flowOrder[0]),
-    incomingCard,
-    spoonsRemaining: Math.max(1, active.length - 1),
-    grabbed: {},
-    letters: { ...(previous.letters || {}) },
-    eliminated,
-    dealerOffset,
-    winnerUid: null,
-    roundLoserUid: null,
+    phase: "passing", roundNumber, hands, drawPile: deck, trash: [], flowOrder, passPosition: 0,
+    currentPlayerIndex: members.findIndex((member) => member.uid === flowOrder[0]), incomingCard,
+    spoonsRemaining: Math.max(1, active.length - 1), grabbed: {}, letters: { ...(previous.letters || {}) }, eliminated,
+    dealerOffset, winnerUid: null, roundLoserUid: null,
     message: `${members.find((member) => member.uid === flowOrder[0])?.nickname} chooses a card to pass.`,
   };
 }
@@ -57,60 +43,6 @@ export function createSpoonsGame(members, rules = {}, random = Math.random) {
 export function hasFourOfAKind(cards) {
   if (!cards || cards.length !== 4) return false;
   return cards.every((card) => card.rank === cards[0].rank);
-}
-
-function passCard(state, actorUid, cardId, members, random = Math.random) {
-  if (state.phase !== "passing") throw new Error("Cards are not being passed right now.");
-  const currentUid = state.flowOrder?.[Number(state.passPosition || 0)];
-  if (currentUid !== actorUid) throw new Error("Wait for the card to reach you.");
-  const hand = [...(state.hands?.[actorUid] || [])];
-  const incoming = state.incomingCard;
-  if (!incoming) throw new Error("No incoming card is available.");
-  const five = [...hand, incoming];
-  const chosen = five.find((card) => card.id === cardId);
-  if (!chosen) throw new Error("Choose one of your five available cards to pass.");
-  const kept = five.filter((card) => card.id !== cardId);
-  if (kept.length !== 4) throw new Error("You must keep exactly four cards.");
-  const hands = { ...(state.hands || {}), [actorUid]: sortStandardHand(kept) };
-
-  if (hasFourOfAKind(kept)) {
-    return {
-      ...state,
-      hands,
-      phase: "grabbing",
-      triggerUid: actorUid,
-      message: `${members.find((member) => member.uid === actorUid)?.nickname} made four of a kind — grab a spoon!`,
-    };
-  }
-
-  const nextPosition = Number(state.passPosition || 0) + 1;
-  if (nextPosition < state.flowOrder.length) {
-    const nextUid = state.flowOrder[nextPosition];
-    return {
-      ...state,
-      hands,
-      incomingCard: chosen,
-      passPosition: nextPosition,
-      currentPlayerIndex: members.findIndex((member) => member.uid === nextUid),
-      message: `${members.find((member) => member.uid === nextUid)?.nickname} chooses a card to pass.`,
-    };
-  }
-
-  let drawPile = [...(state.drawPile || [])];
-  let trash = [...(state.trash || []), chosen];
-  ({ drawPile, trash } = replenish(drawPile, trash, random));
-  const nextIncoming = drawPile.shift();
-  const firstUid = state.flowOrder[0];
-  return {
-    ...state,
-    hands,
-    drawPile,
-    trash,
-    incomingCard: nextIncoming,
-    passPosition: 0,
-    currentPlayerIndex: members.findIndex((member) => member.uid === firstUid),
-    message: `${members.find((member) => member.uid === firstUid)?.nickname} starts the next pass.`,
-  };
 }
 
 function grabSpoon(state, actorUid, members) {
@@ -129,10 +61,41 @@ function grabSpoon(state, actorUid, members) {
   const eliminated = { ...(state.eliminated || {}) };
   if (letters[loser.uid] >= Number(state.lettersToLose || SPOONS_RULES.lettersToLose)) eliminated[loser.uid] = true;
   const survivors = activeMembers(members, eliminated);
-  if (survivors.length === 1) {
-    return { ...state, grabbed, spoonsRemaining: 0, letters, eliminated, phase: "game-over", winnerUid: survivors[0].uid, roundLoserUid: loser.uid, message: `${survivors[0].nickname} is the last player standing and wins Spoons!` };
-  }
+  if (survivors.length === 1) return { ...state, grabbed, spoonsRemaining: 0, letters, eliminated, phase: "game-over", winnerUid: survivors[0].uid, roundLoserUid: loser.uid, message: `${survivors[0].nickname} is the last player standing and wins Spoons!` };
   return { ...state, grabbed, spoonsRemaining: 0, letters, eliminated, phase: "round-end", roundLoserUid: loser.uid, message: `${loser.nickname} missed a spoon and gets a letter.` };
+}
+
+function passCard(state, actorUid, cardId, members, random = Math.random) {
+  if (state.phase !== "passing") throw new Error("Cards are not being passed right now.");
+  const currentUid = state.flowOrder?.[Number(state.passPosition || 0)];
+  if (currentUid !== actorUid) throw new Error("Wait for the card to reach you.");
+  const hand = [...(state.hands?.[actorUid] || [])];
+  const incoming = state.incomingCard;
+  if (!incoming) throw new Error("No incoming card is available.");
+  const five = [...hand, incoming];
+  const chosen = five.find((card) => card.id === cardId);
+  if (!chosen) throw new Error("Choose one of your five available cards to pass.");
+  const kept = five.filter((card) => card.id !== cardId);
+  if (kept.length !== 4) throw new Error("You must keep exactly four cards.");
+  const hands = { ...(state.hands || {}), [actorUid]: sortStandardHand(kept) };
+
+  if (hasFourOfAKind(kept)) {
+    const started = { ...state, hands, phase: "grabbing", triggerUid: actorUid, message: `${members.find((member) => member.uid === actorUid)?.nickname} made four of a kind and takes the first spoon!` };
+    return grabSpoon(started, actorUid, members);
+  }
+
+  const nextPosition = Number(state.passPosition || 0) + 1;
+  if (nextPosition < state.flowOrder.length) {
+    const nextUid = state.flowOrder[nextPosition];
+    return { ...state, hands, incomingCard: chosen, passPosition: nextPosition, currentPlayerIndex: members.findIndex((member) => member.uid === nextUid), message: `${members.find((member) => member.uid === nextUid)?.nickname} chooses a card to pass.` };
+  }
+
+  let drawPile = [...(state.drawPile || [])];
+  let trash = [...(state.trash || []), chosen];
+  ({ drawPile, trash } = replenish(drawPile, trash, random));
+  const nextIncoming = drawPile.shift();
+  const firstUid = state.flowOrder[0];
+  return { ...state, hands, drawPile, trash, incomingCard: nextIncoming, passPosition: 0, currentPlayerIndex: members.findIndex((member) => member.uid === firstUid), message: `${members.find((member) => member.uid === firstUid)?.nickname} starts the next pass.` };
 }
 
 export function reduceSpoons(state, actorUid, action, members, rules = {}) {
