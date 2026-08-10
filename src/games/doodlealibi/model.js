@@ -36,6 +36,7 @@ function caseState(players, round, scores, usedCases = []) {
     round,
     case: selected,
     suspectUids,
+    duelMode: players.length === 2,
     scores,
     usedCases: [...usedCases, selected.id],
     drawings: {},
@@ -65,10 +66,36 @@ function normalizeStrokes(strokes) {
 
 function allDrawn(state, players, key = "drawings") { return players.every((p) => state[key]?.[p.uid]); }
 
-function scoreCase(state, players) {
+function scoreCase(state, players, hostUid) {
   const scores = structuredClone(state.scores);
   const suspects = new Set(state.suspectUids);
   const voteCounts = Object.fromEntries(state.suspectUids.map((uid) => [uid, 0]));
+
+  if (state.duelMode) {
+    const targetUid = state.votes?.[hostUid] || null;
+    const suspectUid = state.suspectUids[0];
+    const innocent = players.find((p) => !suspects.has(p.uid));
+    const judgeCorrect = Boolean(targetUid && suspects.has(targetUid));
+    if (judgeCorrect && innocent) {
+      scores[innocent.uid].score += 200;
+      scores[innocent.uid].correctVotes += 1;
+      voteCounts[suspectUid] = 1;
+    } else if (suspectUid) {
+      scores[suspectUid].score += 200;
+      scores[suspectUid].escapes += 1;
+    }
+    if (state.suspectGuesses?.[suspectUid] === state.case.common) scores[suspectUid].score += 250;
+    return {
+      ...state,
+      phase: "result",
+      scores,
+      voteCounts,
+      duelJudgeTarget: targetUid,
+      duelJudgeCorrect: judgeCorrect,
+      deadline: nowPlus(5200),
+    };
+  }
+
   Object.entries(state.votes || {}).forEach(([voterUid, targetUid]) => {
     if (suspects.has(targetUid)) {
       scores[voterUid].score += 200;
@@ -101,7 +128,8 @@ export function reduceDoodleAlibiState(state, actor, action, players, _settings,
   if (action.type === "voteSuspect") {
     if (state.phase !== "vote") throw new Error("Voting is closed.");
     if (state.votes?.[actor.uid]) throw new Error("Your vote is locked.");
-    if (action.targetUid === actor.uid) throw new Error("You cannot accuse your own drawing.");
+    if (state.duelMode && actor.uid !== hostUid) throw new Error("In 2-player Detective Mode, the TV host makes the accusation.");
+    if (!state.duelMode && action.targetUid === actor.uid) throw new Error("You cannot accuse your own drawing.");
     if (!players.some((p) => p.uid === action.targetUid)) throw new Error("That drawing is not available.");
     return { ...state, votes: { ...state.votes, [actor.uid]: action.targetUid } };
   }
@@ -129,14 +157,14 @@ export function reduceDoodleAlibiState(state, actor, action, players, _settings,
     }
     if (state.phase === "gallery") return { ...state, phase: "vote", votes: {}, deadline: nowPlus(26000) };
     if (state.phase === "vote") {
-      const all = players.every((p) => state.votes?.[p.uid]);
-      if (!all && Date.now() < state.deadline && !action.force) throw new Error("Detectives are still voting.");
+      const all = state.duelMode ? Boolean(state.votes?.[hostUid]) : players.every((p) => state.votes?.[p.uid]);
+      if (!all && Date.now() < state.deadline && !action.force) throw new Error(state.duelMode ? "The TV detective is still deciding." : "Detectives are still voting.");
       return { ...state, phase: "suspectGuess", suspectGuesses: {}, deadline: nowPlus(14000) };
     }
     if (state.phase === "suspectGuess") {
       const all = state.suspectUids.every((uid) => state.suspectGuesses?.[uid]);
       if (!all && Date.now() < state.deadline && !action.force) throw new Error("Suspects are still guessing the common prompt.");
-      return scoreCase(state, players);
+      return scoreCase(state, players, hostUid);
     }
     if (state.phase === "result") {
       if (state.round >= 4) return { ...state, phase: "final", deadline: null };
@@ -153,7 +181,7 @@ export const doodleAlibiDefinition = {
   name: "Doodle Alibi",
   eyebrow: "Draw. Accuse. Get away with it.",
   description: "A phone-drawing social deduction game where one or two artists receive a subtly different assignment.",
-  minPlayers: 4,
+  minPlayers: 2,
   maxPlayers: 12,
   introVideo: "/media/doodle-alibi-intro.mp4",
   music: "doodlealibi",
