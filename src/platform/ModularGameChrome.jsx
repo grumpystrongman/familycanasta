@@ -26,12 +26,14 @@ export function GameHome({
     joinRoom,
     error,
     busy,
+    minimumPlayers = 2,
   } = controller;
 
+  const robotCount = Math.max(1, Number(minimumPlayers) - 1);
   const quickChoices = quickPlayChoices?.length ? quickPlayChoices : [{
     icon: "🤖",
-    label: "Play vs robot",
-    description: "Skip the lobby and start immediately.",
+    label: robotCount === 1 ? "Play vs robot" : `Play with ${robotCount} robots`,
+    description: robotCount === 1 ? "Skip the lobby and start immediately." : "Fill the table with robot players and start immediately.",
     rules: {},
   }];
   const unavailable = !user || busy || !firebaseReady;
@@ -49,7 +51,7 @@ export function GameHome({
 
         <div className="game-start-intro">
           <p className="game-summary">{summary}</p>
-          <div className="game-start-badges"><span>{maxPlayers === 2 ? "2 players" : `2–${maxPlayers} players`}</span><span>Robot play</span><span>Online rooms</span></div>
+          <div className="game-start-badges"><span>{maxPlayers === 2 ? "2 players" : `${minimumPlayers}–${maxPlayers} players`}</span><span>Robot play</span><span>Online rooms</span></div>
         </div>
 
         {firebaseMissing.length > 0 ? <p className="modular-error">Firebase is not configured for online rooms.</p> : null}
