@@ -7,7 +7,7 @@ function nextActiveIndex(state, members, startIndex) {
   for (let offset = 1; offset <= members.length; offset += 1) {
     const index = (startIndex + offset) % members.length;
     const uid = members[index].uid;
-    if (state.inHand?.[uid] && !state.folded?.[uid] && !state.allIn?.[uid]) return index;
+    if (state.inHand?.[uid] && !state.folded?.[uid]) return index;
   }
   return startIndex;
 }
@@ -53,7 +53,7 @@ export function comparePokerHands(left, right) {
 }
 
 function beginBetting(state, phase, members) {
-  const base = { ...state, phase, currentBet: 0, bettingContrib: Object.fromEntries(members.map((member) => [member.uid, 0])), acted: {}, raises: 0, allIn: {} };
+  const base = { ...state, phase, currentBet: 0, bettingContrib: Object.fromEntries(members.map((member) => [member.uid, 0])), acted: {}, raises: 0 };
   const first = nextActiveIndex(base, members, Number(state.dealerIndex || 0));
   return { ...base, currentPlayerIndex: first, message: `${members[first].nickname} acts first.` };
 }
@@ -86,9 +86,9 @@ export function createPokerGame(members, rules = {}, random = Math.random) {
 function payment(balances, uid, amount) {
   const next = { ...balances };
   const available = Math.max(0, Number(next[uid] || 0));
-  const paid = Math.min(available, Math.max(0, amount));
-  next[uid] = available - paid;
-  return { balances: next, paid, empty: next[uid] === 0 };
+  if (available < amount) throw new Error("Not enough points to match that bet. Fold instead.");
+  next[uid] = available - amount;
+  return { balances: next, paid: amount };
 }
 
 function awardUncontested(state, members) {
@@ -100,7 +100,7 @@ function awardUncontested(state, members) {
 }
 
 function bettingComplete(state, members) {
-  return activeUids(state, members).every((uid) => state.allIn?.[uid] || (state.acted?.[uid] && Number(state.bettingContrib?.[uid] || 0) === Number(state.currentBet || 0)));
+  return activeUids(state, members).every((uid) => state.acted?.[uid] && Number(state.bettingContrib?.[uid] || 0) === Number(state.currentBet || 0));
 }
 
 function startDraw(state, members) {
@@ -130,7 +130,7 @@ function finishBetting(state, members) { return state.phase === "betting-1" ? st
 function bet(state, actorUid, action, members) {
   if (!["betting-1","betting-2"].includes(state.phase)) throw new Error("Betting is closed.");
   if (members[Number(state.currentPlayerIndex || 0)]?.uid !== actorUid) throw new Error("It is not your turn to act.");
-  const folded = { ...(state.folded || {}) }; const acted = { ...(state.acted || {}) }; const bettingContrib = { ...(state.bettingContrib || {}) }; const allIn = { ...(state.allIn || {}) };
+  const folded = { ...(state.folded || {}) }; const acted = { ...(state.acted || {}) }; const bettingContrib = { ...(state.bettingContrib || {}) };
   let balances = { ...(state.balances || {}) }; let pot = Number(state.pot || 0); let currentBet = Number(state.currentBet || 0); let raises = Number(state.raises || 0);
 
   if (action.move === "fold") { folded[actorUid] = true; acted[actorUid] = true; }
@@ -138,16 +138,14 @@ function bet(state, actorUid, action, members) {
     if (raises >= Number(state.maxRaises || POKER_RULES.maxRaises)) throw new Error("The raise limit has been reached for this betting round.");
     const increment = state.phase === "betting-1" ? POKER_RULES.firstRaise : POKER_RULES.secondRaise;
     const target = currentBet + increment; const needed = target - Number(bettingContrib[actorUid] || 0);
-    if (Number(balances[actorUid] || 0) < needed) throw new Error("Not enough points to raise. Call or fold instead.");
     const paid = payment(balances, actorUid, needed); balances = paid.balances; pot += paid.paid; bettingContrib[actorUid] = target; currentBet = target; raises += 1;
-    Object.keys(acted).forEach((uid) => { acted[uid] = false; }); acted[actorUid] = true; if (paid.empty) allIn[actorUid] = true;
+    Object.keys(acted).forEach((uid) => { acted[uid] = false; }); acted[actorUid] = true;
   } else {
     const needed = Math.max(0, currentBet - Number(bettingContrib[actorUid] || 0));
     const paid = payment(balances, actorUid, needed); balances = paid.balances; pot += paid.paid; bettingContrib[actorUid] = Number(bettingContrib[actorUid] || 0) + paid.paid; acted[actorUid] = true;
-    if (paid.empty && needed > 0) allIn[actorUid] = true;
   }
 
-  let next = { ...state, folded, acted, bettingContrib, allIn, balances, pot, currentBet, raises };
+  let next = { ...state, folded, acted, bettingContrib, balances, pot, currentBet, raises };
   const uncontested = awardUncontested(next, members); if (uncontested) return uncontested;
   if (bettingComplete(next, members)) return finishBetting(next, members);
   const nextIndex = nextActiveIndex(next, members, Number(state.currentPlayerIndex || 0));
@@ -195,7 +193,10 @@ export function choosePokerRobotMove(state, members) {
   if (["betting-1","betting-2"].includes(state.phase)) {
     const active = members[Number(state.currentPlayerIndex || 0)]; if (!active?.isRobot) return null;
     const hand = evaluatePokerHand(state.hands?.[active.uid] || []); const owed = Number(state.currentBet || 0) - Number(state.bettingContrib?.[active.uid] || 0);
-    let move = "call"; if (owed > 0 && hand.category === 0 && Number(state.balances?.[active.uid] || 0) > 5) move = "fold"; else if (hand.category >= 2 && Number(state.raises || 0) < Number(state.maxRaises || POKER_RULES.maxRaises)) move = "raise";
+    let move = "call";
+    if (owed > Number(state.balances?.[active.uid] || 0)) move = "fold";
+    else if (owed > 0 && hand.category === 0 && Number(state.balances?.[active.uid] || 0) > 5) move = "fold";
+    else if (hand.category >= 2 && Number(state.raises || 0) < Number(state.maxRaises || POKER_RULES.maxRaises) && Number(state.balances?.[active.uid] || 0) >= owed + (state.phase === "betting-1" ? POKER_RULES.firstRaise : POKER_RULES.secondRaise)) move = "raise";
     return { uid: active.uid, action: { type: "bet", move }, key: `bet:${state.roundNumber}:${state.phase}:${active.uid}:${state.currentBet}:${state.raises}` };
   }
   if (state.phase === "drawing") {
