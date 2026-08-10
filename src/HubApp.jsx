@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import GameGuidance from "./platform/GameGuidance";
+import GameLearningCenter from "./platform/GameLearningCenter";
 import LayoutModeControl from "./platform/LayoutModeControl";
 
 const GAME_CATALOG = [
@@ -39,9 +40,55 @@ const GAME_CATALOG = [
     players: "2–6 players",
     status: "Planned",
   },
+  {
+    id: "ers",
+    name: "Egyptian Rat Screw",
+    icon: "⚡",
+    eyebrow: "Flip and react",
+    description: "Survive face-card challenges and be first to slap doubles, sandwiches, tens, and more.",
+    players: "2–6 players",
+    status: "Planned",
+  },
+  {
+    id: "spoons",
+    name: "Spoons",
+    icon: "🥄",
+    eyebrow: "Four of a kind scramble",
+    description: "Pass fast, collect four of a kind, then grab a spoon before somebody else does.",
+    players: "3–6 players",
+    status: "Planned",
+  },
+  {
+    id: "indians",
+    name: "Indians",
+    icon: "♠",
+    eyebrow: "Progressive Spades",
+    description: "Play partnership Spades while another complete low rank disappears every hand.",
+    players: "4 players",
+    status: "Planned",
+  },
+  {
+    id: "poker",
+    name: "Five-Card Draw",
+    icon: "★",
+    eyebrow: "Family poker points",
+    description: "Classic draw poker with game points only: bet, draw, bluff, and compare hands.",
+    players: "2–6 players",
+    status: "Planned",
+  },
+  {
+    id: "golf",
+    name: "Six Card Golf",
+    icon: "⛳",
+    eyebrow: "Low score wins",
+    description: "Improve a six-card grid across nine holes and cancel matching columns to zero.",
+    players: "2–4 players",
+    status: "Planned",
+  },
 ];
 
 const gameLoaders = import.meta.glob("./games/*/index.jsx");
+const LEGACY_GUIDANCE_GAMES = new Set(["canasta", "hearts", "spades", "rummy"]);
 
 function selectedGameId() {
   return new URLSearchParams(window.location.search).get("game") || "";
@@ -114,7 +161,7 @@ function GameHub() {
 
       <footer className="hub-footer">
         <strong>Family Card Room</strong>
-        <span>Canasta remains isolated from every new game engine.</span>
+        <span>Each game keeps an isolated rules engine, with tutorials available whenever someone needs a refresher.</span>
       </footer>
     </main>
   );
@@ -184,7 +231,8 @@ export default function HubApp() {
   return (
     <>
       <LayoutModeControl gameId={gameId} />
-      <GameGuidance gameId={gameId} />
+      {LEGACY_GUIDANCE_GAMES.has(gameId) ? <GameGuidance gameId={gameId} /> : null}
+      <GameLearningCenter gameId={gameId} />
       <SelectedGame />
     </>
   );
