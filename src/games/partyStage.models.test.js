@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { PUNCHLINE_PROMPTS, createPunchlineGameState } from "./punchline/model.js";
+import { PUNCHLINE_PROMPTS, createPunchlineGameState, punchlineDefinition, reducePunchlineGameState } from "./punchline/model.js";
 import { LAST_ONE_ALIVE_TRIVIA, MICRO_TYPES, createLastOneAliveState } from "./lastonealive/model.js";
 import { DOODLE_CASES, createDoodleAlibiState } from "./doodlealibi/model.js";
 
@@ -18,6 +18,33 @@ test("Punchline ships a full prompt library and balanced opening round", () => {
   assert.equal(state.matchups.length, players.length);
   for (const player of players) assert.equal(state.assignments[player.uid].length, 2);
   for (const matchup of state.matchups) assert.equal(matchup.authors.length, 2);
+});
+
+test("Punchline supports a two-player Duel Mode judged by the TV host", () => {
+  const duelPlayers = players.slice(0, 2);
+  const host = { uid: "tv-host", isHost: true, displayOnly: true };
+  let state = createPunchlineGameState(duelPlayers);
+  assert.equal(punchlineDefinition.minPlayers, 2);
+  assert.equal(state.matchups.length, 2);
+
+  const submissions = {};
+  for (const player of duelPlayers) {
+    submissions[player.uid] = {};
+    for (const promptId of state.assignments[player.uid]) submissions[player.uid][promptId] = `${player.nickname} answer`;
+  }
+  state = { ...state, phase: "vote", submissions, votes: {}, matchupIndex: 0 };
+  const choice = state.matchups[0].authors[0];
+
+  assert.throws(
+    () => reducePunchlineGameState(state, duelPlayers[0], { type: "vote", choice }, duelPlayers, {}, host.uid),
+    /TV host judges/,
+  );
+
+  state = reducePunchlineGameState(state, host, { type: "vote", choice }, duelPlayers, {}, host.uid);
+  assert.equal(state.votes[host.uid], choice);
+  state = reducePunchlineGameState(state, host, { type: "hostAdvance" }, duelPlayers, {}, host.uid);
+  assert.equal(state.phase, "result");
+  assert.equal(state.scores[choice].score, 100);
 });
 
 test("Last One Alive ships a full trivia library and every promised trap", () => {
