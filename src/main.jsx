@@ -42,7 +42,7 @@ function StartupStatus({ title, detail }) {
     <main style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: "24px" }}>
       <section style={{ maxWidth: "760px", padding: "28px", borderRadius: "18px", background: "rgba(255,255,255,0.96)", color: "#14241d", boxShadow: "0 18px 60px rgba(0,0,0,0.28)" }}>
         <h1 style={{ marginTop: 0 }}>{title}</h1>
-        {detail ? <pre style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{detail}</pre> : <p>Starting the family card room.</p>}
+        {detail ? <pre style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{detail}</pre> : <p>Starting the family game room.</p>}
         {detail ? <button type="button" onClick={() => window.location.reload()}>Reload</button> : null}
       </section>
     </main>
@@ -60,12 +60,12 @@ class AppErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, info) {
-    console.error("Family card room render failed.", error, info);
+    console.error("Family game room render failed.", error, info);
   }
 
   render() {
     if (this.state.error) {
-      return <StartupStatus title="The family card room could not start" detail={errorDetail(this.state.error)} />;
+      return <StartupStatus title="The family game room could not start" detail={errorDetail(this.state.error)} />;
     }
     return this.props.children;
   }
@@ -165,7 +165,7 @@ async function startApplication() {
   if (!rootElement) throw new Error("Missing #root element in index.html");
 
   const root = ReactDOM.createRoot(rootElement);
-  root.render(<StartupStatus title="Loading the family card room…" />);
+  root.render(<StartupStatus title="Loading the family game room…" />);
 
   try {
     const module = await import("./HubApp");
@@ -184,8 +184,8 @@ async function startApplication() {
       }, 250);
     }
   } catch (error) {
-    console.error("Family card room startup failed.", error);
-    root.render(<StartupStatus title="The family card room could not start" detail={errorDetail(error)} />);
+    console.error("Family game room startup failed.", error);
+    root.render(<StartupStatus title="The family game room could not start" detail={errorDetail(error)} />);
   }
 }
 
@@ -194,10 +194,10 @@ window.addEventListener("unhandledrejection", (event) => {
 });
 
 startApplication().catch((error) => {
-  console.error("Family card room bootstrap failed.", error);
+  console.error("Family game room bootstrap failed.", error);
   if (rootElement) {
     ReactDOM.createRoot(rootElement).render(
-      <StartupStatus title="The family card room could not start" detail={errorDetail(error)} />,
+      <StartupStatus title="The family game room could not start" detail={errorDetail(error)} />,
     );
   }
 });
