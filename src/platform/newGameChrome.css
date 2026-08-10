@@ -1,0 +1,16 @@
+.game-family-note { margin: 14px 0 22px; padding: 11px 14px; border: 1px solid rgba(228,189,98,.28); border-radius: 12px; color: #efe6c7; background: rgba(228,189,98,.08); line-height: 1.45; }
+.new-game-player-strip { display: grid; grid-template-columns: repeat(auto-fit,minmax(150px,1fr)); gap: 10px; margin: 16px 0; }
+.new-game-player-strip article { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 10px 12px; border: 1px solid rgba(255,255,255,.1); border-radius: 14px; background: rgba(255,255,255,.06); }
+.new-game-player-strip article > span { font-size: 1.55rem; }
+.new-game-player-strip article div { display: grid; min-width: 0; }
+.new-game-player-strip strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.new-game-player-strip small { margin-top: 3px; color: #cbd8d1; line-height: 1.25; }
+.new-game-actions { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin: 16px 0; }
+.new-game-actions button { min-height: 44px; padding: 10px 17px; border: 0; border-radius: 999px; color: #12241c; background: #e4bd62; font: inherit; font-weight: 850; cursor: pointer; }
+.new-game-actions button.secondary { color: #f5f0dc; background: rgba(255,255,255,.12); }
+.new-game-actions button.danger { color: #fff2ef; background: #8b3934; }
+.new-game-actions button:disabled { opacity: .42; cursor: not-allowed; }
+.new-game-status { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin: 12px 0; padding: 12px 14px; border-radius: 13px; background: rgba(255,255,255,.07); }
+.new-game-status strong { color: #f1cc72; }
+.new-game-empty { color: #c6d1cb; text-align: center; line-height: 1.5; }
+@media (max-width:680px) { .new-game-player-strip { grid-template-columns: repeat(2,minmax(0,1fr)); } }
