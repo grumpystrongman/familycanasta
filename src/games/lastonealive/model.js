@@ -90,7 +90,7 @@ function makeMicrogame(type, wrongUids) {
   if (type === "deadButton") return { ...base, curse: Math.floor(Math.random() * 6) };
   if (type === "safeDial") return { ...base, target: 0.2 + Math.random() * 0.6, width: 0.16 };
   if (type === "oddOneOut") return { ...base, odd: Math.floor(Math.random() * 9), symbols: ["▲", "▲", "▲", "▲", "▲", "▲", "▲", "▲", "●"] };
-  if (type === "majorityGrave") return base;
+  if (type === "majorityGrave") return wrongUids.length === 1 ? { ...base, soloSafeChoice: Math.random() < 0.5 ? "A" : "B" } : base;
   if (type === "memoryMorgue") {
     const icons = ["🕯️", "🗝️", "🦇", "🕸️", "🧪", "🪦", "🦴", "🔔"];
     return { ...base, icons, missing: Math.floor(Math.random() * icons.length) };
@@ -118,11 +118,16 @@ function resolveMicrogame(state) {
   else if (state.microType === "safeDial") losers = state.wrongUids.filter((uid) => Math.abs(Number(answers[uid]?.value ?? -9) - state.target) > state.width / 2);
   else if (state.microType === "oddOneOut") losers = state.wrongUids.filter((uid) => Number(answers[uid]?.choice) !== state.odd);
   else if (state.microType === "majorityGrave") {
-    const a = state.wrongUids.filter((uid) => answers[uid]?.choice === "A").length;
-    const b = state.wrongUids.filter((uid) => answers[uid]?.choice === "B").length;
-    if (a !== b) {
-      const majority = a > b ? "A" : "B";
-      losers = state.wrongUids.filter((uid) => answers[uid]?.choice === majority || !answers[uid]);
+    if (state.wrongUids.length === 1) {
+      const uid = state.wrongUids[0];
+      if (!answers[uid] || answers[uid]?.choice !== state.soloSafeChoice) losers = [uid];
+    } else {
+      const a = state.wrongUids.filter((uid) => answers[uid]?.choice === "A").length;
+      const b = state.wrongUids.filter((uid) => answers[uid]?.choice === "B").length;
+      if (a !== b) {
+        const majority = a > b ? "A" : "B";
+        losers = state.wrongUids.filter((uid) => answers[uid]?.choice === majority || !answers[uid]);
+      }
     }
   } else if (state.microType === "memoryMorgue") losers = state.wrongUids.filter((uid) => Number(answers[uid]?.choice) !== state.missing);
   else losers = state.wrongUids.filter((uid) => Number(answers[uid]?.choice) !== state.safeWire);
@@ -257,7 +262,7 @@ export const lastOneAliveDefinition = {
   name: "Last One Alive",
   eyebrow: "Trivia. Traps. Escape.",
   description: "Horror-comedy trivia where wrong answers trigger dangerous little side games and ghosts can still steal the win.",
-  minPlayers: 3,
+  minPlayers: 2,
   maxPlayers: 12,
   introVideo: "/media/last-one-alive-intro.mp4",
   music: "lastonealive",

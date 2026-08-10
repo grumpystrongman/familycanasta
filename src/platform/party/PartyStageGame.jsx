@@ -60,10 +60,18 @@ function ScoreStrip({ definition, state, players }) {
   })}</div>;
 }
 
+function twoPlayerLobbyCopy(definition) {
+  if (definition.id === "punchline") return "DUEL MODE · The TV host judges each head-to-head and the final Crowd Pleaser.";
+  if (definition.id === "doodlealibi") return "DETECTIVE MODE · The TV becomes the neutral detective and accuses the altered drawing.";
+  if (definition.id === "lastonealive") return "DUEL SURVIVAL · Trivia, traps, ghosts, resurrection, and the escape finale all support two players.";
+  return "";
+}
+
 function HostLobby({ table, definition }) {
   const joinUrl = `${window.location.origin}${window.location.pathname}?game=${definition.id}&room=${table.roomCode}`;
   const qr = `https://api.qrserver.com/v1/create-qr-code/?size=280x280&margin=8&data=${encodeURIComponent(joinUrl)}`;
   const readyCount = table.players.filter((p) => p.ready).length;
+  const twoPlayerCopy = table.players.length === 2 ? twoPlayerLobbyCopy(definition) : "";
   useEffect(() => { if (table.players.length) partyAudio.sfx("join"); }, [table.players.length]);
   return <main className={`party-stage party-theme-${definition.id}`}>
     <div className="party-stage-lights" aria-hidden="true" />
@@ -74,6 +82,7 @@ function HostLobby({ table, definition }) {
         {definition.id === "punchline" ? <div className="party-lobby-settings"><label className="party-switch"><input type="checkbox" checked={table.room?.settings?.profanityFilter !== false} onChange={(e) => table.setSettings({ profanityFilter: e.target.checked })} /> Family-friendly filter</label><label>Prompt tone<select value={table.room?.settings?.spice || "cleaner"} onChange={(e) => table.setSettings({ spice: e.target.value })}><option value="cleaner">Cleaner</option><option value="spicier">Spicier PG-13</option></select></label></div> : null}
         <button className="party-primary party-start" type="button" disabled={table.busy || table.players.length < definition.minPlayers || readyCount !== table.players.length} onClick={() => { partyAudio.sfx("go"); table.start(); }}>START THE SHOW</button>
         <p className="party-minimum">{definition.minPlayers}–{definition.maxPlayers} phones · everyone must tap Ready</p>
+        {twoPlayerCopy ? <p className="party-phone-help">{twoPlayerCopy}</p> : null}
       </div>
     </section>
   </main>;
@@ -89,32 +98,46 @@ function StagePanel({ title, kicker, timer, children }) {
 function Progress({ value, total, label }) { const pct = total ? Math.min(100, value / total * 100) : 0; return <div className="party-progress-wrap"><div className="party-progress"><span style={{ width: `${pct}%` }} /></div><b>{value}/{total} {label}</b></div>; }
 function WaitingPhone({ title, text }) { return <main className="party-phone waiting"><div className="party-wait-pulse" /><h1>{title}</h1><p>{text}</p><small>Eyes on the TV</small></main>; }
 
-function PunchlineHost({ state, players }) {
+function PunchlineHost({ state, players, table }) {
   const matchup = state.matchups?.[state.matchupIndex];
   const answers = matchup?.authors?.map((uid) => ({ uid, text: state.submissions?.[uid]?.[matchup.promptId] || "(ran out of time)", player: playerById(players, uid) })) || [];
+  const duelMode = players.length === 2;
   if (state.phase === "answer") {
     const total = players.length * 2;
     const done = Object.values(state.submissions || {}).reduce((sum, perPlayer) => sum + Object.keys(perPlayer || {}).length, 0);
     return <StagePanel title={`ROUND ${state.round}`} kicker="WRITE TWO · KEEP THEM SECRET" timer={state.deadline}><h2 className="party-stage-bigcopy">Phones are hot. Make the room laugh.</h2><Progress value={done} total={total} label="answers locked" /></StagePanel>;
   }
-  if (state.phase === "vote") return <StagePanel title={`ROUND ${state.round} · MATCHUP ${state.matchupIndex + 1}`} kicker="VOTE ON YOUR PHONES" timer={state.deadline}><p className="party-prompt">{state.prompts?.[matchup?.promptId]}</p><div className="party-answer-showdown">{answers.map((a, i) => <article key={a.uid}><span>{String.fromCharCode(65 + i)}</span><strong>{a.text}</strong></article>)}</div><Progress value={submittedCount(state.votes)} total={players.filter((p) => !matchup.authors.includes(p.uid)).length} label="votes locked" /></StagePanel>;
-  if (state.phase === "result") return <StagePanel title="THE ROOM HAS SPOKEN" kicker="POINTS ARE LIVE"><p className="party-prompt small">{state.prompts?.[matchup?.promptId]}</p><div className="party-answer-showdown results">{answers.map((a) => { const votes = state.result?.counts?.[a.uid] || 0; const eligible = state.result?.eligible || 1; const bonus = votes === eligible && eligible > 1 ? 250 : 0; return <article key={a.uid}><div className="party-author">{a.player?.avatar} {a.player?.nickname}</div><strong>{a.text}</strong><div className="party-vote-score">{votes} vote{votes === 1 ? "" : "s"} · +{votes * 100 + bonus}</div></article>; })}</div></StagePanel>;
+  if (state.phase === "vote") {
+    const hostVote = state.votes?.[table.user?.uid];
+    const eligible = duelMode ? 1 : players.filter((p) => !matchup.authors.includes(p.uid)).length;
+    return <StagePanel title={`ROUND ${state.round} · MATCHUP ${state.matchupIndex + 1}`} kicker={duelMode ? "DUEL MODE · TV HOST JUDGES" : "VOTE ON YOUR PHONES"} timer={state.deadline}><p className="party-prompt">{state.prompts?.[matchup?.promptId]}</p><div className="party-answer-showdown">{answers.map((a, i) => <article key={a.uid}><span>{String.fromCharCode(65 + i)}</span><strong>{a.text}</strong></article>)}</div>{duelMode ? <div className="party-answer-phone-grid">{answers.map((a, i) => <button type="button" key={a.uid} disabled={Boolean(hostVote)} onClick={() => { partyAudio.sfx("vote"); table.act({ type: "vote", choice: a.uid }); }}><span>{String.fromCharCode(65 + i)}</span>{hostVote === a.uid ? "✓ PICKED" : `PICK ${String.fromCharCode(65 + i)}`}</button>)}</div> : null}<Progress value={submittedCount(state.votes)} total={eligible} label={duelMode ? "judge decision locked" : "votes locked"} /></StagePanel>;
+  }
+  if (state.phase === "result") return <StagePanel title={duelMode ? "THE JUDGE HAS SPOKEN" : "THE ROOM HAS SPOKEN"} kicker="POINTS ARE LIVE"><p className="party-prompt small">{state.prompts?.[matchup?.promptId]}</p><div className="party-answer-showdown results">{answers.map((a) => { const votes = state.result?.counts?.[a.uid] || 0; const eligible = state.result?.eligible || 1; const bonus = votes === eligible && eligible > 1 ? 250 : 0; return <article key={a.uid}><div className="party-author">{a.player?.avatar} {a.player?.nickname}</div><strong>{a.text}</strong><div className="party-vote-score">{votes} vote{votes === 1 ? "" : "s"} · +{votes * 100 + bonus}</div></article>; })}</div></StagePanel>;
   if (state.phase === "finaleAnswer") return <StagePanel title="FINAL · CROWD PLEASER" kicker="EVERYBODY ANSWERS" timer={state.deadline}><p className="party-prompt">{state.finalePrompt}</p><Progress value={submittedCount(state.submissions)} total={players.length} label="final answers locked" /></StagePanel>;
-  if (state.phase === "finaleVote") return <StagePanel title="RANK YOUR TOP THREE" kicker="300 · 200 · 100 POINTS" timer={state.deadline}><p className="party-prompt small">{state.finalePrompt}</p><div className="party-finale-wall">{Object.values(state.submissions || {}).map((text, i) => <article key={`${text}-${i}`}><span>{i + 1}</span>{text}</article>)}</div><Progress value={submittedCount(state.rankings)} total={players.length} label="rankings locked" /></StagePanel>;
+  if (state.phase === "finaleVote") {
+    const entries = Object.entries(state.submissions || {});
+    if (duelMode) {
+      const locked = state.rankings?.[table.user?.uid]?.[0];
+      return <StagePanel title="TV HOST: PICK THE CROWD PLEASER" kicker="DUEL MODE · FINAL JUDGMENT" timer={state.deadline}><p className="party-prompt small">{state.finalePrompt}</p><div className="party-answer-showdown">{entries.map(([uid, text], i) => <article key={uid}><span>{String.fromCharCode(65 + i)}</span><strong>{text}</strong></article>)}</div><div className="party-answer-phone-grid">{entries.map(([uid], i) => <button type="button" key={uid} disabled={Boolean(locked)} onClick={() => { partyAudio.sfx("vote"); table.act({ type: "rankFinale", ranking: [uid] }); }}><span>{String.fromCharCode(65 + i)}</span>{locked === uid ? "✓ WINNER" : `PICK ${String.fromCharCode(65 + i)}`}</button>)}</div><Progress value={submittedCount(state.rankings)} total={1} label="final decision locked" /></StagePanel>;
+    }
+    return <StagePanel title="RANK YOUR TOP THREE" kicker="300 · 200 · 100 POINTS" timer={state.deadline}><p className="party-prompt small">{state.finalePrompt}</p><div className="party-finale-wall">{entries.map(([, text], i) => <article key={`${text}-${i}`}><span>{i + 1}</span>{text}</article>)}</div><Progress value={submittedCount(state.rankings)} total={players.length} label="rankings locked" /></StagePanel>;
+  }
   return <FinalPodium title="PUNCHLINE CHAMPION" players={players} state={state} definitionId="punchline" extra={state.highlights?.slice().sort((a, b) => b.votes - a.votes)[0]?.answer} />;
 }
 
 function PunchlinePlayer({ state, table }) {
   const uid = table.user.uid;
+  const duelMode = table.players.length === 2;
   if (state.phase === "answer") return <PunchlineAnswerPhone state={state} uid={uid} act={table.act} />;
   if (state.phase === "vote") {
     const matchup = state.matchups[state.matchupIndex];
+    if (duelMode) return <WaitingPhone title="Your answers are on TV" text="Duel Mode: the TV host is judging this matchup." />;
     if (matchup.authors.includes(uid)) return <WaitingPhone title="Your answer is on TV" text="You sit this vote out. Enjoy the chaos." />;
     if (state.votes?.[uid]) return <WaitingPhone title="Vote locked" text="Look up at the TV for the reveal." />;
     return <main className="party-phone game"><p className="party-phone-kicker">VOTE</p><h1>{state.prompts[matchup.promptId]}</h1><Timer deadline={state.deadline} /><div className="party-answer-phone-grid">{matchup.authors.map((authorUid, index) => <button type="button" key={authorUid} onClick={() => { partyAudio.sfx("vote"); table.act({ type: "vote", choice: authorUid }); }}><span>{String.fromCharCode(65 + index)}</span>{state.submissions?.[authorUid]?.[matchup.promptId] || "(ran out of time)"}</button>)}</div></main>;
   }
   if (state.phase === "finaleAnswer") return <FinaleAnswerPhone state={state} table={table} />;
-  if (state.phase === "finaleVote") return <FinaleRankPhone state={state} table={table} />;
+  if (state.phase === "finaleVote") return duelMode ? <WaitingPhone title="Final judgment" text="The TV host is choosing the Crowd Pleaser winner." /> : <FinaleRankPhone state={state} table={table} />;
   if (state.phase === "final") return <PlayerFinal definitionId="punchline" state={state} table={table} />;
   return <WaitingPhone title="Eyes on the TV" text="Results are being revealed." />;
 }
@@ -152,7 +175,11 @@ const MICRO_COPY = {
   cutWire: ["CUT THE WIRE", "One labeled wire is safe. Choose carefully."],
 };
 
-function MicrogameTV({ state, players }) { const [title, copy] = MICRO_COPY[state.microType] || ["TRAP", "Choose carefully."]; return <StagePanel title={title} kicker="WRONG ANSWERS HAVE CONSEQUENCES" timer={state.deadline}><p className="party-stage-bigcopy">{copy}</p>{state.microType === "safeDial" ? <div className="party-dial-tv"><span style={{ left: `${(state.target - state.width / 2) * 100}%`, width: `${state.width * 100}%` }} /></div> : null}<div className="party-doomed-row">{state.wrongUids.map((uid) => { const p = playerById(players, uid); return <span key={uid}>{p?.avatar} {p?.nickname}</span>; })}</div><Progress value={submittedCount(state.microAnswers)} total={state.wrongUids.length} label="choices locked" /></StagePanel>; }
+function MicrogameTV({ state, players }) {
+  const [title, standardCopy] = MICRO_COPY[state.microType] || ["TRAP", "Choose carefully."];
+  const copy = state.microType === "majorityGrave" && state.wrongUids.length === 1 ? "Two graves. One is safe. Pick A or B." : standardCopy;
+  return <StagePanel title={title} kicker="WRONG ANSWERS HAVE CONSEQUENCES" timer={state.deadline}><p className="party-stage-bigcopy">{copy}</p>{state.microType === "safeDial" ? <div className="party-dial-tv"><span style={{ left: `${(state.target - state.width / 2) * 100}%`, width: `${state.width * 100}%` }} /></div> : null}<div className="party-doomed-row">{state.wrongUids.map((uid) => { const p = playerById(players, uid); return <span key={uid}>{p?.avatar} {p?.nickname}</span>; })}</div><Progress value={submittedCount(state.microAnswers)} total={state.wrongUids.length} label="choices locked" /></StagePanel>;
+}
 
 function EscapeTrack({ state, players }) { return <div className="party-escape-track">{players.map((p) => <div className="party-runner" key={p.uid}><span>{p.avatar}</span><b>{p.nickname}</b><div><i style={{ width: `${Math.min(100, (state.positions[p.uid] || 0) / 12 * 100)}%` }} /></div><strong>{Math.min(12, state.positions[p.uid] || 0)}/12</strong></div>)}</div>; }
 
@@ -191,7 +218,7 @@ function MicrogamePhone({ state, table }) {
   if (state.microType === "safeDial") return <SafeDialPhone state={state} table={table} />;
   if (state.microType === "deadButton") return <main className="party-phone game horror"><p className="party-phone-kicker">DEAD BUTTON</p><h1>One is cursed.</h1><Timer deadline={state.deadline} /><div className="party-dead-buttons">{Array.from({ length: 6 }).map((_, i) => <button type="button" key={i} onClick={() => table.act({ type: "microAnswer", payload: { choice: i } })}>{i + 1}</button>)}</div></main>;
   if (state.microType === "oddOneOut") return <main className="party-phone game horror"><p className="party-phone-kicker">ODD ONE OUT</p><h1>Tap the intruder</h1><Timer deadline={state.deadline} /><div className="party-symbol-grid">{state.symbols.map((symbol, i) => <button type="button" key={i} onClick={() => table.act({ type: "microAnswer", payload: { choice: i } })}>{i === state.odd ? "●" : symbol}</button>)}</div></main>;
-  if (state.microType === "majorityGrave") return <main className="party-phone game horror"><p className="party-phone-kicker">MAJORITY GRAVE</p><h1>The minority survives.</h1><Timer deadline={state.deadline} /><div className="party-binary"><button type="button" onClick={() => table.act({ type: "microAnswer", payload: { choice: "A" } })}>A</button><button type="button" onClick={() => table.act({ type: "microAnswer", payload: { choice: "B" } })}>B</button></div></main>;
+  if (state.microType === "majorityGrave") return <main className="party-phone game horror"><p className="party-phone-kicker">MAJORITY GRAVE</p><h1>{state.wrongUids.length === 1 ? "One grave is safe. Choose." : "The minority survives."}</h1><Timer deadline={state.deadline} /><div className="party-binary"><button type="button" onClick={() => table.act({ type: "microAnswer", payload: { choice: "A" } })}>A</button><button type="button" onClick={() => table.act({ type: "microAnswer", payload: { choice: "B" } })}>B</button></div></main>;
   if (state.microType === "memoryMorgue") return <MemoryMorguePhone state={state} table={table} />;
   return <main className="party-phone game horror"><p className="party-phone-kicker">CUT THE WIRE</p><h1>Pick the safe pattern</h1><Timer deadline={state.deadline} /><div className="party-wire-list">{state.wires.map((wire, i) => <button type="button" key={wire} onClick={() => table.act({ type: "microAnswer", payload: { choice: i } })}><span className={`wire-pattern wire-${i}`} />{wire}</button>)}</div></main>;
 }
@@ -228,14 +255,22 @@ function LastOneAlivePlayer({ state, table }) {
 function StrokeSvg({ strokes, label }) { return <svg className="party-drawing-svg" viewBox="0 0 1000 700" role="img" aria-label={label}>{(strokes || []).map((stroke, index) => <polyline key={index} points={(stroke.points || []).map(([x, y]) => `${x * 1000},${y * 700}`).join(" ")} fill="none" stroke={stroke.color || "#fff"} strokeWidth={(stroke.width || 4) * 2.2} strokeLinecap="round" strokeLinejoin="round" />)}</svg>; }
 function DrawingGallery({ state, players, revealNames }) { const finalCase = state.round === 4; return <div className="party-drawing-gallery">{players.map((p, index) => <article key={p.uid}><div className="party-drawing-number">#{index + 1}</div>{finalCase ? <div className="party-before-after"><div><small>BEFORE</small><StrokeSvg strokes={state.beforeDrawings?.[p.uid]} label={`Drawing ${index + 1} before twist`} /></div><div><small>AFTER</small><StrokeSvg strokes={state.drawings?.[p.uid]} label={`Drawing ${index + 1} after twist`} /></div></div> : <StrokeSvg strokes={state.drawings?.[p.uid]} label={`Drawing ${index + 1}`} />}{revealNames ? <b>{p.avatar} {p.nickname}{state.suspectUids.includes(p.uid) ? " · SUSPECT" : ""}</b> : null}</article>)}</div>; }
 
-function DoodleAlibiHost({ state, players }) {
+function DoodleAlibiHost({ state, players, table }) {
+  const duelMode = Boolean(state.duelMode || players.length === 2);
   if (["draw", "finalBase", "finalTwist"].includes(state.phase)) {
     const key = state.phase === "finalBase" ? "beforeDrawings" : "drawings";
     return <StagePanel title={state.round === 4 ? state.phase === "finalBase" ? "FINAL CASE · BASE DRAW" : "FINAL CASE · THE TWIST" : `CASE ${state.round}`} kicker="DRAW ON YOUR PHONES · NO PEEKING" timer={state.deadline}><p className="party-stage-bigcopy">{state.phase === "finalTwist" ? "Same drawing. New instruction. Fifteen seconds." : "Everybody has an assignment. The altered prompt is hiding in plain sight."}</p><Progress value={submittedCount(state[key])} total={players.length} label="drawings locked" /></StagePanel>;
   }
-  if (state.phase === "gallery" || state.phase === "vote") return <StagePanel title={state.phase === "gallery" ? "THE EVIDENCE WALL" : "WHO GOT THE ALTERED PROMPT?"} kicker={state.phase === "gallery" ? "STUDY THE DRAWINGS" : "ACCUSE ON YOUR PHONES"} timer={state.deadline}><DrawingGallery state={state} players={players} revealNames={false} /><Progress value={state.phase === "vote" ? submittedCount(state.votes) : players.length} total={players.length} label={state.phase === "vote" ? "accusations locked" : "drawings revealed"} /></StagePanel>;
+  if (state.phase === "gallery") return <StagePanel title="THE EVIDENCE WALL" kicker={duelMode ? "TV DETECTIVE · STUDY BOTH DRAWINGS" : "STUDY THE DRAWINGS"} timer={state.deadline}><DrawingGallery state={state} players={players} revealNames={false} /><Progress value={players.length} total={players.length} label="drawings revealed" /></StagePanel>;
+  if (state.phase === "vote") {
+    if (duelMode) {
+      const locked = state.votes?.[table.user?.uid];
+      return <StagePanel title="TV DETECTIVE: WHO GOT THE ALTERED PROMPT?" kicker="DETECTIVE MODE · MAKE THE ACCUSATION" timer={state.deadline}><DrawingGallery state={state} players={players} revealNames={false} /><div className="party-answer-phone-grid">{players.map((p, index) => <button type="button" key={p.uid} disabled={Boolean(locked)} onClick={() => { partyAudio.sfx("vote"); table.act({ type: "voteSuspect", targetUid: p.uid }); }}><span>#{index + 1}</span>{locked === p.uid ? "✓ ACCUSED" : `ACCUSE #${index + 1}`}</button>)}</div><Progress value={submittedCount(state.votes)} total={1} label="detective accusation locked" /></StagePanel>;
+    }
+    return <StagePanel title="WHO GOT THE ALTERED PROMPT?" kicker="ACCUSE ON YOUR PHONES" timer={state.deadline}><DrawingGallery state={state} players={players} revealNames={false} /><Progress value={submittedCount(state.votes)} total={players.length} label="accusations locked" /></StagePanel>;
+  }
   if (state.phase === "suspectGuess") return <StagePanel title="ONE LAST ALIBI" kicker="THE SUSPECTS ARE GUESSING" timer={state.deadline}><p className="party-stage-bigcopy">Can the altered artists figure out what everybody else was actually drawing?</p><Progress value={submittedCount(state.suspectGuesses)} total={state.suspectUids.length} label="suspect guesses locked" /></StagePanel>;
-  if (state.phase === "result") return <StagePanel title="CASE CLOSED" kicker="IDENTITIES REVEALED"><div className="party-case-prompts"><div><small>COMMON PROMPT</small>{state.case.common}</div><div><small>ALTERED PROMPT</small>{state.case.suspect}</div></div><DrawingGallery state={state} players={players} revealNames /><div className="party-suspect-reveal">Suspect{state.suspectUids.length > 1 ? "s" : ""}: {state.suspectUids.map((uid) => { const p = playerById(players, uid); return `${p?.avatar} ${p?.nickname}`; }).join(" · ")}</div></StagePanel>;
+  if (state.phase === "result") return <StagePanel title="CASE CLOSED" kicker={duelMode ? (state.duelJudgeCorrect ? "TV DETECTIVE GOT IT" : "THE ALTERED ARTIST FOOLED THE TV") : "IDENTITIES REVEALED"}><div className="party-case-prompts"><div><small>COMMON PROMPT</small>{state.case.common}</div><div><small>ALTERED PROMPT</small>{state.case.suspect}</div></div><DrawingGallery state={state} players={players} revealNames /><div className="party-suspect-reveal">Suspect{state.suspectUids.length > 1 ? "s" : ""}: {state.suspectUids.map((uid) => { const p = playerById(players, uid); return `${p?.avatar} ${p?.nickname}`; }).join(" · ")}</div></StagePanel>;
   return <FinalPodium title="MASTER OF THE ALIBI" players={players} state={state} definitionId="doodlealibi" />;
 }
 
@@ -256,6 +291,7 @@ function DrawingPhone({ state, table, prompt, baseStrokes = [] }) {
 function DoodleAlibiPlayer({ state, table }) {
   const uid = table.user.uid;
   const suspect = state.suspectUids?.includes(uid);
+  const duelMode = Boolean(state.duelMode || table.players.length === 2);
   if (["draw", "finalBase", "finalTwist"].includes(state.phase)) {
     const key = state.phase === "finalBase" ? "beforeDrawings" : "drawings";
     if (state[key]?.[uid]) return <WaitingPhone title="Drawing locked" text="Do not reveal your prompt. Look up at the TV." />;
@@ -263,11 +299,12 @@ function DoodleAlibiPlayer({ state, table }) {
     return <DrawingPhone key={`${state.round}-${state.phase}`} state={state} table={table} prompt={prompt} baseStrokes={state.phase === "finalTwist" ? state.beforeDrawings?.[uid] : []} />;
   }
   if (state.phase === "vote") {
+    if (duelMode) return <WaitingPhone title="The TV is investigating" text="Detective Mode: keep a straight face while the TV chooses the altered drawing." />;
     if (state.votes?.[uid]) return <WaitingPhone title="Accusation locked" text="Now watch the case unravel on TV." />;
     return <main className="party-phone game doodle"><p className="party-phone-kicker">MAKE YOUR ACCUSATION</p><h1>Which drawing got the altered prompt?</h1><Timer deadline={state.deadline} /><div className="party-phone-gallery">{table.players.map((p, index) => p.uid === uid ? null : <button type="button" key={p.uid} onClick={() => table.act({ type: "voteSuspect", targetUid: p.uid })}><StrokeSvg strokes={state.drawings?.[p.uid]} label={`Drawing ${index + 1}`} /><span>#{index + 1}</span></button>)}</div></main>;
   }
   if (state.phase === "suspectGuess") {
-    if (!suspect) return <WaitingPhone title="The suspects are scrambling" text="You have made your accusation." />;
+    if (!suspect) return <WaitingPhone title="The suspect is scrambling" text={duelMode ? "The altered artist gets one last chance to identify your prompt." : "You have made your accusation."} />;
     if (state.suspectGuesses?.[uid]) return <WaitingPhone title="Alibi locked" text="Let's see if you guessed the common prompt." />;
     return <main className="party-phone game doodle"><p className="party-phone-kicker">SUSPECT BONUS</p><h1>What was everybody else asked to draw?</h1><Timer deadline={state.deadline} /><div className="party-common-options">{state.commonOptions.map((option) => <button type="button" key={option} onClick={() => table.act({ type: "guessCommon", guess: option })}>{option}</button>)}</div></main>;
   }
@@ -284,13 +321,17 @@ function FinalPodium({ title, players, state, definitionId, winnerUid, extra }) 
 
 function PlayerFinal({ definitionId, state, table }) { const uid = table.user.uid; const def = { id: definitionId }; const ordered = orderedByScore(def, state, table.players); const rank = Math.max(1, ordered.findIndex((p) => p.uid === uid) + 1); return <main className="party-phone final"><div className="party-avatar-big">{table.me?.avatar}</div><p className="party-phone-kicker">FINAL RESULT</p><h1>#{rank}</h1><h2>{scoreValue(def, state, uid)} points</h2><p>Look up at the TV for the full podium.</p></main>; }
 
-function interactionComplete(definition, state, players) {
+function interactionComplete(definition, state, players, hostUid) {
   if (!state) return false;
   if (definition.id === "punchline") {
     if (state.phase === "answer") return players.every((p) => (state.assignments?.[p.uid] || []).every((id) => state.submissions?.[p.uid]?.[id]));
-    if (state.phase === "vote") { const matchup = state.matchups[state.matchupIndex]; return players.filter((p) => !matchup.authors.includes(p.uid)).every((p) => state.votes?.[p.uid]); }
+    if (state.phase === "vote") {
+      if (players.length === 2) return Boolean(state.votes?.[hostUid]);
+      const matchup = state.matchups[state.matchupIndex];
+      return players.filter((p) => !matchup.authors.includes(p.uid)).every((p) => state.votes?.[p.uid]);
+    }
     if (state.phase === "finaleAnswer") return players.every((p) => state.submissions?.[p.uid]);
-    if (state.phase === "finaleVote") return players.every((p) => state.rankings?.[p.uid]);
+    if (state.phase === "finaleVote") return players.length === 2 ? Boolean(state.rankings?.[hostUid]) : players.every((p) => state.rankings?.[p.uid]);
   }
   if (definition.id === "lastonealive") {
     if (state.phase === "trivia") return players.every((p) => state.answers?.[p.uid]);
@@ -301,7 +342,7 @@ function interactionComplete(definition, state, players) {
   if (definition.id === "doodlealibi") {
     if (state.phase === "draw" || state.phase === "finalTwist") return players.every((p) => state.drawings?.[p.uid]);
     if (state.phase === "finalBase") return players.every((p) => state.beforeDrawings?.[p.uid]);
-    if (state.phase === "vote") return players.every((p) => state.votes?.[p.uid]);
+    if (state.phase === "vote") return state.duelMode ? Boolean(state.votes?.[hostUid]) : players.every((p) => state.votes?.[p.uid]);
     if (state.phase === "suspectGuess") return state.suspectUids.every((uid) => state.suspectGuesses?.[uid]);
   }
   return false;
@@ -334,16 +375,16 @@ function GameStage({ table, definition }) {
 
   useEffect(() => {
     if (!table.isHost || !state || state.phase === "final") return undefined;
-    const early = interactionComplete(definition, state, table.players);
+    const early = interactionComplete(definition, state, table.players, table.user?.uid);
     const transitional = ["result", "triviaResult", "microResult", "resurrectionResult", "gallery"].includes(state.phase);
     const delay = early ? 900 : state.deadline ? Math.max(150, state.deadline - Date.now() + 120) : transitional ? 3500 : null;
     if (delay == null) return undefined;
     const timer = window.setTimeout(() => table.act({ type: "hostAdvance", force: true }), delay);
     return () => window.clearTimeout(timer);
-  }, [table.isHost, state, definition, table.players.length]);
+  }, [table.isHost, state, definition, table.players.length, table.user?.uid]);
 
   if (table.isHost && intro) return <IntroVideo definition={definition} onDone={() => { setIntro(false); partyAudio.startMusic(definition.music); partyAudio.sfx("go"); }} />;
-  if (table.isHost) return <main className={`party-stage party-theme-${definition.id}`}><div className="party-stage-lights" aria-hidden="true" /><header className="party-tv-bar compact"><div><span className="party-kicker">{definition.name}</span><strong>ROOM {table.roomCode}</strong></div><SoundControls /></header><ScoreStrip definition={definition} state={state} players={table.players} />{definition.id === "punchline" ? <PunchlineHost state={state} players={table.players} /> : definition.id === "lastonealive" ? <LastOneAliveHost state={state} players={table.players} /> : <DoodleAlibiHost state={state} players={table.players} />}<div className="party-host-tools"><button type="button" onClick={() => table.act({ type: "hostAdvance", force: true })}>Skip / advance</button></div></main>;
+  if (table.isHost) return <main className={`party-stage party-theme-${definition.id}`}><div className="party-stage-lights" aria-hidden="true" /><header className="party-tv-bar compact"><div><span className="party-kicker">{definition.name}</span><strong>ROOM {table.roomCode}</strong></div><SoundControls /></header><ScoreStrip definition={definition} state={state} players={table.players} />{definition.id === "punchline" ? <PunchlineHost state={state} players={table.players} table={table} /> : definition.id === "lastonealive" ? <LastOneAliveHost state={state} players={table.players} /> : <DoodleAlibiHost state={state} players={table.players} table={table} />}<div className="party-host-tools"><button type="button" onClick={() => table.act({ type: "hostAdvance", force: true })}>Skip / advance</button></div></main>;
   if (definition.id === "punchline") return <PunchlinePlayer state={state} table={table} />;
   if (definition.id === "lastonealive") return <LastOneAlivePlayer state={state} table={table} />;
   return <DoodleAlibiPlayer state={state} table={table} />;
