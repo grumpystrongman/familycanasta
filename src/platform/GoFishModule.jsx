@@ -3,9 +3,7 @@ import StandardCard, { RANKS } from "./StandardCard";
 import useModularTable from "./useModularTable";
 import { GameHome, GameLobby } from "./ModularGameChrome";
 import { navigateToHub } from "../HubApp";
-import { chooseGoFishRobotMove, createGoFishGame, GO_FISH_RULES, reduceGoFish } from "./goFishCore";
-
-const SUIT_ORDER = Object.freeze({ clubs: 0, diamonds: 1, hearts: 2, spades: 3 });
+import { chooseGoFishRobotMove, createGoFishGame, GO_FISH_RULES, groupGoFishHand, reduceGoFish } from "./goFishCore";
 
 function titleCaseRank(rank) {
   const words = { J: "Jacks", Q: "Queens", K: "Kings", A: "Aces" };
@@ -18,16 +16,6 @@ function formatRank(theme, rank) {
 
 function formatCard(theme, card) {
   return theme.cardLabel?.(card) || formatRank(theme, card?.rank);
-}
-
-export function groupGoFishHand(cards = []) {
-  const list = Array.isArray(cards) ? cards.filter(Boolean) : Object.values(cards || {}).filter(Boolean);
-  return RANKS.map((rank) => ({
-    rank,
-    cards: list
-      .filter((card) => card.rank === rank)
-      .sort((a, b) => (SUIT_ORDER[a.suit] ?? 99) - (SUIT_ORDER[b.suit] ?? 99)),
-  })).filter((group) => group.cards.length > 0);
 }
 
 function adultMissRoast(theme, rank) {
