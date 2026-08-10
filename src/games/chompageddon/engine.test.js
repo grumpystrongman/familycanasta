@@ -7,6 +7,8 @@ import {
   createChompers,
   createRound,
   resolveBallCollisions,
+  resolveChomperBallCollisions,
+  stepRound,
   triggerChomp,
   winnersForRound,
 } from "./engine.js";
@@ -45,16 +47,56 @@ test("full-extension mouth captures every ball inside the capture radius", () =>
   assert.equal(round.balls[2].capturedBy, null);
 });
 
-test("overlapping balls separate and exchange motion", () => {
+test("head-on balls separate and exchange their normal velocity", () => {
   const balls = [
     { id: 0, x: 100, y: 100, vx: 60, vy: 0, capturedBy: null },
     { id: 1, x: 115, y: 100, vx: -60, vy: 0, capturedBy: null },
   ];
-  resolveBallCollisions(balls);
+  const collisions = resolveBallCollisions(balls);
+  assert.equal(collisions, 1);
   assert.ok(balls[0].x < 100);
   assert.ok(balls[1].x > 115);
-  assert.ok(balls[0].vx < 60);
-  assert.ok(balls[1].vx > -60);
+  assert.ok(balls[0].vx < 0, "left ball should reverse after the collision");
+  assert.ok(balls[1].vx > 0, "right ball should reverse after the collision");
+});
+
+test("fast balls collide under sub-stepping instead of tunneling through each other", () => {
+  const round = createRound({ humanCount: 4, random: () => 0.5, ballCount: 2 });
+  const center = CHOMP_RULES.arenaSize / 2;
+  round.rattleClock = 99;
+  round.balls[0] = { ...round.balls[0], x: center - 20, y: center, vx: 340, vy: 0, capturedBy: null };
+  round.balls[1] = { ...round.balls[1], x: center + 20, y: center, vx: -340, vy: 0, capturedBy: null };
+
+  stepRound(round, 0.033, () => 0.5);
+  assert.ok(round.balls[0].vx < 0, "first fast ball should bounce back");
+  assert.ok(round.balls[1].vx > 0, "second fast ball should bounce back");
+});
+
+test("a tangent rim graze gets deflected back into the arena instead of becoming an orbit", () => {
+  const round = createRound({ humanCount: 4, random: () => 0.5, ballCount: 1 });
+  const center = CHOMP_RULES.arenaSize / 2;
+  const limit = CHOMP_RULES.arenaRadius - CHOMP_RULES.ballRadius;
+  round.rattleClock = 99;
+  round.balls[0] = { ...round.balls[0], x: center + limit, y: center, vx: 0, vy: 220, capturedBy: null };
+
+  stepRound(round, 0.033, () => 0.75);
+  const ball = round.balls[0];
+  const radialVelocity = ball.vx;
+  assert.ok(radialVelocity < -10, `expected an inward radial component, got ${radialVelocity}`);
+});
+
+test("an extending monster head physically knocks aside a ball it does not capture", () => {
+  const round = createRound({ humanCount: 4, random: () => 0.5, ballCount: 1 });
+  const monster = round.chompers[2];
+  monster.phase = "launch";
+  monster.phaseTime = 0.07;
+  const pose = chomperPose(2, Math.sin(Math.PI / 4));
+  round.balls[0] = { ...round.balls[0], x: pose.x + 50, y: pose.y + 6, vx: 0, vy: 0, capturedBy: null };
+
+  const hits = resolveChomperBallCollisions(round);
+  assert.equal(hits, 1);
+  assert.ok(round.balls[0].vx > 80, "moving head should transfer meaningful forward momentum");
+  assert.ok(Math.abs(round.balls[0].vy) > 5, "head collision should also scatter the ball laterally");
 });
 
 test("highest score wins and ties return multiple monsters", () => {
