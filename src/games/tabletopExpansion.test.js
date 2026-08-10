@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { chooseConnect4RobotMove, createConnect4Game, reduceConnect4 } from "./connect4/engine.js";
-import { createHnefataflBoard, legalHnefataflMoves, reduceHnefatafl } from "./hnefatafl/engine.js";
-import { BATTLESHIP_FLEET, placeBattleshipFleet, reduceBattleship } from "./battleship/engine.js";
+import { chooseConnect4RobotMove, createConnect4Game, normalizeConnect4Board, reduceConnect4 } from "./connect4/engine.js";
+import { createHnefataflBoard, createHnefataflGame, legalHnefataflMoves, normalizeHnefataflBoard, reduceHnefatafl } from "./hnefatafl/engine.js";
+import { BATTLESHIP_FLEET, normalizeBattleshipFleet, placeBattleshipFleet, reduceBattleship } from "./battleship/engine.js";
 import { extractBooks, reduceGoFish } from "../platform/goFishCore.js";
 
 const members2 = [
@@ -29,12 +29,41 @@ test("Connect 4 robot blocks an immediate opponent win", () => {
   assert.equal(move.action.column, 3);
 });
 
+test("Connect 4 accepts Firebase-style keyed boards", () => {
+  const keyed = { 35: "b", 36: "b", 37: "b" };
+  const dense = normalizeConnect4Board(keyed);
+  assert.equal(dense.length, 42);
+  assert.equal(dense[0], null);
+  const members = [{ ...members2[0], isRobot: true }, members2[1]];
+  const move = chooseConnect4RobotMove({ phase: "playing", currentPlayerIndex: 0, board: keyed }, members);
+  assert.equal(move.action.column, 3);
+});
+
 test("Hnefatafl starts with 24 attackers, 12 defenders, and one king", () => {
   const board = createHnefataflBoard();
   assert.equal(board.filter((piece) => piece === "A").length, 24);
   assert.equal(board.filter((piece) => piece === "D").length, 12);
   assert.equal(board.filter((piece) => piece === "K").length, 1);
   assert.ok(legalHnefataflMoves(board, 3).length > 0);
+});
+
+test("Hnefatafl restores sparse Firebase board objects", () => {
+  const board = createHnefataflBoard();
+  const keyed = Object.fromEntries(board.map((piece, index) => [index, piece]).filter(([, piece]) => piece));
+  const dense = normalizeHnefataflBoard(keyed);
+  assert.equal(dense.length, 121);
+  assert.equal(dense.filter((piece) => piece === "A").length, 24);
+  assert.equal(dense.filter((piece) => piece === "D").length, 12);
+  assert.equal(dense.filter((piece) => piece === "K").length, 1);
+  assert.ok(legalHnefataflMoves(keyed, 3).length > 0);
+});
+
+test("Hnefatafl quick play can put the human on defense", () => {
+  const members = [members2[0], { ...members2[1], isRobot: true }];
+  const state = createHnefataflGame(members, { humanSide: "defenders" });
+  assert.equal(state.defenderUid, "a");
+  assert.equal(state.attackerUid, "b");
+  assert.equal(state.currentPlayerIndex, 1);
 });
 
 test("Hnefatafl defenders win when the king reaches a corner", () => {
@@ -67,6 +96,13 @@ test("Battleship deployment creates the classic non-overlapping 17-cell fleet", 
   const cells = fleet.flatMap((ship) => ship.cells);
   assert.equal(cells.length, 17);
   assert.equal(new Set(cells).size, 17);
+});
+
+test("Battleship restores Firebase collections with missing empty hit arrays", () => {
+  const fleet = normalizeBattleshipFleet({ 0: { id: "d", name: "Destroyer", size: 2, cells: { 0: 20, 1: 21 } } });
+  assert.equal(fleet.length, 1);
+  assert.deepEqual(fleet[0].cells, [20, 21]);
+  assert.deepEqual(fleet[0].hits, []);
 });
 
 test("Battleship records a hit and can sink the final ship", () => {
@@ -118,6 +154,22 @@ test("the adult variant is explicitly gated and branded Go F' Yourself", async (
   assert.match(source, /adult:\s*true/);
   assert.match(moduleSource, /18\+ table/);
   assert.match(moduleSource, /Go F' Yourself/);
+});
+
+test("tabletop chrome owns its styles and offers one-click robot play", async () => {
+  const chrome = await readFile(new URL("../platform/ModularGameChrome.jsx", import.meta.url), "utf8");
+  const controller = await readFile(new URL("../platform/useModularTable.js", import.meta.url), "utf8");
+  assert.match(chrome, /standardCards\.css/);
+  assert.match(chrome, /FASTEST WAY IN/);
+  assert.match(chrome, /Play vs robot/);
+  assert.match(controller, /quickStartRobot/);
+});
+
+test("Hnefatafl home offers explicit attacker and defender quick play", async () => {
+  const source = await readFile(new URL("./hnefatafl/index.jsx", import.meta.url), "utf8");
+  assert.match(source, /Defend the King/);
+  assert.match(source, /Lead the Raiders/);
+  assert.match(source, /normalizeHnefataflBoard/);
 });
 
 test("the hub expands beyond card games and installs all five new routes", async () => {
