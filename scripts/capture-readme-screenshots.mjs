@@ -60,12 +60,21 @@ async function captureRummy() {
   await capture("rummy-entry", ".rummy-shell .modular-game-panel");
 }
 
+async function captureTabletopEntry(gameId, name) {
+  await open(`/?game=${gameId}`, ".game-start-panel");
+  await capture(name, ".game-start-panel");
+}
+
 try {
   await captureHub();
   await captureCanasta();
   await captureHearts();
   await captureSpades();
   await captureRummy();
+  await captureTabletopEntry("hnefatafl", "hnefatafl-entry");
+  await captureTabletopEntry("connect4", "connect4-entry");
+  await captureTabletopEntry("battleship", "battleship-entry");
+  await captureTabletopEntry("gofish", "gofish-entry");
 } finally {
   await browser.close();
 }

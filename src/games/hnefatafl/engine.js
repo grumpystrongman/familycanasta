@@ -12,6 +12,28 @@ function inside(row, column) { return row >= 0 && row < SIZE && column >= 0 && c
 function sideFor(piece) { return piece === "A" ? "attackers" : piece === "D" || piece === "K" ? "defenders" : null; }
 function restricted(index) { return index === THRONE || CORNERS.has(index); }
 
+export function normalizeHnefataflBoard(board) {
+  const dense = Array(SIZE * SIZE).fill(null);
+  if (Array.isArray(board)) {
+    for (let index = 0; index < dense.length; index += 1) dense[index] = board[index] ?? null;
+    return dense;
+  }
+  if (board && typeof board === "object") {
+    for (const [key, value] of Object.entries(board)) {
+      const index = Number(key);
+      if (Number.isInteger(index) && index >= 0 && index < dense.length) dense[index] = value ?? null;
+    }
+  }
+  return dense;
+}
+
+function sideForUid(state, uid, members) {
+  if (state?.attackerUid && uid === state.attackerUid) return "attackers";
+  if (state?.defenderUid && uid === state.defenderUid) return "defenders";
+  const index = members.findIndex((member) => member.uid === uid);
+  return index === 0 ? "attackers" : index >= 0 ? "defenders" : null;
+}
+
 export function createHnefataflBoard() {
   const board = Array(SIZE * SIZE).fill(null);
   const attackers = [
@@ -32,7 +54,8 @@ export function createHnefataflBoard() {
 }
 
 export function legalHnefataflMoves(board, from) {
-  const piece = board?.[from];
+  const denseBoard = normalizeHnefataflBoard(board);
+  const piece = denseBoard[from];
   if (!piece) return [];
   const moves = [];
   const row = rowOf(from);
@@ -42,7 +65,7 @@ export function legalHnefataflMoves(board, from) {
     let nextColumn = column + dc;
     while (inside(nextRow, nextColumn)) {
       const next = indexOf(nextRow, nextColumn);
-      if (board[next]) break;
+      if (denseBoard[next]) break;
       if (piece !== "K" && restricted(next)) break;
       moves.push(next);
       nextRow += dr;
@@ -82,7 +105,7 @@ function kingSurrounded(board, kingIndex) {
 }
 
 function applyCaptures(board, to, movingSide) {
-  const nextBoard = [...board];
+  const nextBoard = normalizeHnefataflBoard(board);
   const captures = [];
   const row = rowOf(to);
   const column = colOf(to);
@@ -105,24 +128,38 @@ function applyCaptures(board, to, movingSide) {
   }
 
   const kingIndex = nextBoard.indexOf("K");
-  if (movingSide === "attackers" && kingNeedsStrongCapture(kingIndex) && kingSurrounded(nextBoard, kingIndex)) {
+  if (movingSide === "attackers" && kingIndex >= 0 && kingNeedsStrongCapture(kingIndex) && kingSurrounded(nextBoard, kingIndex)) {
     nextBoard[kingIndex] = null;
     captures.push({ index: kingIndex, piece: "K" });
   }
   return { board: nextBoard, captures };
 }
 
-export function createHnefataflGame(members) {
+export function createHnefataflGame(members, rules = {}) {
   if (members.length !== 2) throw new Error("Hnefatafl needs exactly two players.");
+  const human = members.find((member) => !member.isRobot);
+  let attackerUid = members[0].uid;
+  let defenderUid = members[1].uid;
+  if (human && rules.humanSide === "defenders") {
+    defenderUid = human.uid;
+    attackerUid = members.find((member) => member.uid !== human.uid)?.uid || attackerUid;
+  } else if (human && rules.humanSide === "attackers") {
+    attackerUid = human.uid;
+    defenderUid = members.find((member) => member.uid !== human.uid)?.uid || defenderUid;
+  }
+  const attackerIndex = Math.max(0, members.findIndex((member) => member.uid === attackerUid));
+  const attacker = members[attackerIndex];
   return {
     phase: "playing",
     roundNumber: 1,
     board: createHnefataflBoard(),
-    currentPlayerIndex: 0,
+    attackerUid,
+    defenderUid,
+    currentPlayerIndex: attackerIndex,
     winnerUid: null,
     winnerSide: null,
     lastMove: null,
-    message: `${members[0].nickname} commands the attackers.`,
+    message: `${attacker.nickname} commands the attackers and moves first.`,
   };
 }
 
@@ -135,13 +172,14 @@ export function reduceHnefatafl(state, actorUid, action, members) {
   const from = Number(action.from);
   const to = Number(action.to);
   if (!Number.isInteger(from) || !Number.isInteger(to)) throw new Error("Choose a valid move.");
-  const piece = state.board?.[from];
+  const board = normalizeHnefataflBoard(state.board);
+  const piece = board[from];
   if (!piece) throw new Error("There is no piece there.");
-  const actorSide = currentIndex === 0 ? "attackers" : "defenders";
+  const actorSide = sideForUid(state, actorUid, members);
   if (sideFor(piece) !== actorSide) throw new Error("That piece belongs to the other side.");
-  if (!legalHnefataflMoves(state.board, from).includes(to)) throw new Error("Pieces move like rooks through open squares.");
+  if (!legalHnefataflMoves(board, from).includes(to)) throw new Error("Pieces move like rooks through open squares.");
 
-  const moved = [...state.board];
+  const moved = [...board];
   moved[from] = null;
   moved[to] = piece;
   const captured = applyCaptures(moved, to, actorSide);
@@ -171,7 +209,10 @@ export function reduceHnefatafl(state, actorUid, action, members) {
     };
   }
 
-  const nextIndex = (currentIndex + 1) % 2;
+  const nextSide = actorSide === "attackers" ? "defenders" : "attackers";
+  const mappedUid = nextSide === "attackers" ? state.attackerUid : state.defenderUid;
+  let nextIndex = mappedUid ? members.findIndex((member) => member.uid === mappedUid) : -1;
+  if (nextIndex < 0) nextIndex = (currentIndex + 1) % members.length;
   return {
     ...state,
     board: captured.board,
@@ -182,12 +223,14 @@ export function reduceHnefatafl(state, actorUid, action, members) {
 }
 
 function moveScore(state, member, from, to, members) {
-  const piece = state.board[from];
+  const board = normalizeHnefataflBoard(state.board);
+  const piece = board[from];
   if (piece === "K" && CORNERS.has(to)) return 100000;
   let score = 0;
   const toRow = rowOf(to);
   const toColumn = colOf(to);
-  if (member.seat === 1 && piece === "K") {
+  const memberSide = sideForUid(state, member.uid, members);
+  if (memberSide === "defenders" && piece === "K") {
     const cornerDistance = Math.min(
       toRow + toColumn,
       toRow + (SIZE - 1 - toColumn),
@@ -196,14 +239,14 @@ function moveScore(state, member, from, to, members) {
     );
     score += 200 - cornerDistance * 10;
   }
-  if (member.seat === 0) {
-    const kingIndex = state.board.indexOf("K");
+  if (memberSide === "attackers") {
+    const kingIndex = board.indexOf("K");
     const kingRow = rowOf(kingIndex);
     const kingColumn = colOf(kingIndex);
     score += 60 - (Math.abs(toRow - kingRow) + Math.abs(toColumn - kingColumn)) * 3;
   }
   try {
-    const next = reduceHnefatafl(state, member.uid, { type: "move", from, to }, members);
+    const next = reduceHnefatafl({ ...state, board }, member.uid, { type: "move", from, to }, members);
     if (next.phase === "game-over" && next.winnerUid === member.uid) score += 50000;
     score += Number(next.lastMove?.captures?.length || 0) * 100;
   } catch {
@@ -216,12 +259,13 @@ export function chooseHnefataflRobotMove(state, members) {
   if (state?.phase !== "playing") return null;
   const current = members[Number(state.currentPlayerIndex || 0)];
   if (!current?.isRobot) return null;
-  const side = Number(state.currentPlayerIndex || 0) === 0 ? "attackers" : "defenders";
+  const board = normalizeHnefataflBoard(state.board);
+  const side = sideForUid(state, current.uid, members);
   const candidates = [];
-  for (let from = 0; from < state.board.length; from += 1) {
-    if (sideFor(state.board[from]) !== side) continue;
-    for (const to of legalHnefataflMoves(state.board, from)) {
-      candidates.push({ from, to, score: moveScore(state, current, from, to, members) });
+  for (let from = 0; from < board.length; from += 1) {
+    if (sideFor(board[from]) !== side) continue;
+    for (const to of legalHnefataflMoves(board, from)) {
+      candidates.push({ from, to, score: moveScore({ ...state, board }, current, from, to, members) });
     }
   }
   if (!candidates.length) return null;
