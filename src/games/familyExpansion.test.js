@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { ersSlapReasons } from "./ers/engine.js";
+import { ersSlapReasons, reduceERS } from "./ers/engine.js";
 import { hasFourOfAKind, reduceSpoons } from "./spoons/engine.js";
 import { cardsPerPlayerForRound, removedRanksForRound } from "./indians/engine.js";
 import { comparePokerHands, evaluatePokerHand, reducePoker } from "./poker/engine.js";
@@ -20,6 +20,17 @@ test("ERS recognizes the family table slap patterns", () => {
   assert.ok(ersSlapReasons([card("3"), card("7")]).includes("tens"));
   assert.ok(ersSlapReasons([card("Q"), card("K")]).includes("marriage"));
   assert.ok(ersSlapReasons([card("Q"), card("K"), card("A"), card("2")]).includes("four-in-a-row"));
+});
+
+test("ERS players eliminated by a bad empty-handed slap cannot slap back in", () => {
+  const state = {
+    phase: "playing",
+    hands: { a: [], b: [card("7")] },
+    pile: [card("4"), card("9")],
+    out: { a: true },
+    currentPlayerIndex: 1,
+  };
+  assert.throws(() => reduceERS(state, "a", { type: "slap" }, members.slice(0, 2)), /eliminated/);
 });
 
 test("Spoons four-of-a-kind check requires all four ranks to match", () => {
