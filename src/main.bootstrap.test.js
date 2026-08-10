@@ -15,10 +15,10 @@ test("loads the game hub independently from optional Canasta controllers", async
   assert.doesNotMatch(source, /import GameStateEnhancer from/);
 });
 
-test("renders visible family card room startup and failure states instead of a blank root", async () => {
+test("renders visible family game room startup and failure states instead of a blank root", async () => {
   const source = await readFile(sourceUrl, "utf8");
 
-  assert.match(source, /Loading the family card room/);
-  assert.match(source, /The family card room could not start/);
+  assert.match(source, /Loading the family game room/);
+  assert.match(source, /The family game room could not start/);
   assert.match(source, /AppErrorBoundary/);
 });
