@@ -1,8 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { PUNCHLINE_PROMPTS, createPunchlineGameState, punchlineDefinition, reducePunchlineGameState } from "./punchline/model.js";
-import { LAST_ONE_ALIVE_TRIVIA, MICRO_TYPES, createLastOneAliveState } from "./lastonealive/model.js";
-import { DOODLE_CASES, createDoodleAlibiState } from "./doodlealibi/model.js";
+import { LAST_ONE_ALIVE_TRIVIA, MICRO_TYPES, createLastOneAliveState, lastOneAliveDefinition, reduceLastOneAliveState } from "./lastonealive/model.js";
+import { DOODLE_CASES, createDoodleAlibiState, doodleAlibiDefinition, reduceDoodleAlibiState } from "./doodlealibi/model.js";
 
 const players = Array.from({ length: 6 }, (_, index) => ({
   uid: `player-${index + 1}`,
@@ -10,6 +10,7 @@ const players = Array.from({ length: 6 }, (_, index) => ({
   avatar: "🦊",
   seat: index,
 }));
+const host = { uid: "tv-host", isHost: true, displayOnly: true };
 
 test("Punchline ships a full prompt library and balanced opening round", () => {
   assert.ok(PUNCHLINE_PROMPTS.length >= 80);
@@ -22,7 +23,6 @@ test("Punchline ships a full prompt library and balanced opening round", () => {
 
 test("Punchline supports a two-player Duel Mode judged by the TV host", () => {
   const duelPlayers = players.slice(0, 2);
-  const host = { uid: "tv-host", isHost: true, displayOnly: true };
   let state = createPunchlineGameState(duelPlayers);
   assert.equal(punchlineDefinition.minPlayers, 2);
   assert.equal(state.matchups.length, 2);
@@ -47,6 +47,31 @@ test("Punchline supports a two-player Duel Mode judged by the TV host", () => {
   assert.equal(state.scores[choice].score, 100);
 });
 
+test("Last One Alive supports two players and solo Majority Grave remains fair", () => {
+  const duelPlayers = players.slice(0, 2);
+  assert.equal(lastOneAliveDefinition.minPlayers, 2);
+  let state = createLastOneAliveState(duelPlayers);
+  assert.equal(state.phase, "trivia");
+  assert.equal(Object.keys(state.stats).length, 2);
+
+  state = {
+    ...state,
+    phase: "triviaResult",
+    round: 4,
+    wrongUids: [duelPlayers[0].uid],
+    deadline: Date.now() - 1,
+  };
+  state = reduceLastOneAliveState(state, host, { type: "hostAdvance", force: true }, duelPlayers, {}, host.uid);
+  assert.equal(state.phase, "microgame");
+  assert.equal(state.microType, "majorityGrave");
+  assert.ok(["A", "B"].includes(state.soloSafeChoice));
+
+  state = reduceLastOneAliveState(state, duelPlayers[0], { type: "microAnswer", payload: { choice: state.soloSafeChoice } }, duelPlayers, {}, host.uid);
+  state = reduceLastOneAliveState(state, host, { type: "hostAdvance" }, duelPlayers, {}, host.uid);
+  assert.equal(state.phase, "microResult");
+  assert.equal(state.stats[duelPlayers[0].uid].hearts, 3);
+});
+
 test("Last One Alive ships a full trivia library and every promised trap", () => {
   assert.ok(LAST_ONE_ALIVE_TRIVIA.length >= 60);
   assert.deepEqual(MICRO_TYPES, ["deadButton", "safeDial", "oddOneOut", "majorityGrave", "memoryMorgue", "cutWire"]);
@@ -57,6 +82,33 @@ test("Last One Alive ships a full trivia library and every promised trap", () =>
     assert.equal(state.stats[player.uid].hearts, 3);
     assert.equal(state.stats[player.uid].ghost, false);
   }
+});
+
+test("Doodle Alibi supports a two-player Detective Mode judged by the TV", () => {
+  const duelPlayers = players.slice(0, 2);
+  assert.equal(doodleAlibiDefinition.minPlayers, 2);
+  let state = createDoodleAlibiState(duelPlayers);
+  assert.equal(state.duelMode, true);
+  assert.equal(state.suspectUids.length, 1);
+
+  const suspectUid = state.suspectUids[0];
+  const innocentUid = duelPlayers.find((p) => p.uid !== suspectUid).uid;
+  state = { ...state, phase: "vote", votes: {}, deadline: Date.now() + 10000 };
+
+  assert.throws(
+    () => reduceDoodleAlibiState(state, duelPlayers[0], { type: "voteSuspect", targetUid: suspectUid }, duelPlayers, {}, host.uid),
+    /TV host makes the accusation/,
+  );
+
+  state = reduceDoodleAlibiState(state, host, { type: "voteSuspect", targetUid: suspectUid }, duelPlayers, {}, host.uid);
+  state = reduceDoodleAlibiState(state, host, { type: "hostAdvance" }, duelPlayers, {}, host.uid);
+  assert.equal(state.phase, "suspectGuess");
+  state = reduceDoodleAlibiState(state, { ...duelPlayers.find((p) => p.uid === suspectUid) }, { type: "guessCommon", guess: state.case.common }, duelPlayers, {}, host.uid);
+  state = reduceDoodleAlibiState(state, host, { type: "hostAdvance" }, duelPlayers, {}, host.uid);
+  assert.equal(state.phase, "result");
+  assert.equal(state.duelJudgeCorrect, true);
+  assert.equal(state.scores[innocentUid].score, 200);
+  assert.equal(state.scores[suspectUid].score, 250);
 });
 
 test("Doodle Alibi ships at least 45 cases and supports a two-suspect large room", () => {
