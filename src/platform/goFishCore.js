@@ -1,6 +1,17 @@
 import { createStandardDeck, RANKS, shuffleCards } from "./standardDeck.js";
 
 export const GO_FISH_RULES = Object.freeze({ playersMin: 2, playersMax: 6 });
+const SUIT_ORDER = Object.freeze({ clubs: 0, diamonds: 1, hearts: 2, spades: 3 });
+
+export function groupGoFishHand(cards = []) {
+  const list = Array.isArray(cards) ? cards.filter(Boolean) : Object.values(cards || {}).filter(Boolean);
+  return RANKS.map((rank) => ({
+    rank,
+    cards: list
+      .filter((card) => card.rank === rank)
+      .sort((a, b) => (SUIT_ORDER[a.suit] ?? 99) - (SUIT_ORDER[b.suit] ?? 99)),
+  })).filter((group) => group.cards.length > 0);
+}
 
 function cloneHands(hands = {}) {
   return Object.fromEntries(Object.entries(hands).map(([uid, cards]) => [uid, [...cards]]));
