@@ -74,17 +74,34 @@ export default function useModularTable({
     }
   }
 
+  function persistIdentity() {
+    localStorage.setItem("familyCardNickname", nickname);
+    localStorage.setItem("familyCardAvatar", avatar);
+  }
+
   async function createRoom() {
     await run(async () => {
-      localStorage.setItem("familyCardNickname", nickname);
-      localStorage.setItem("familyCardAvatar", avatar);
+      persistIdentity();
       const code = await createModularRoom({ user, nickname, avatar, gameId, maxPlayers, rules });
+      setRoomCode(code);
+    }).catch(() => {});
+  }
+
+  async function quickStartRobot(ruleOverrides = {}) {
+    if (!user || !firebaseReady) return;
+    await run(async () => {
+      persistIdentity();
+      const quickRules = { ...rules, ...(ruleOverrides || {}) };
+      const code = await createModularRoom({ user, nickname, avatar, gameId, maxPlayers, rules: quickRules });
+      await addModularRobot(code, user.uid);
+      await startModularGame(code, user.uid, createGameState, minimumPlayers);
       setRoomCode(code);
     }).catch(() => {});
   }
 
   async function joinRoom() {
     await run(async () => {
+      persistIdentity();
       const code = await joinModularRoom({ code: joinCode, user, nickname, avatar, gameId });
       setRoomCode(code);
     }).catch(() => {});
@@ -119,6 +136,7 @@ export default function useModularTable({
     error,
     busy,
     createRoom,
+    quickStartRobot,
     joinRoom,
     addRobot,
     start,
