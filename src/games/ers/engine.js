@@ -68,6 +68,7 @@ function collect(state, uid, members, message) {
 }
 
 function doSlap(state, actorUid, members) {
+  if (state.out?.[actorUid]) throw new Error("You were eliminated by an incorrect empty-handed slap.");
   if (!state.pile?.length) throw new Error("There is no center pile yet.");
   const reasons = ersSlapReasons(state.pile);
   if (reasons.length) return collect(state, actorUid, members, `${members.find((member) => member.uid === actorUid)?.nickname} wins the pile with ${reasons[0]}.`);
