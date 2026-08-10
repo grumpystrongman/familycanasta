@@ -1,9 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react";
-import StandardCard, { RANKS, sortStandardHand } from "./StandardCard";
+import StandardCard, { RANKS } from "./StandardCard";
 import useModularTable from "./useModularTable";
 import { GameHome, GameLobby } from "./ModularGameChrome";
 import { navigateToHub } from "../HubApp";
 import { chooseGoFishRobotMove, createGoFishGame, GO_FISH_RULES, reduceGoFish } from "./goFishCore";
+
+const SUIT_ORDER = Object.freeze({ clubs: 0, diamonds: 1, hearts: 2, spades: 3 });
 
 function titleCaseRank(rank) {
   const words = { J: "Jacks", Q: "Queens", K: "Kings", A: "Aces" };
@@ -16,6 +18,16 @@ function formatRank(theme, rank) {
 
 function formatCard(theme, card) {
   return theme.cardLabel?.(card) || formatRank(theme, card?.rank);
+}
+
+export function groupGoFishHand(cards = []) {
+  const list = Array.isArray(cards) ? cards.filter(Boolean) : Object.values(cards || {}).filter(Boolean);
+  return RANKS.map((rank) => ({
+    rank,
+    cards: list
+      .filter((card) => card.rank === rank)
+      .sort((a, b) => (SUIT_ORDER[a.suit] ?? 99) - (SUIT_ORDER[b.suit] ?? 99)),
+  })).filter((group) => group.cards.length > 0);
 }
 
 function adultMissRoast(theme, rank) {
@@ -72,8 +84,10 @@ function FishTable({ controller, theme }) {
   const state = room.gameState;
   const current = members[Number(state.currentPlayerIndex || 0)];
   const myTurn = state.phase === "playing" && current?.uid === user?.uid;
-  const hand = sortStandardHand(state.hands?.[user?.uid] || []);
-  const ranksInHand = useMemo(() => RANKS.filter((rank) => hand.some((card) => card.rank === rank)), [hand]);
+  const rawHand = state.hands?.[user?.uid] || [];
+  const handGroups = useMemo(() => groupGoFishHand(rawHand), [rawHand]);
+  const handSize = handGroups.reduce((sum, group) => sum + group.cards.length, 0);
+  const ranksInHand = useMemo(() => handGroups.map((group) => group.rank), [handGroups]);
   const targets = members.filter((member) => member.uid !== user?.uid && (state.hands?.[member.uid]?.length || 0) > 0);
   const [rank, setRank] = useState("");
   const [targetUid, setTargetUid] = useState("");
@@ -153,13 +167,26 @@ function FishTable({ controller, theme }) {
         ) : null}
 
         <section className="fish-hand-area">
-          <div className="fish-hand-heading"><span>Your hand</span><strong>{hand.length} cards</strong></div>
+          <div className="fish-hand-heading">
+            <span>Your hand <small>· matching cards stay together automatically</small></span>
+            <strong>{handSize} cards · {handGroups.length} sets</strong>
+          </div>
           <div className="fish-hand">
-            {hand.length ? hand.map((card) => (
-              <div key={card.id} className={`fish-card-wrap ${theme.adult ? "fish-adult-card-wrap" : ""}`}>
-                <StandardCard card={card} compact disabled={!myTurn} selected={rank === card.rank} onClick={() => myTurn && setRank(card.rank)} />
-                {theme.adult ? <div className="fish-card-copy"><strong>{formatRank(theme, card.rank)}</strong><small>{formatCard(theme, card)}</small></div> : null}
-              </div>
+            {handGroups.length ? handGroups.map((group) => (
+              <section key={group.rank} className={`fish-hand-group ${rank === group.rank ? "selected" : ""}`}>
+                <button type="button" className="fish-hand-group-heading" disabled={busy} onClick={() => setRank(group.rank)}>
+                  <span><strong>{formatRank(theme, group.rank)}</strong><small>{theme.adult ? "Matching set" : `Rank ${group.rank}`}</small></span>
+                  <b>{group.cards.length}/4</b>
+                </button>
+                <div className="fish-hand-group-cards">
+                  {group.cards.map((card) => (
+                    <div key={card.id} className={`fish-card-wrap ${theme.adult ? "fish-adult-card-wrap" : ""}`}>
+                      <StandardCard card={card} compact disabled={!myTurn} selected={rank === card.rank} onClick={() => myTurn && setRank(card.rank)} />
+                      {theme.adult ? <div className="fish-card-copy"><strong>{formatRank(theme, card.rank)}</strong><small>{formatCard(theme, card)}</small></div> : null}
+                    </div>
+                  ))}
+                </div>
+              </section>
             )) : <p className="fish-empty-hand">No cards in hand. {state.stock?.length ? "You’ll draw when your turn reaches you." : "Watch the last books land."}</p>}
           </div>
         </section>
