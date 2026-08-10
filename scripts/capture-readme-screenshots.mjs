@@ -65,6 +65,11 @@ async function captureTabletopEntry(gameId, name) {
   await capture(name, ".game-start-panel");
 }
 
+async function captureChompageddon() {
+  await open("/?game=chompageddon", ".chomp-launchpad");
+  await capture("chompageddon-entry", ".chompageddon-page");
+}
+
 try {
   await captureHub();
   await captureCanasta();
@@ -75,6 +80,7 @@ try {
   await captureTabletopEntry("connect4", "connect4-entry");
   await captureTabletopEntry("battleship", "battleship-entry");
   await captureTabletopEntry("gofish", "gofish-entry");
+  await captureChompageddon();
 } finally {
   await browser.close();
 }
