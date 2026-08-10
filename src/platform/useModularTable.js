@@ -93,7 +93,8 @@ export default function useModularTable({
       persistIdentity();
       const quickRules = { ...rules, ...(ruleOverrides || {}) };
       const code = await createModularRoom({ user, nickname, avatar, gameId, maxPlayers, rules: quickRules });
-      await addModularRobot(code, user.uid);
+      const robotCount = Math.max(1, Number(minimumPlayers || 2) - 1);
+      for (let index = 0; index < robotCount; index += 1) await addModularRobot(code, user.uid);
       await startModularGame(code, user.uid, createGameState, minimumPlayers);
       setRoomCode(code);
     }).catch(() => {});
@@ -135,6 +136,7 @@ export default function useModularTable({
     members,
     error,
     busy,
+    minimumPlayers,
     createRoom,
     quickStartRobot,
     joinRoom,
