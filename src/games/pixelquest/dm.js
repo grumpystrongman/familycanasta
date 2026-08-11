@@ -1,3 +1,5 @@
+import React, { useEffect, useState } from "react";
+import { auth } from "../../firebase.js";
 import { currentAdventure, currentScene } from "./engine.js";
 
 const OPENERS = [
@@ -166,5 +168,65 @@ export class LlmNarrator {
   }
 }
 
-export const localNarrator = new LocalNarrator();
-export const gemmaNarrator = new GemmaNarrator({ fallback: localNarrator });
+export const deterministicNarrator = new LocalNarrator();
+export const gemmaNarrator = new GemmaNarrator({ fallback: deterministicNarrator });
+
+function GemmaNarration({ campaign, fallback, kind = "describe", plan = "" }) {
+  const [text, setText] = useState(fallback);
+  const scene = currentScene(campaign);
+  const requestKey = `${campaign.seed}:${scene?.id || "none"}:${kind}:${plan}:${campaign.log?.length || 0}`;
+
+  useEffect(() => {
+    setText(fallback);
+    if (!gemmaNarrator.configured) return undefined;
+    const controller = new AbortController();
+    let active = true;
+    (async () => {
+      try {
+        const token = await auth?.currentUser?.getIdToken?.();
+        const result = kind === "plan"
+          ? await gemmaNarrator.reactToPlan(campaign, plan, { token, signal: controller.signal })
+          : await gemmaNarrator.describe(campaign, { token, signal: controller.signal });
+        const narration = kind === "plan" ? result?.narration : result;
+        if (active && narration) setText(String(narration));
+      } catch {
+        // Deterministic narration remains visible when the AI service is unavailable.
+      }
+    })();
+    return () => { active = false; controller.abort(); };
+  }, [requestKey, fallback]);
+
+  return React.createElement("span", {
+    className: "pq-gemma-narration",
+    "data-dm-model": gemmaNarrator.configured ? gemmaNarrator.model : "local",
+  }, text);
+}
+
+class HybridNarrator {
+  describe(campaign) {
+    const fallback = deterministicNarrator.describe(campaign);
+    if (typeof window === "undefined" || !gemmaNarrator.configured) return fallback;
+    return React.createElement(GemmaNarration, { campaign, fallback, key: `${campaign.seed}:${currentScene(campaign)?.id}` });
+  }
+
+  reactToPlan(campaign, plan) {
+    const local = deterministicNarrator.reactToPlan(campaign, plan);
+    if (typeof window === "undefined" || !gemmaNarrator.configured) return local;
+    return {
+      ...local,
+      narration: React.createElement(GemmaNarration, {
+        campaign,
+        plan,
+        kind: "plan",
+        fallback: local.narration,
+        key: `${campaign.seed}:${currentScene(campaign)?.id}:plan:${plan}`,
+      }),
+    };
+  }
+
+  combatQuip(campaign, actorName) {
+    return deterministicNarrator.combatQuip(campaign, actorName);
+  }
+}
+
+export const localNarrator = new HybridNarrator();
