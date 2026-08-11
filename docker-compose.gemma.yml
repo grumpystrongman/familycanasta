@@ -1,0 +1,45 @@
+services:
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    volumes:
+      - pixelquest-ollama:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  gemma-install:
+    image: ollama/ollama:latest
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    entrypoint: ["/bin/sh", "-lc"]
+    command: >-
+      ollama pull gemma4:12b &&
+      ollama list | grep -q 'gemma4:12b'
+    restart: "no"
+
+  pixelquest-dm:
+    build:
+      context: ./services/pixelquest-dm
+    restart: unless-stopped
+    depends_on:
+      gemma-install:
+        condition: service_completed_successfully
+    environment:
+      PORT: 8787
+      OLLAMA_BASE_URL: http://ollama:11434
+      GEMMA_MODEL: gemma4:12b
+      DM_AUTH_MODE: ${DM_AUTH_MODE:-firebase}
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-}
+      DM_ALLOWED_ORIGIN: ${DM_ALLOWED_ORIGIN:-http://localhost:5173}
+      DM_TIMEOUT_MS: ${DM_TIMEOUT_MS:-30000}
+    ports:
+      - "${PIXELQUEST_DM_PORT:-8787}:8787"
+
+volumes:
+  pixelquest-ollama:

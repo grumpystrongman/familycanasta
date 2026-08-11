@@ -8,6 +8,8 @@
     "build": "vite build",
     "test": "node --test",
     "preview": "vite preview",
+    "pixelquest:dm": "node services/pixelquest-dm/server.mjs",
+    "pixelquest:dm:test": "node --test services/pixelquest-dm/server.test.mjs src/games/pixelquest/dm.test.js",
     "firebase:login": "firebase login",
     "firebase:deploy": "firebase deploy"
   },
