@@ -18,12 +18,13 @@ await context.addInitScript(() => {
   localStorage.setItem("familyCardNickname", "Family Host");
   localStorage.setItem("canastaAvatar", "🦊");
   localStorage.setItem("familyCardAvatar", "🦊");
+  // Documentation capture is an automated test browser, not an age-verification flow.
+  // Set the existing consent flag so the README can show the actual adults-only game screen.
   localStorage.setItem("familyGameAdultAccepted", "yes");
 });
 
 const page = await context.newPage();
 page.setDefaultTimeout(30_000);
-page.on("console", (message) => console.log(`[browser:${message.type()}] ${message.text()}`));
 page.on("pageerror", (error) => console.log(`[browser:error] ${error.stack || error.message}`));
 
 async function open(route, selector) {
@@ -92,6 +93,8 @@ async function capturePixelQuest() {
   await open("/?game=pixelquest", ".pq-title-screen");
   await capture("pixelquest-entry", ".pq-title-screen");
 
+  // This is intentionally more than a screenshot. It proves that two separate
+  // browser sessions can join the same Firebase room and retain independent input.
   await page.getByRole("button", { name: /create adventure room/i }).click();
   await page.locator(".pq-lobby-screen").waitFor({ state: "visible" });
   const roomCode = (await page.locator(".pq-lobby-banner strong").first().innerText()).trim();
@@ -108,7 +111,6 @@ async function capturePixelQuest() {
   });
   const guestPage = await guestContext.newPage();
   guestPage.setDefaultTimeout(30_000);
-  guestPage.on("console", (message) => console.log(`[pixelquest-guest:${message.type()}] ${message.text()}`));
   guestPage.on("pageerror", (error) => console.log(`[pixelquest-guest:error] ${error.stack || error.message}`));
 
   try {
@@ -139,16 +141,10 @@ async function capturePixelQuest() {
       guestPage.getByRole("heading", { name: /How do you enter Blackhollow/i }).waitFor({ state: "visible" }),
     ]);
 
+    // The host votes first and remains on the decision scene. The remote guest's
+    // independently submitted vote is the final required human input and advances it.
     await page.getByRole("button", { name: /Investigate the lit mill/i }).click();
-    await page.waitForTimeout(1200);
-    console.log(`PIXELQUEST_HOST_AFTER_FIRST_VOTE: ${(await page.locator(".pq-main-stage").innerText()).replaceAll("\n", " | ")}`);
-    console.log(`PIXELQUEST_GUEST_AFTER_HOST_VOTE: ${(await guestPage.locator(".pq-main-stage").innerText()).replaceAll("\n", " | ")}`);
-    const hostErrors = await page.locator(".pq-error").allInnerTexts();
-    const guestErrors = await guestPage.locator(".pq-error").allInnerTexts();
-    if (hostErrors.length) console.log(`PIXELQUEST_HOST_ERRORS: ${hostErrors.join(" | ")}`);
-    if (guestErrors.length) console.log(`PIXELQUEST_GUEST_ERRORS: ${guestErrors.join(" | ")}`);
     await page.locator(".pq-choice-list button.chosen").waitFor({ state: "visible" });
-
     await guestPage.getByRole("button", { name: /Investigate the lit mill/i }).click();
     await Promise.all([
       page.getByRole("heading", { name: /this choice is yours/i }).waitFor({ state: "visible" }),
@@ -197,19 +193,27 @@ try {
   await captureHearts();
   await captureSpades();
   await captureRummy();
+
+  // Party Stage games added this week.
   await capturePartyEntry("punchline", "punchline-entry");
   await capturePartyEntry("lastonealive", "last-one-alive-entry");
   await capturePartyEntry("doodlealibi", "doodle-alibi-entry");
+
+  // Strategy, board, and family table games added this week.
   await captureGameEntry("hnefatafl", "hnefatafl-entry");
   await captureGameEntry("connect4", "connect4-entry");
   await captureGameEntry("battleship", "battleship-entry");
   await captureGameEntry("gofish", "gofish-entry");
   await captureGameEntry("gofyourself", "go-f-yourself-entry");
+
+  // Card-room expansion games added this week.
   await captureGameEntry("ers", "egyptian-rat-screw-entry");
   await captureGameEntry("spoons", "spoons-entry");
   await captureGameEntry("indians", "indians-entry");
   await captureGameEntry("poker", "five-card-draw-entry");
   await captureGameEntry("golf", "six-card-golf-entry");
+
+  // Local physics arcade game added this week.
   await captureChompageddon();
 } finally {
   await browser.close();
