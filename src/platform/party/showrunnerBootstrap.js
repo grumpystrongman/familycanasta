@@ -6,6 +6,14 @@ const spokenIntros = new Set();
 let lastPhaseKey = "";
 let captionTimer = null;
 
+function ensureAudibleDefaults() {
+  if (typeof window === "undefined") return;
+  try {
+    if (window.localStorage.getItem("familyPartyMusicVolume") == null) partyAudio.setMusicVolume(0.52);
+    if (window.localStorage.getItem("familyPartySfxVolume") == null) partyAudio.setSfxVolume(0.82);
+  } catch { /* storage can be blocked; the in-memory defaults still work */ }
+}
+
 function isHostScreen() {
   if (typeof window === "undefined") return false;
   const role = new URLSearchParams(window.location.search).get("role");
@@ -174,6 +182,7 @@ function handleShowEvent(event) {
 
 if (typeof window !== "undefined" && !window.__familyPartyShowrunnerInstalled) {
   window.__familyPartyShowrunnerInstalled = true;
+  ensureAudibleDefaults();
   partyAnnouncer.prepare();
   partyAudio.onEvent(handleShowEvent);
 }
