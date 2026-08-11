@@ -122,7 +122,11 @@ async function callOllama({ kind, context, plan, ollamaBaseUrl, model, fetchImpl
         system: `You are the Dungeon Master for PixelQuest: The Living Dungeon, a cooperative family fantasy RPG. Be imaginative, concise, fair, and responsive to player choices. ${RULES_NOTICE}`,
         prompt: buildPrompt(kind, context, plan),
         format: schemaFor(kind, choices),
-        options: { temperature: kind === "plan" ? 0.65 : 0.8, top_p: 0.92 },
+        options: {
+          temperature: kind === "plan" ? 0.65 : 0.8,
+          top_p: 0.92,
+          num_predict: kind === "plan" ? 120 : 80,
+        },
       }),
       signal: controller.signal,
     });
