@@ -37,9 +37,9 @@ test("Slum Lord exposes tactical movement and property-management choices on one
 
 test("Slum Lord replaces round caps with objective-based endings", () => {
   assert.doesNotMatch(gameSource, /15 rounds|25 rounds|40 rounds/i);
-  assert.match(gameSource, /Last Landlord Standing/);
-  assert.match(gameSource, /Build an Empire/);
-  assert.match(gameSource, /Own the Block/);
+  assert.match(chaos, /Last Landlord Standing/);
+  assert.match(chaos, /Build an Empire/);
+  assert.match(chaos, /Own the Block/);
 });
 
 test("Slum Lord offers three cosmetic N64-style board themes", () => {
