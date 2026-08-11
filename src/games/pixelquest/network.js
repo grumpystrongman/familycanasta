@@ -1,0 +1,211 @@
+import { ADVENTURE_BY_ID, HEROES } from "./data.js";
+import {
+  advanceCombatTurn,
+  applyPrivateChoice,
+  castPartyVote,
+  completeAdventure,
+  continueStoryScene,
+  createCampaign,
+  currentCombatActor,
+  currentScene,
+  endHeroTurn,
+  finishCombat,
+  moveCombatActor,
+  recoverFromDefeat,
+  resolvePartyVote,
+  resolveSkillScene,
+  runAutomaticTurns,
+  startCombat,
+  useAbility,
+} from "./engine.js";
+import { useTileAbility } from "./specialActions.js";
+
+function clone(value) { return JSON.parse(JSON.stringify(value)); }
+
+function heroForUid(state, uid) {
+  const heroId = state.seatHeroes?.[uid];
+  return state.campaign?.heroes?.find((hero) => hero.id === heroId) || null;
+}
+
+function memberForUid(members, uid) {
+  return members.find((member) => member.uid === uid) || null;
+}
+
+function hostUid(members) {
+  return members.find((member) => member.isHost)?.uid || members[0]?.uid;
+}
+
+function requireHost(actorUid, members) {
+  if (actorUid !== hostUid(members)) throw new Error("Only the host can advance this part of the adventure.");
+}
+
+function availableHeroId(selections, preferredIndex = 0) {
+  const used = new Set(Object.values(selections || {}).filter(Boolean));
+  for (let offset = 0; offset < HEROES.length; offset += 1) {
+    const candidate = HEROES[(preferredIndex + offset) % HEROES.length];
+    if (!used.has(candidate.id)) return candidate.id;
+  }
+  return HEROES[0].id;
+}
+
+export function createPixelQuestGameState(members, rules = {}) {
+  const adventureId = ADVENTURE_BY_ID[rules.adventureId] ? rules.adventureId : "bells-blackhollow";
+  const selections = {};
+  for (const member of members) {
+    if (member.isRobot) selections[member.uid] = availableHeroId(selections, Number(member.seat || 0));
+  }
+  return {
+    phase: "hero-select",
+    roundNumber: 0,
+    adventureId,
+    difficulty: rules.difficulty || "story",
+    selections,
+    seatHeroes: {},
+    campaign: null,
+    message: "Choose a hero. Each adventurer must be unique.",
+  };
+}
+
+function beginCampaign(state, actorUid, members) {
+  requireHost(actorUid, members);
+  const selections = { ...(state.selections || {}) };
+  for (const member of members) {
+    if (!selections[member.uid]) {
+      if (member.isRobot) selections[member.uid] = availableHeroId(selections, Number(member.seat || 0));
+      else throw new Error(`${member.nickname} still needs to choose a hero.`);
+    }
+  }
+  const ordered = [...members].sort((a, b) => Number(a.seat) - Number(b.seat));
+  const heroIds = ordered.map((member) => selections[member.uid]);
+  const controllers = ordered.map((member) => member.isRobot ? "ai" : "human");
+  const seed = `${state.adventureId}:${Date.now()}:${ordered.map((member) => member.uid).join("|")}`;
+  const campaign = createCampaign({ adventureId: state.adventureId, heroIds, controllers, seed });
+  return {
+    ...state,
+    phase: "playing",
+    roundNumber: 1,
+    selections,
+    seatHeroes: Object.fromEntries(ordered.map((member, index) => [member.uid, heroIds[index]])),
+    campaign,
+    message: "The adventure begins.",
+  };
+}
+
+function selectHero(state, actorUid, heroId, members) {
+  const member = memberForUid(members, actorUid);
+  if (!member || member.isRobot) throw new Error("That seat cannot choose a human hero.");
+  if (!HEROES.some((hero) => hero.id === heroId)) throw new Error("Choose a valid hero.");
+  const takenBy = Object.entries(state.selections || {}).find(([uid, selected]) => uid !== actorUid && selected === heroId);
+  if (takenBy) throw new Error("Another adventurer already chose that hero.");
+  return { ...state, selections: { ...(state.selections || {}), [actorUid]: heroId }, message: `${member.nickname} is ready.` };
+}
+
+function ensureOwnTurn(state, actorUid) {
+  const hero = heroForUid(state, actorUid);
+  const current = currentCombatActor(state.campaign);
+  if (!hero || !current || current.id !== hero.id) throw new Error("Wait for your hero's turn.");
+  return hero;
+}
+
+function autoResolve(campaign) {
+  if (!campaign?.combat || campaign.combat.victory) return campaign;
+  return runAutomaticTurns(campaign, 48);
+}
+
+export function reducePixelQuest(state, actorUid, action, members) {
+  if (!action?.type) throw new Error("Choose an action.");
+  if (state.phase === "hero-select") {
+    if (action.type === "select-hero") return selectHero(state, actorUid, action.heroId, members);
+    if (action.type === "begin-adventure") return beginCampaign(state, actorUid, members);
+    throw new Error("Choose a hero before the adventure begins.");
+  }
+  if (state.phase !== "playing" || !state.campaign) throw new Error("The adventure is not active.");
+
+  let next = clone(state);
+  let campaign = next.campaign;
+  const scene = currentScene(campaign);
+  const myHero = heroForUid(next, actorUid);
+
+  switch (action.type) {
+    case "continue-story":
+      requireHost(actorUid, members);
+      campaign = continueStoryScene(campaign);
+      break;
+    case "vote":
+      if (!myHero) throw new Error("No hero is assigned to your seat.");
+      campaign = castPartyVote(campaign, myHero.id, action.choiceId);
+      break;
+    case "resolve-vote": {
+      requireHost(actorUid, members);
+      const resolved = resolvePartyVote(campaign);
+      if (!resolved.resolved) throw new Error("Every human adventurer must vote before the party moves on.");
+      campaign = resolved.state;
+      break;
+    }
+    case "private-choice":
+      if (!myHero) throw new Error("No hero is assigned to your seat.");
+      campaign = applyPrivateChoice(campaign, myHero.id, action.choiceId);
+      break;
+    case "skill-check":
+      if (!myHero) throw new Error("No hero is assigned to your seat.");
+      campaign = resolveSkillScene(campaign, myHero.id);
+      break;
+    case "start-combat":
+      requireHost(actorUid, members);
+      campaign = autoResolve(startCombat(campaign));
+      break;
+    case "move": {
+      ensureOwnTurn(next, actorUid);
+      const result = moveCombatActor(campaign, myHero.id, Number(action.x), Number(action.y));
+      if (!result.ok) throw new Error(result.reason);
+      campaign = result.state;
+      break;
+    }
+    case "ability": {
+      ensureOwnTurn(next, actorUid);
+      const result = useAbility(campaign, myHero.id, action.abilityId, action.targetId);
+      if (!result.ok) throw new Error(result.reason);
+      campaign = autoResolve(result.state);
+      break;
+    }
+    case "tile-ability": {
+      ensureOwnTurn(next, actorUid);
+      const result = useTileAbility(campaign, myHero.id, action.abilityId, Number(action.x), Number(action.y));
+      if (!result.ok) throw new Error(result.reason);
+      campaign = autoResolve(result.state);
+      break;
+    }
+    case "end-turn":
+      ensureOwnTurn(next, actorUid);
+      campaign = autoResolve(endHeroTurn(campaign));
+      break;
+    case "finish-combat":
+      requireHost(actorUid, members);
+      campaign = finishCombat(campaign);
+      break;
+    case "recover-defeat":
+      requireHost(actorUid, members);
+      campaign = recoverFromDefeat(campaign);
+      break;
+    case "complete-adventure":
+      requireHost(actorUid, members);
+      campaign = completeAdventure(campaign);
+      next.phase = campaign.completed ? "complete" : "playing";
+      break;
+    case "dev-skip-turn":
+      requireHost(actorUid, members);
+      campaign = advanceCombatTurn(campaign);
+      break;
+    default:
+      throw new Error(`Unknown PixelQuest action: ${action.type}`);
+  }
+
+  next.campaign = campaign;
+  next.roundNumber = campaign.combat?.round || next.roundNumber;
+  next.message = scene?.title || "The adventure continues.";
+  return next;
+}
+
+export function pixelQuestSeatForUid(state, uid) {
+  return state?.seatHeroes?.[uid] || state?.selections?.[uid] || null;
+}
