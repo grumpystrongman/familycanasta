@@ -8,8 +8,6 @@ const impactAudio = (file) => `${KENNEY_RAW}/kenney_impactsounds/Audio/${file}.o
 const maleVoice = (file) => `${KENNEY_RAW}/kenney_voiceoverpack/Male/${file}.ogg`;
 const femaleVoice = (file) => `${KENNEY_RAW}/kenney_voiceoverpack/Female/${file}.ogg`;
 
-// Recorded production music. These tracks are free under CC BY 4.0; attribution
-// lives in THIRD_PARTY_AUDIO.md and is surfaced in the Party Stage credits UI.
 const MUSIC = {
   lobby: "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Pinball%20Spring.mp3",
   punchline: "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Mischief%20Maker.mp3",
@@ -50,13 +48,13 @@ const VOICE = {
   gameOver: { default: maleVoice("game_over") },
 };
 
+export const PARTY_AUDIO_SOURCES = { music: MUSIC, sfx: SFX, voice: VOICE };
+
 function storageGet(key) {
-  try { return typeof localStorage === "undefined" ? null : localStorage.getItem(key); }
-  catch { return null; }
+  try { return typeof localStorage === "undefined" ? null : localStorage.getItem(key); } catch { return null; }
 }
 function storageSet(key, value) {
-  try { if (typeof localStorage !== "undefined") localStorage.setItem(key, value); }
-  catch { /* storage can be blocked */ }
+  try { if (typeof localStorage !== "undefined") localStorage.setItem(key, value); } catch { /* blocked storage */ }
 }
 function storedNumber(key, fallback) {
   const raw = storageGet(key);
@@ -65,7 +63,7 @@ function storedNumber(key, fallback) {
   return Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : fallback;
 }
 function choose(list = []) { return list[Math.floor(Math.random() * list.length)] || ""; }
-function safeAudio(url) {
+function makeAudio(url) {
   if (typeof Audio === "undefined" || !url) return null;
   const audio = new Audio(url);
   audio.preload = "auto";
@@ -74,7 +72,7 @@ function safeAudio(url) {
 
 class AudioDirector {
   constructor() {
-    this.context = null; // compatibility flag used by the existing controls
+    this.context = null;
     this.musicVolume = storedNumber(MUSIC_KEY, 0.34);
     this.sfxVolume = storedNumber(SFX_KEY, 0.78);
     this.music = null;
@@ -93,15 +91,15 @@ class AudioDirector {
 
   emit(type, detail = {}) {
     this.listeners.forEach((listener) => {
-      try { listener({ type, ...detail }); } catch { /* presentation hooks never break gameplay */ }
+      try { listener({ type, ...detail }); } catch { /* show hooks cannot break gameplay */ }
     });
   }
 
   async enable() {
     if (typeof window === "undefined" || typeof Audio === "undefined") return false;
+    // Set this synchronously so a click that calls sfx() can start HTMLAudio in
+    // the same user-activation stack instead of waiting for a promise callback.
     this.context = { state: "running" };
-    // Prime the handful of clips used most often. Browsers may still lazy-load,
-    // but this removes most first-click latency without blocking the game.
     ["join", "ready", "vote", "lock", "reveal", "correct", "wrong", "go"].forEach((name) => {
       (SFX[name] || []).forEach((url) => this.preload(url));
     });
@@ -111,10 +109,10 @@ class AudioDirector {
 
   preload(url) {
     if (!url || this.preloaded.has(url)) return this.preloaded.get(url) || null;
-    const audio = safeAudio(url);
+    const audio = makeAudio(url);
     if (!audio) return null;
     this.preloaded.set(url, audio);
-    try { audio.load(); } catch { /* network/browser may defer loading */ }
+    try { audio.load(); } catch { /* browser may defer */ }
     return audio;
   }
 
@@ -142,7 +140,7 @@ class AudioDirector {
   playUrl(url, volume = this.sfxVolume, { rate = 1 } = {}) {
     if (!url || typeof Audio === "undefined") return null;
     const source = this.preload(url);
-    const audio = source ? source.cloneNode(true) : safeAudio(url);
+    const audio = source ? source.cloneNode(true) : makeAudio(url);
     if (!audio) return null;
     audio.volume = Math.max(0, Math.min(1, volume));
     audio.playbackRate = rate;
@@ -152,31 +150,24 @@ class AudioDirector {
 
   voiceCue(name) {
     const entry = VOICE[name];
-    if (!entry) return;
-    // Don't turn the human cue pack into constant chatter.
-    if (Date.now() - this.lastVoiceAt < 1800) return;
+    if (!entry || Date.now() - this.lastVoiceAt < 1800) return;
     const url = entry[this.loopName] || entry.default;
     if (!url) return;
     this.lastVoiceAt = Date.now();
     this.duckMusic(0.16);
     const audio = this.playUrl(url, Math.min(1, this.sfxVolume * 1.05));
-    if (audio) {
-      const restore = () => this.restoreMusic();
-      audio.addEventListener("ended", restore, { once: true });
-      audio.addEventListener("error", restore, { once: true });
-      window.setTimeout(restore, 2500);
-    } else this.restoreMusic();
+    if (!audio) return this.restoreMusic();
+    const restore = () => this.restoreMusic();
+    audio.addEventListener("ended", restore, { once: true });
+    audio.addEventListener("error", restore, { once: true });
+    if (typeof window !== "undefined") window.setTimeout(restore, 2500);
   }
 
   sfx(name) {
-    if (!this.context) {
-      this.enable().then((ok) => { if (ok) this.sfx(name); }).catch(() => {});
-      return;
-    }
+    if (!this.context) this.enable().catch(() => {});
+    if (!this.context) return;
     this.emit("sfx", { name, theme: this.loopName || "lobby" });
-    const urls = SFX[name] || SFX.tick;
-    this.playUrl(choose(urls), this.sfxVolume);
-
+    this.playUrl(choose(SFX[name] || SFX.tick), this.sfxVolume);
     if (name === "ready") this.voiceCue("ready");
     else if (name === "go") this.voiceCue("go");
     else if (name === "correct") this.voiceCue("correct");
@@ -184,18 +175,19 @@ class AudioDirector {
     else if (name === "fanfare") this.voiceCue("winner");
   }
 
-  cue(name) { this.voiceCue(name); }
+  cue(name) {
+    if (!this.context) this.enable().catch(() => {});
+    if (this.context) this.voiceCue(name);
+  }
 
   startMusic(name = "lobby") {
-    if (!this.context) {
-      this.enable().then((ok) => { if (ok) this.startMusic(name); }).catch(() => {});
-      return;
-    }
+    if (!this.context) this.enable().catch(() => {});
+    if (!this.context) return;
     const source = MUSIC[name] || MUSIC.lobby;
     if (this.loopName === name && this.music && !this.music.paused) return;
     this.stopMusic();
     this.loopName = name;
-    this.music = safeAudio(source);
+    this.music = makeAudio(source);
     if (!this.music) return;
     this.music.loop = true;
     this.music.volume = this.musicVolume;
