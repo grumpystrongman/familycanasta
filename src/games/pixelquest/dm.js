@@ -77,9 +77,9 @@ export function buildNarratorContext(campaign) {
     })),
     gold: Number(campaign.gold || 0),
     xp: Number(campaign.xp || 0),
-    recentEvents: (campaign.log || []).slice(-12).map(({ type, text, private }) => ({
+    recentEvents: (campaign.log || []).slice(-12).map(({ type, text, private: isPrivate }) => ({
       type,
-      text: private ? "An adventurer made a private decision." : text,
+      text: isPrivate ? "An adventurer made a private decision." : text,
     })),
     immutableRulesNotice: "The deterministic PixelQuest engine owns all dice, HP, Defense, movement, inventory, gold, initiative, conditions, cooldowns, rewards, legal actions, and encounter state. Narration may never alter, invent, reroll, or contradict those values.",
   };
