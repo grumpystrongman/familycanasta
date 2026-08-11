@@ -5,18 +5,12 @@ import {
   autoResolveDebt,
   botAuctionLimit,
   botPurchaseDecision,
-  botUpgradeChoice,
   buyPendingProperty,
-  calculateNetWorth,
   canMortgageProperty,
-  canSellUpgrade,
   canUnmortgageProperty,
-  canUpgradeProperty,
-  createGame,
   currentPlayer,
   declareBankruptcy,
   describeSpace,
-  endTurn,
   getPlayerProperties,
   mortgageProperty,
   passAuction,
@@ -24,15 +18,34 @@ import {
   placeAuctionBid,
   proposeTrade,
   rejectTrade,
-  rollDice,
-  sellUpgrade,
   startAuction,
   unmortgageProperty,
-  upgradeProperty,
   useCourtPass,
 } from "./engine.js";
+import {
+  GOALS,
+  SCHEMES,
+  botChaosAction,
+  calculateChaosNetWorth,
+  canChaosUpgrade,
+  canInstallScheme,
+  canSellUpgradeChaos,
+  cityPressure,
+  createChaosGame,
+  finishChaosTurn,
+  getScheme,
+  goalDescription,
+  goalLabel,
+  installScheme,
+  portfolioHeat,
+  removeScheme,
+  rollStreetDice,
+  sellUpgradeChaos,
+  upgradePropertyChaos,
+} from "./chaos.js";
 import "./styles.css";
 import "./n64-overrides.css";
+import "./chaos.css";
 
 const PLAYER_COLORS = ["#ef5350", "#42a5f5", "#ffca28", "#66bb6a"];
 const TOKEN_NAMES = ["Wrench", "Plunger", "Brick", "Bucket", "Key", "Van", "Toolbox", "Saw"];
@@ -87,7 +100,7 @@ function Token({ player, index, active = false, compact = false }) {
 
 function Setup({ onStart, onExit }) {
   const [count, setCount] = useState(2);
-  const [roundLimit, setRoundLimit] = useState(25);
+  const [goalMode, setGoalMode] = useState("bankruptcy");
   const [players, setPlayers] = useState([
     { name: "You", isBot: false, token: TOKENS[0] },
     { name: "CPU Landlord", isBot: true, token: TOKENS[1] },
@@ -103,16 +116,20 @@ function Setup({ onStart, onExit }) {
         <div className="sl-logo-lockup">
           <div className="sl-logo-building" aria-hidden="true"><span /><span /><span /></div>
           <div>
-            <p className="sl-kicker">A property game with terrible maintenance</p>
+            <p className="sl-kicker">18+ property management for terrible people</p>
             <h1>SLUM LORD</h1>
-            <p>Buy the block. Patch the leaks. Dodge inspections. Collect rent.</p>
+            <p>Buy the block. Raise the rent. Dodge inspectors. Make choices you would deny under oath.</p>
           </div>
         </div>
 
+        <div className="sl-adult-warning">Adult satire: drugs, vice, gangs, cops, homelessness, drunken disasters, bureaucracy, taxes, fines, rats, and aggressively questionable landlord behavior.</div>
+
         <div className="sl-setup-options">
-          <label>Players<select value={count} onChange={(event) => setCount(Number(event.target.value))}><option value={2}>2 players</option><option value={3}>3 players</option><option value={4}>4 players</option></select></label>
-          <label>Game length<select value={roundLimit} onChange={(event) => setRoundLimit(Number(event.target.value))}><option value={15}>Quick — 15 rounds</option><option value={25}>Standard — 25 rounds</option><option value={40}>Long — 40 rounds</option><option value={0}>Last landlord standing</option></select></label>
+          <label>Landlords<select value={count} onChange={(event) => setCount(Number(event.target.value))}><option value={2}>2 landlords</option><option value={3}>3 landlords</option><option value={4}>4 landlords</option></select></label>
+          <label>How do we win?<select value={goalMode} onChange={(event) => setGoalMode(event.target.value)}>{Object.entries(GOALS).map(([id, goal]) => <option key={id} value={id}>{goal.label}</option>)}</select></label>
         </div>
+
+        <div className="sl-goal-note"><strong>{GOALS[goalMode].label}</strong><span>{goalDescription(goalMode)}</span></div>
 
         <div className="sl-player-setup-list">
           {players.slice(0, count).map((player, index) => (
@@ -127,7 +144,7 @@ function Setup({ onStart, onExit }) {
 
         <div className="sl-setup-actions">
           <button type="button" className="sl-button sl-button-secondary" onClick={onExit}>Back to game room</button>
-          <button type="button" className="sl-button sl-button-primary" onClick={() => onStart(players.slice(0, count), roundLimit || null)}>Start game</button>
+          <button type="button" className="sl-button sl-button-primary" onClick={() => onStart(players.slice(0, count), goalMode)}>Start the bad decisions</button>
         </div>
       </section>
     </main>
@@ -139,11 +156,13 @@ function BoardSpace({ state, space, selected, onSelect }) {
   const group = space.group ? GROUPS[space.group] : null;
   const current = currentPlayer(state);
   const occupants = state.players.map((player, index) => ({ player, index })).filter(({ player }) => !player.bankrupt && player.position === space.id);
+  const scheme = getScheme(ownership);
 
   return (
     <button type="button" className={`sl-space sl-space-${space.type} ${selected ? "selected" : ""}`} style={{ ...gridPosition(space.id), "--group": group?.color || "#d9d4c7" }} onClick={() => onSelect(space.id)}>
       {group ? <span className="sl-group-band" /> : null}
       {ownership ? <span className="sl-owner-flag" style={{ "--owner": ownerColor(state, ownership.ownerId) }} /> : null}
+      {scheme?.heat ? <span className="sl-space-heat" title={`${scheme.name}: Heat ${scheme.heat}`}>🔥{scheme.heat}</span> : null}
       <span className="sl-space-icon" aria-hidden="true">{iconFor(space)}</span>
       <strong>{space.name}</strong>
       <small>{space.price ? cash(space.price) : space.subtitle || ""}</small>
@@ -163,7 +182,7 @@ function PlayerRail({ state }) {
           <div className="sl-player-card-token"><Token player={player} index={index} active={current?.id === player.id} compact /></div>
           <div><strong>{player.name}</strong><small>{player.isBot ? "CPU" : "LOCAL"}{player.inCourt ? " · IN COURT" : ""}</small></div>
           <b>{player.bankrupt ? "BANKRUPT" : cash(player.cash)}</b>
-          <span>Net worth {cash(calculateNetWorth(state, player.id))}</span>
+          <span>Net {cash(calculateChaosNetWorth(state, player.id))} · Heat 🔥{portfolioHeat(state, player.id)}</span>
         </section>
       ))}
     </aside>
@@ -171,14 +190,23 @@ function PlayerRail({ state }) {
 }
 
 function PropertyPanel({ state, spaceId, onState }) {
+  const [schemeChoice, setSchemeChoice] = useState(SCHEMES[0].id);
   const space = BOARD[spaceId];
   const detail = describeSpace(state, spaceId);
   const player = currentPlayer(state);
-  if (!space || !detail) return null;
-
-  const { ownership, owner, currentRent } = detail;
+  const ownership = detail?.ownership;
+  const owner = detail?.owner;
+  const currentRent = detail?.currentRent;
   const mine = ownership?.ownerId === player?.id;
-  const upgradeLabel = space.type === "property" ? UPGRADE_NAMES[Math.min(ownership?.upgrades || 0, UPGRADE_NAMES.length - 1)] : null;
+  const scheme = getScheme(ownership);
+  const selectedScheme = SCHEMES.find((item) => item.id === schemeChoice) || SCHEMES[0];
+  const upgradeLabel = space?.type === "property" ? UPGRADE_NAMES[Math.min(ownership?.upgrades || 0, UPGRADE_NAMES.length - 1)] : null;
+
+  useEffect(() => {
+    setSchemeChoice(SCHEMES[0].id);
+  }, [spaceId]);
+
+  if (!space || !detail) return null;
 
   return (
     <section className="sl-space-panel">
@@ -190,17 +218,30 @@ function PropertyPanel({ state, spaceId, onState }) {
       {space.price ? <div className="sl-property-facts">
         <span><small>Price</small><b>{cash(space.price)}</b></span>
         <span><small>Owner</small><b>{owner?.name || "Bank"}</b></span>
-        <span><small>Rent</small><b>{ownership && !ownership.mortgaged ? cash(currentRent) : "—"}</b></span>
-        <span><small>Mortgage</small><b>{cash(space.mortgage)}</b></span>
+        <span><small>Base rent</small><b>{ownership && !ownership.mortgaged ? cash(currentRent) : "—"}</b></span>
+        <span><small>Heat</small><b>{scheme ? `🔥 ${scheme.heat}` : "Clean-ish"}</b></span>
       </div> : <p className="sl-space-description">{space.subtitle || "Special board space."}</p>}
 
-      {space.type === "property" ? <div className="sl-rent-ladder"><strong>{upgradeLabel || "Rent schedule"}</strong><div>{space.rent.map((rent, index) => <span key={index} className={(ownership?.upgrades || 0) === index ? "active" : ""}>{index === 0 ? "Base" : index === 4 ? "Cash Cow" : `Lv ${index}`} <b>{cash(rent)}</b></span>)}</div></div> : null}
+      {space.type === "property" ? <div className="sl-rent-ladder"><strong>{upgradeLabel || "Rent schedule"}</strong><div>{space.rent.map((rent, index) => <span key={index} className={(ownership?.upgrades || 0) === index ? "active" : ""}>{UPGRADE_NAMES[index] || `Lv ${index}`} <b>{cash(rent)}</b></span>)}</div></div> : null}
 
-      {mine ? <div className="sl-panel-actions">
-        {canUpgradeProperty(state, player.id, space.id) ? <button type="button" onClick={() => onState(upgradeProperty(state, player.id, space.id))}>Upgrade {cash(space.upgradeCost)}</button> : null}
-        {canSellUpgrade(state, player.id, space.id) ? <button type="button" onClick={() => onState(sellUpgrade(state, player.id, space.id))}>Sell upgrade</button> : null}
-        {canMortgageProperty(state, player.id, space.id) ? <button type="button" onClick={() => onState(mortgageProperty(state, player.id, space.id))}>Mortgage</button> : null}
-        {canUnmortgageProperty(state, player.id, space.id) ? <button type="button" onClick={() => onState(unmortgageProperty(state, player.id, space.id))}>Pay mortgage</button> : null}
+      {scheme ? <div className="sl-scheme-card"><small>Current scheme</small><strong>{scheme.name}</strong><p>{scheme.description}</p><span>Rent ×{scheme.rentMultiplier.toFixed(2)} + {cash(scheme.flatRent)} · Heat 🔥{scheme.heat}</span></div> : null}
+
+      {mine && space.type === "property" ? <div className="sl-management-panel">
+        <strong>Property management</strong>
+        <p>The first two improvements no longer require the whole color group. Levels 3–4 still require full block control.</p>
+        <div className="sl-panel-actions">
+          <button type="button" disabled={!canChaosUpgrade(state, player.id, space.id)} onClick={() => onState(upgradePropertyChaos(state, player.id, space.id))}>Improve {cash(space.upgradeCost)}</button>
+          <button type="button" disabled={!canSellUpgradeChaos(state, player.id, space.id)} onClick={() => onState(sellUpgradeChaos(state, player.id, space.id))}>Strip upgrade</button>
+          {canMortgageProperty(state, player.id, space.id) ? <button type="button" onClick={() => onState(mortgageProperty(state, player.id, space.id))}>Mortgage</button> : null}
+          {canUnmortgageProperty(state, player.id, space.id) ? <button type="button" onClick={() => onState(unmortgageProperty(state, player.id, space.id))}>Pay mortgage</button> : null}
+        </div>
+
+        {!scheme ? <div className="sl-scheme-picker">
+          <label>Install a rent scheme<select value={schemeChoice} onChange={(event) => setSchemeChoice(event.target.value)}>{SCHEMES.map((item) => <option key={item.id} value={item.id}>{item.name} · {cash(item.cost)}</option>)}</select></label>
+          <p>{selectedScheme.description}</p>
+          <div><span>Rent ×{selectedScheme.rentMultiplier.toFixed(2)} + {cash(selectedScheme.flatRent)}</span><span>Heat 🔥{selectedScheme.heat}</span></div>
+          <button type="button" disabled={!canInstallScheme(state, player.id, space.id, schemeChoice)} onClick={() => onState(installScheme(state, player.id, space.id, schemeChoice))}>Do something questionable</button>
+        </div> : <button type="button" className="sl-cleanup-button" onClick={() => onState(removeScheme(state, player.id, space.id))}>Clean up the scheme · $50</button>}
       </div> : null}
     </section>
   );
@@ -214,7 +255,7 @@ function PurchaseModal({ state, onState }) {
   if (state.pendingAction?.type !== "purchase") return null;
   const space = BOARD[state.pendingAction.spaceId];
   const player = state.players.find((candidate) => candidate.id === state.pendingAction.playerId);
-  return <div className="sl-modal-backdrop"><section className="sl-game-modal"><p className="sl-kicker">Unclaimed property</p><h2>{space.name}</h2><p>{player.name} can buy it for <strong>{cash(space.price)}</strong> or send it to auction.</p><div className="sl-property-ticket" style={{ "--group": space.group ? GROUPS[space.group].color : "#8aa2b0" }}><span /><b>{space.name}</b><small>{space.group ? GROUPS[space.group].name : space.type}</small><strong>{cash(space.price)}</strong></div>{player.isBot ? <p className="sl-thinking">CPU landlord is deciding…</p> : <div className="sl-modal-actions"><button type="button" className="sl-button sl-button-secondary" onClick={() => onState(startAuction(state))}>Auction</button><button type="button" className="sl-button sl-button-primary" disabled={player.cash < space.price} onClick={() => onState(buyPendingProperty(state))}>Buy</button></div>}</section></div>;
+  return <div className="sl-modal-backdrop"><section className="sl-game-modal"><p className="sl-kicker">Unclaimed property</p><h2>{space.name}</h2><p>{player.name} can buy it for <strong>{cash(space.price)}</strong> or throw it to the vultures at auction.</p><div className="sl-property-ticket" style={{ "--group": space.group ? GROUPS[space.group].color : "#8aa2b0" }}><span /><b>{space.name}</b><small>{space.group ? GROUPS[space.group].name : space.type}</small><strong>{cash(space.price)}</strong></div>{player.isBot ? <p className="sl-thinking">CPU landlord is calculating how little maintenance is legally survivable…</p> : <div className="sl-modal-actions"><button type="button" className="sl-button sl-button-secondary" onClick={() => onState(startAuction(state))}>Auction</button><button type="button" className="sl-button sl-button-primary" disabled={player.cash < space.price} onClick={() => onState(buyPendingProperty(state))}>Buy</button></div>}</section></div>;
 }
 
 function AuctionModal({ state, onState }) {
@@ -224,7 +265,7 @@ function AuctionModal({ state, onState }) {
   if (!auction) return null;
   const space = BOARD[auction.spaceId];
   const bidder = state.players.find((player) => player.id === auction.currentBidderId);
-  return <div className="sl-modal-backdrop"><section className="sl-game-modal sl-auction-modal"><p className="sl-kicker">Bank auction</p><h2>{space.name}</h2><div className="sl-auction-price"><small>High bid</small><strong>{auction.highBid ? cash(auction.highBid) : "No bids"}</strong></div><p><b style={{ color: ownerColor(state, bidder.id) }}>{bidder.name}</b>, your move.</p>{bidder.isBot ? <p className="sl-thinking">CPU landlord is thinking…</p> : <><input type="number" min={Math.max(10, auction.highBid + 10)} step="10" value={bid} onChange={(event) => setBid(Number(event.target.value))} /><div className="sl-modal-actions"><button type="button" className="sl-button sl-button-secondary" onClick={() => onState(passAuction(state, bidder.id))}>Pass</button><button type="button" className="sl-button sl-button-primary" disabled={bid > bidder.cash || bid <= auction.highBid} onClick={() => onState(placeAuctionBid(state, bidder.id, bid))}>Bid {cash(bid)}</button></div></>}</section></div>;
+  return <div className="sl-modal-backdrop"><section className="sl-game-modal sl-auction-modal"><p className="sl-kicker">Bank auction</p><h2>{space.name}</h2><div className="sl-auction-price"><small>High bid</small><strong>{auction.highBid ? cash(auction.highBid) : "No bids"}</strong></div><p><b style={{ color: ownerColor(state, bidder.id) }}>{bidder.name}</b>, your move.</p>{bidder.isBot ? <p className="sl-thinking">CPU landlord is checking the crime map and pretending not to…</p> : <><input type="number" min={Math.max(10, auction.highBid + 10)} step="10" value={bid} onChange={(event) => setBid(Number(event.target.value))} /><div className="sl-modal-actions"><button type="button" className="sl-button sl-button-secondary" onClick={() => onState(passAuction(state, bidder.id))}>Pass</button><button type="button" className="sl-button sl-button-primary" disabled={bid > bidder.cash || bid <= auction.highBid} onClick={() => onState(placeAuctionBid(state, bidder.id, bid))}>Bid {cash(bid)}</button></div></>}</section></div>;
 }
 
 function DebtModal({ state, onState }) {
@@ -232,7 +273,7 @@ function DebtModal({ state, onState }) {
   if (!debt) return null;
   const player = state.players.find((candidate) => candidate.id === debt.playerId);
   const properties = getPlayerProperties(state, player.id);
-  return <div className="sl-modal-backdrop"><section className="sl-game-modal sl-debt-modal"><p className="sl-kicker">Cash crisis</p><h2>{player.name} is {cash(player.cash)}</h2><p>Raise cash before the bank takes the keys.</p><div className="sl-debt-assets">{properties.map(({ space, ownership }) => <div key={space.id}><span><b>{space.name}</b><small>{ownership.mortgaged ? "Mortgaged" : `${ownership.upgrades || 0} upgrades`}</small></span><span>{canSellUpgrade(state, player.id, space.id) ? <button type="button" onClick={() => onState(sellUpgrade(state, player.id, space.id))}>Sell upgrade</button> : null}{canMortgageProperty(state, player.id, space.id) ? <button type="button" onClick={() => onState(mortgageProperty(state, player.id, space.id))}>Mortgage {cash(space.mortgage)}</button> : null}</span></div>)}</div><div className="sl-modal-actions"><button type="button" className="sl-button sl-button-secondary" onClick={() => onState(autoResolveDebt(state, player.id))}>Auto raise cash</button><button type="button" className="sl-button sl-button-danger" onClick={() => onState(declareBankruptcy(state, player.id))}>Bankruptcy</button></div></section></div>;
+  return <div className="sl-modal-backdrop"><section className="sl-game-modal sl-debt-modal"><p className="sl-kicker">Cash crisis</p><h2>{player.name} is {cash(player.cash)}</h2><p>Raise cash before the bank takes the keys and immediately lists them as "investment opportunities."</p><div className="sl-debt-assets">{properties.map(({ space, ownership }) => <div key={space.id}><span><b>{space.name}</b><small>{ownership.mortgaged ? "Mortgaged" : `${ownership.upgrades || 0} upgrades${ownership.schemeId ? " · scheme active" : ""}`}</small></span><span>{canSellUpgradeChaos(state, player.id, space.id) ? <button type="button" onClick={() => onState(sellUpgradeChaos(state, player.id, space.id))}>Sell upgrade</button> : null}{canMortgageProperty(state, player.id, space.id) ? <button type="button" onClick={() => onState(mortgageProperty(state, player.id, space.id))}>Mortgage {cash(space.mortgage)}</button> : null}</span></div>)}</div><div className="sl-modal-actions"><button type="button" className="sl-button sl-button-secondary" onClick={() => onState(autoResolveDebt(state, player.id))}>Auto liquidate dignity</button><button type="button" className="sl-button sl-button-danger" onClick={() => onState(declareBankruptcy(state, player.id))}>Bankruptcy</button></div></section></div>;
 }
 
 function TradeModal({ state, onState, onClose }) {
@@ -244,14 +285,14 @@ function TradeModal({ state, onState, onClose }) {
   const [offerIds, setOfferIds] = useState([]);
   const [requestIds, setRequestIds] = useState([]);
   const to = state.players.find((player) => player.id === toId);
-  const myProperties = getPlayerProperties(state, from.id).filter(({ ownership }) => !ownership.mortgaged);
-  const theirProperties = to ? getPlayerProperties(state, to.id).filter(({ ownership }) => !ownership.mortgaged) : [];
+  const myProperties = getPlayerProperties(state, from.id).filter(({ ownership }) => !ownership.mortgaged && !(ownership.upgrades > 0));
+  const theirProperties = to ? getPlayerProperties(state, to.id).filter(({ ownership }) => !ownership.mortgaged && !(ownership.upgrades > 0)) : [];
   const toggle = (id, setter) => setter((list) => list.includes(id) ? list.filter((item) => item !== id) : [...list, id]);
   const submit = () => {
     onState(proposeTrade(state, { fromId: from.id, toId, offerPropertyIds: offerIds, requestPropertyIds: requestIds, offerCash, requestCash }));
     onClose();
   };
-  return <div className="sl-modal-backdrop"><section className="sl-game-modal sl-trade-modal"><button type="button" className="sl-modal-close" onClick={onClose}>×</button><p className="sl-kicker">Make a deal</p><h2>Trade properties</h2><label>Trade with<select value={toId} onChange={(event) => { setToId(event.target.value); setRequestIds([]); }}>{others.map((player) => <option key={player.id} value={player.id}>{player.name}</option>)}</select></label><div className="sl-trade-columns"><div><h3>You offer</h3>{myProperties.map(({ space }) => <label className="sl-trade-check" key={space.id}><input type="checkbox" checked={offerIds.includes(space.id)} onChange={() => toggle(space.id, setOfferIds)} />{space.name}</label>)}<label>Cash<input type="number" min="0" max={Math.max(0, from.cash)} value={offerCash} onChange={(event) => setOfferCash(Number(event.target.value))} /></label></div><div><h3>You request</h3>{theirProperties.map(({ space }) => <label className="sl-trade-check" key={space.id}><input type="checkbox" checked={requestIds.includes(space.id)} onChange={() => toggle(space.id, setRequestIds)} />{space.name}</label>)}<label>Cash<input type="number" min="0" max={Math.max(0, to?.cash || 0)} value={requestCash} onChange={(event) => setRequestCash(Number(event.target.value))} /></label></div></div><button type="button" className="sl-button sl-button-primary" onClick={submit}>Propose trade</button></section></div>;
+  return <div className="sl-modal-backdrop"><section className="sl-game-modal sl-trade-modal"><button type="button" className="sl-modal-close" onClick={onClose}>×</button><p className="sl-kicker">Make a deal</p><h2>Trade properties</h2><label>Trade with<select value={toId} onChange={(event) => { setToId(event.target.value); setRequestIds([]); }}>{others.map((player) => <option key={player.id} value={player.id}>{player.name}</option>)}</select></label><div className="sl-trade-columns"><div><h3>You offer</h3>{myProperties.map(({ space }) => <label className="sl-trade-check" key={space.id}><input type="checkbox" checked={offerIds.includes(space.id)} onChange={() => toggle(space.id, setOfferIds)} />{space.name}</label>)}<label>Cash<input type="number" min="0" max={Math.max(0, from.cash)} value={offerCash} onChange={(event) => setOfferCash(Number(event.target.value))} /></label></div><div><h3>You request</h3>{theirProperties.map(({ space }) => <label className="sl-trade-check" key={space.id}><input type="checkbox" checked={requestIds.includes(space.id)} onChange={() => toggle(space.id, setRequestIds)} />{space.name}</label>)}<label>Cash<input type="number" min="0" max={Math.max(0, to?.cash || 0)} value={requestCash} onChange={(event) => setRequestCash(Number(event.target.value))} /></label></div></div><button type="button" className="sl-button sl-button-primary" onClick={submit}>Propose suspiciously fair trade</button></section></div>;
 }
 
 function TradeDecision({ state, onState }) {
@@ -260,25 +301,26 @@ function TradeDecision({ state, onState }) {
   const from = state.players.find((player) => player.id === trade.fromId);
   const to = state.players.find((player) => player.id === trade.toId);
   const propertyNames = (ids) => ids.map((id) => BOARD[id]?.name).filter(Boolean).join(", ") || "No properties";
-  return <div className="sl-modal-backdrop"><section className="sl-game-modal"><p className="sl-kicker">Trade offer</p><h2>{to.name}, deal?</h2><div className="sl-trade-summary"><p><b>{from.name} gives:</b> {propertyNames(trade.offerPropertyIds)}{trade.offerCash ? ` + ${cash(trade.offerCash)}` : ""}</p><p><b>{to.name} gives:</b> {propertyNames(trade.requestPropertyIds)}{trade.requestCash ? ` + ${cash(trade.requestCash)}` : ""}</p></div>{to.isBot ? <p className="sl-thinking">CPU landlord is considering it…</p> : <div className="sl-modal-actions"><button type="button" className="sl-button sl-button-secondary" onClick={() => onState(rejectTrade(state, to.id))}>Reject</button><button type="button" className="sl-button sl-button-primary" onClick={() => onState(acceptTrade(state, to.id))}>Accept</button></div>}</section></div>;
+  return <div className="sl-modal-backdrop"><section className="sl-game-modal"><p className="sl-kicker">Trade offer</p><h2>{to.name}, deal?</h2><div className="sl-trade-summary"><p><b>{from.name} gives:</b> {propertyNames(trade.offerPropertyIds)}{trade.offerCash ? ` + ${cash(trade.offerCash)}` : ""}</p><p><b>{to.name} gives:</b> {propertyNames(trade.requestPropertyIds)}{trade.requestCash ? ` + ${cash(trade.requestCash)}` : ""}</p></div>{to.isBot ? <p className="sl-thinking">CPU landlord is looking for the hidden mold clause…</p> : <div className="sl-modal-actions"><button type="button" className="sl-button sl-button-secondary" onClick={() => onState(rejectTrade(state, to.id))}>Reject</button><button type="button" className="sl-button sl-button-primary" onClick={() => onState(acceptTrade(state, to.id))}>Accept</button></div>}</section></div>;
 }
 
 function CardPopup({ card, onClose }) {
   if (!card) return null;
-  return <div className="sl-card-pop"><div className={`sl-drawn-card ${card.deckType}`}><small>{card.deckType === "inspection" ? "CODE INSPECTION" : "STREET LUCK"}</small><h3>{card.title}</h3><p>{card.text}</p><button type="button" onClick={onClose}>Got it</button></div></div>;
+  return <div className="sl-card-pop"><div className={`sl-drawn-card ${card.deckType}`}><small>{card.deckType === "inspection" ? "CODE / VICE / RAT POLICE" : "STREET LUCK"}</small><h3>{card.title}</h3><p>{card.text}</p><button type="button" onClick={onClose}>Yeah, that tracks</button></div></div>;
 }
 
 function GameOver({ state, onRestart, onExit }) {
   if (state.status !== "finished") return null;
-  const ranking = [...state.players].sort((a, b) => calculateNetWorth(state, b.id) - calculateNetWorth(state, a.id));
+  const ranking = [...state.players].sort((a, b) => calculateChaosNetWorth(state, b.id) - calculateChaosNetWorth(state, a.id));
   const winner = state.players.find((player) => player.id === state.winnerId) || ranking[0];
-  return <div className="sl-modal-backdrop"><section className="sl-game-modal sl-game-over"><p className="sl-kicker">The block has spoken</p><h2>{winner?.name || "Nobody"} wins.</h2><ol>{ranking.map((player) => <li key={player.id}><span>{player.name}</span><b>{cash(calculateNetWorth(state, player.id))}</b></li>)}</ol><div className="sl-modal-actions"><button type="button" className="sl-button sl-button-secondary" onClick={onExit}>Game room</button><button type="button" className="sl-button sl-button-primary" onClick={onRestart}>Play again</button></div></section></div>;
+  return <div className="sl-modal-backdrop"><section className="sl-game-modal sl-game-over"><p className="sl-kicker">The neighborhood has filed its final complaint</p><h2>{winner?.name || "Nobody"} wins.</h2><p>{state.winReason || goalDescription(state.goalMode)}</p><ol>{ranking.map((player) => <li key={player.id}><span>{player.name} · Heat 🔥{portfolioHeat(state, player.id)}</span><b>{cash(calculateChaosNetWorth(state, player.id))}</b></li>)}</ol><div className="sl-modal-actions"><button type="button" className="sl-button sl-button-secondary" onClick={onExit}>Game room</button><button type="button" className="sl-button sl-button-primary" onClick={onRestart}>Make worse choices</button></div></section></div>;
 }
 
 export default function GameBoard() {
   const [state, setState] = useState(null);
   const [selectedSpace, setSelectedSpace] = useState(0);
   const [showTrade, setShowTrade] = useState(false);
+  const [showCab, setShowCab] = useState(false);
   const [card, setCard] = useState(null);
 
   const exit = () => {
@@ -311,10 +353,10 @@ export default function GameBoard() {
           return nextBid <= limit ? placeAuctionBid(current, bot.id, nextBid) : passAuction(current, bot.id);
         }
         if (current.pendingAction?.playerId === bot.id) return botPurchaseDecision(current, bot.id, current.pendingAction.spaceId) ? buyPendingProperty(current) : startAuction(current);
-        if (!current.rolled) return rollDice(current);
-        const upgrade = botUpgradeChoice(current, bot.id);
-        if (upgrade !== null) return upgradeProperty(current, bot.id, upgrade);
-        return endTurn(current);
+        if (!current.rolled) return rollStreetDice(current, "normal");
+        const managed = botChaosAction(current, bot.id);
+        if (managed) return managed;
+        return finishChaosTurn(current);
       });
     }, 650);
 
@@ -322,16 +364,25 @@ export default function GameBoard() {
   }, [state]);
 
   const selected = useMemo(() => state ? describeSpace(state, selectedSpace) : null, [state, selectedSpace]);
-  if (!state) return <Setup onExit={exit} onStart={(players, roundLimit) => setState(createGame(players, { roundLimit }))} />;
+  if (!state) return <Setup onExit={exit} onStart={(players, goalMode) => setState(createChaosGame(players, { goalMode }))} />;
 
   const active = currentPlayer(state);
-  const canRoll = active && !active.isBot && !state.rolled && !state.pendingAction && !state.auction && !state.pendingTrade && !state.debt;
+  const canMove = active && !active.isBot && !state.rolled && !state.pendingAction && !state.auction && !state.pendingTrade && !state.debt;
   const canEnd = active && !active.isBot && state.rolled && !state.pendingAction && !state.auction && !state.pendingTrade && !state.debt;
   const canTrade = active && !active.isBot && !state.rolled && !state.pendingAction && !state.auction && !state.pendingTrade && !state.debt;
+  const canTacticalMove = canMove && !active.inCourt;
+
+  const move = (mode, steps = null) => {
+    const next = rollStreetDice(state, mode, steps);
+    setState(next);
+    const mover = currentPlayer(next);
+    if (mover) setSelectedSpace(mover.position);
+    setShowCab(false);
+  };
 
   return (
     <main className="sl-game-shell">
-      <header className="sl-game-topbar"><button type="button" className="sl-back" onClick={exit}>← Game Room</button><div className="sl-title"><b>SLUM LORD</b><span>Round {state.round}{state.roundLimit ? ` / ${state.roundLimit}` : ""}</span></div><div className="sl-pot"><small>Cash Stash</small><b>{cash(state.pot)}</b></div></header>
+      <header className="sl-game-topbar"><button type="button" className="sl-back" onClick={exit}>← Game Room</button><div className="sl-title"><b>SLUM LORD</b><span>Month {state.round} · {goalLabel(state)}</span></div><div className="sl-pot"><small>Cash Stash · City Pressure {cityPressure(state)}</small><b>{cash(state.pot)}</b></div></header>
 
       <section className="sl-table-layout">
         <PlayerRail state={state} />
@@ -339,26 +390,29 @@ export default function GameBoard() {
         <section className="sl-board-zone">
           <div className="sl-board-perspective"><div className="sl-board">
             {BOARD.map((space) => <BoardSpace key={space.id} state={state} space={space} selected={selectedSpace === space.id} onSelect={setSelectedSpace} />)}
-            <div className="sl-board-center"><div className="sl-center-skyline"><i /><i /><i /><i /><i /></div><p>PROPERTY MANAGEMENT</p><h1>SLUM<br />LORD</h1><span>Own the block. Avoid the inspector.</span></div>
+            <div className="sl-board-center"><div className="sl-center-skyline"><i /><i /><i /><i /><i /></div><p>PROPERTY MISMANAGEMENT</p><h1>SLUM<br />LORD</h1><span>Raise rent. Raise Heat. Blame the city.</span></div>
           </div></div>
 
-          <section className="sl-turn-console">
-            <div className="sl-active-player" style={{ "--player": ownerColor(state, active.id) }}><small>{active.isBot ? "CPU TURN" : "YOUR TURN"}</small><strong>{active.name}</strong><span>{active.inCourt ? "Housing Court" : BOARD[active.position].name}</span></div>
+          <section className="sl-turn-console sl-chaos-console">
+            <div className="sl-active-player" style={{ "--player": ownerColor(state, active.id) }}><small>{active.isBot ? "CPU TURN" : "YOUR TURN"}</small><strong>{active.name}</strong><span>{active.inCourt ? "Housing Court" : BOARD[active.position].name} · Heat 🔥{portfolioHeat(state, active.id)}</span></div>
             <Dice state={state} />
             <div className="sl-turn-buttons">
               {active.inCourt && !state.rolled && !active.isBot ? <button type="button" disabled={active.cash < 50} onClick={() => setState(payCourtFine(state, active.id))}>Pay $50 fine</button> : null}
               {active.inCourt && active.courtPasses > 0 && !state.rolled && !active.isBot ? <button type="button" onClick={() => setState(useCourtPass(state, active.id))}>Use court pass</button> : null}
-              <button type="button" className="primary" disabled={!canRoll} onClick={() => setState(rollDice(state))}>Roll dice</button>
-              <button type="button" disabled={!canEnd} onClick={() => setState(endTurn(state))}>{state.extraTurn ? "Roll again" : "End turn"}</button>
+              <button type="button" className="primary" disabled={!canMove} onClick={() => move("normal")}>{active.inCourt ? "Roll for freedom" : "Roll normally"}</button>
+              {!active.inCourt ? <button type="button" disabled={!canTacticalMove} onClick={() => move("cruise")}>Cruise slow · 3–7</button> : null}
+              {!active.inCourt ? <button type="button" disabled={!canTacticalMove || active.cash < 60} onClick={() => setShowCab((value) => !value)}>Sketchy cab · $60</button> : null}
+              <button type="button" disabled={!canEnd} onClick={() => setState(finishChaosTurn(state))}>{state.extraTurn ? "Roll again" : "End turn"}</button>
               <button type="button" disabled={!canTrade} onClick={() => setShowTrade(true)}>Trade</button>
             </div>
+            {showCab && canTacticalMove ? <div className="sl-cab-picker"><small>Pay $60 and choose exactly how far the cab goes. No doubles, no bonus roll, driver definitely has insurance.</small><div>{Array.from({ length: 9 }, (_, index) => index + 3).map((steps) => <button type="button" key={steps} onClick={() => move("cab", steps)}>{steps}</button>)}</div></div> : null}
           </section>
         </section>
 
-        <aside className="sl-info-rail"><PropertyPanel state={state} spaceId={selectedSpace} onState={setState} /><section className="sl-log-panel"><h3>Neighborhood feed</h3><div>{state.log.slice(0, 8).map((entry) => <p key={entry.id} className={entry.kind}>{entry.text}</p>)}</div></section></aside>
+        <aside className="sl-info-rail"><PropertyPanel state={state} spaceId={selectedSpace} onState={setState} /><section className="sl-log-panel"><h3>Neighborhood feed</h3><div>{state.log.slice(0, 10).map((entry) => <p key={entry.id} className={entry.kind}>{entry.text}</p>)}</div></section></aside>
       </section>
 
-      {selected?.price && selected.owner ? <div className="sl-owner-key" style={{ "--owner": ownerColor(state, selected.owner.id) }}>{selected.owner.name} owns this property</div> : null}
+      {selected?.price && selected.owner ? <div className="sl-owner-key" style={{ "--owner": ownerColor(state, selected.owner.id) }}>{selected.owner.name} owns this property{selected.ownership?.schemeId ? ` · ${getScheme(selected.ownership)?.name}` : ""}</div> : null}
       <PurchaseModal state={state} onState={setState} />
       <AuctionModal state={state} onState={setState} />
       <DebtModal state={state} onState={setState} />
