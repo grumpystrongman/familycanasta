@@ -26,6 +26,12 @@ function sessionKey(gameId) { return `familyPartySession:${gameId}`; }
 function savedSession(gameId) {
   try {
     const saved = JSON.parse(localStorage.getItem(sessionKey(gameId)) || "null");
+    // Sessions written before the lifecycle fix had no age metadata and are the
+    // exact entries that could resurrect an already-finished room forever.
+    if (saved && !saved.savedAt) {
+      localStorage.removeItem(sessionKey(gameId));
+      return null;
+    }
     if (saved?.savedAt && Date.now() - saved.savedAt > SESSION_MAX_AGE) {
       localStorage.removeItem(sessionKey(gameId));
       return null;
