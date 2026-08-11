@@ -6,6 +6,7 @@ import LayoutModeControl from "./platform/LayoutModeControl";
 
 const GAME_CATALOG = [
   { id: "canasta", name: "Canasta", icon: "♣", eyebrow: "Meld strategy", description: "The complete family Canasta table, preserved exactly as it plays today.", players: "2–6 players", status: "Ready" },
+  { id: "pixelquest", name: "PixelQuest: The Living Dungeon", icon: "⚔", eyebrow: "Co-op fantasy campaign", description: "A 1–8 player living dungeon with honest d20 dice, tactical battles, party votes, private choices, AI companions, and twenty adventure cartridges.", players: "1–8 online players", status: "Ready" },
   { id: "punchline", name: "Punchline", icon: "🎤", eyebrow: "Write it · vote it", description: "A big-screen comedy show where every phone writes the punchlines and the room decides what lands.", players: "3–12 phones", status: "Ready" },
   { id: "lastonealive", name: "Last One Alive", icon: "👻", eyebrow: "Trivia · traps · escape", description: "Horror-comedy trivia with six survival micro-games, ghosts, resurrection, and a final race for the exit.", players: "3–12 phones", status: "Ready" },
   { id: "doodlealibi", name: "Doodle Alibi", icon: "🖍️", eyebrow: "Draw · accuse · deceive", description: "Draw secret assignments on your phone, study the TV evidence wall, and expose the altered prompt.", players: "4–12 phones", status: "Ready" },
@@ -29,6 +30,7 @@ const gameLoaders = import.meta.glob("./games/*/index.jsx");
 const LEGACY_GUIDANCE_GAMES = new Set(["canasta", "hearts", "spades", "rummy"]);
 const TABLETOP_GUIDANCE_GAMES = new Set(["gofish", "gofyourself", "connect4", "battleship", "hnefatafl", "chompageddon"]);
 const PARTY_STAGE_GAMES = new Set(["punchline", "lastonealive", "doodlealibi"]);
+const IMMERSIVE_FULLSCREEN_GAMES = new Set([...PARTY_STAGE_GAMES, "pixelquest"]);
 
 function selectedGameId() { return new URLSearchParams(window.location.search).get("game") || ""; }
 function gameModulePath(gameId) { return `./games/${gameId}/index.jsx`; }
@@ -53,7 +55,7 @@ function GameHub() {
     <main className="family-game-hub">
       <section className="hub-hero">
         <div><p className="hub-kicker">Family game night</p><h1>Pick a table. Start a game.</h1><p className="hub-intro">One home for the games people actually play together—cards, boards, strategy, phone-controlled party shows, and one clearly marked adults-only table. Every game keeps its own rules, state, table, and tests while sharing the same front door.</p></div>
-        <div className="hub-deck-mark" aria-hidden="true"><span>♠</span><span>🎤</span><span>👻</span><span>🖍️</span></div>
+        <div className="hub-deck-mark" aria-hidden="true"><span>♠</span><span>⚔</span><span>🎤</span><span>👻</span></div>
       </section>
       <section className="hub-game-grid" aria-label="Available family games">{GAME_CATALOG.map((game) => <HubCard key={game.id} game={game} />)}</section>
       <footer className="hub-footer"><strong>Family Game Room</strong><span>Card games, board games, party games, and strategy tables—each isolated behind its own rules engine.</span></footer>
@@ -88,7 +90,7 @@ export default function HubApp() {
   if (!loadedGame.Component) return <main className="hub-loading-screen"><section><p className="hub-kicker">Setting the table</p><h1>Opening the game…</h1></section></main>;
 
   const SelectedGame = loadedGame.Component;
-  if (PARTY_STAGE_GAMES.has(gameId)) return <SelectedGame />;
+  if (IMMERSIVE_FULLSCREEN_GAMES.has(gameId)) return <SelectedGame />;
 
   return <><LayoutModeControl gameId={gameId} />{LEGACY_GUIDANCE_GAMES.has(gameId) ? <GameGuidance gameId={gameId} /> : null}{TABLETOP_GUIDANCE_GAMES.has(gameId) ? <TabletopLearningCenter gameId={gameId} /> : <GameLearningCenter gameId={gameId} />}<SelectedGame /></>;
 }
