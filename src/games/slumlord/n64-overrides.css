@@ -1,0 +1,34 @@
+.sl-board {
+  grid-template-columns: 1.35fr repeat(8, 1fr) 1.35fr;
+  grid-template-rows: 1.35fr repeat(8, 1fr) 1.35fr;
+}
+
+.sl-board::before {
+  inset: 10.8%;
+}
+
+.sl-board-center {
+  grid-column: 2 / 10;
+  grid-row: 2 / 10;
+}
+
+/* Keep the late-90s console look crisp rather than texture-heavy. */
+.sl-board,
+.sl-space,
+.sl-token-base,
+.sl-token-body,
+.sl-dice span,
+.sl-game-modal,
+.sl-player-card,
+.sl-turn-console,
+.sl-info-rail section {
+  image-rendering: pixelated;
+}
+
+.sl-space:focus-visible,
+.sl-turn-buttons button:focus-visible,
+.sl-panel-actions button:focus-visible,
+.sl-button:focus-visible {
+  outline: 4px solid #fff2a8;
+  outline-offset: 2px;
+}
