@@ -202,7 +202,7 @@ class AudioDirector {
   }
 
   sfx(name) {
-    if (!this.context) {
+    if (!this.context || this.context.state !== "running") {
       this.enable().then((ok) => { if (ok) this.sfx(name); }).catch(() => {});
       return;
     }
@@ -268,7 +268,7 @@ class AudioDirector {
   }
 
   startMusic(name = "lobby") {
-    if (!this.context || !this.musicGain) {
+    if (!this.context || !this.musicGain || this.context.state !== "running") {
       this.enable().then((ok) => { if (ok) this.startMusic(name); }).catch(() => {});
       return;
     }
