@@ -1,7 +1,6 @@
 import { ADVENTURE_BY_ID, HEROES } from "./data.js";
 import {
   advanceCombatTurn,
-  applyPrivateChoice,
   castPartyVote,
   completeAdventure,
   continueStoryScene,
@@ -11,6 +10,7 @@ import {
   endHeroTurn,
   finishCombat,
   moveCombatActor,
+  moveToScene,
   recoverFromDefeat,
   resolvePartyVote,
   resolveSkillScene,
@@ -112,6 +112,30 @@ function autoResolve(campaign) {
   return runAutomaticTurns(campaign, 48);
 }
 
+function resolveIndividualPrivateChoice(campaign, scene, hero, choiceId, members, state) {
+  const choice = scene.choices?.find((entry) => entry.id === choiceId);
+  if (!choice) throw new Error("Choose a valid private action.");
+  const key = `${scene.id}:${hero.id}`;
+  if (campaign.privateChoices?.[key]) throw new Error("Your private decision is already locked in.");
+  const next = clone(campaign);
+  next.privateChoices ||= {};
+  next.privateChoices[key] = choiceId;
+  if (choice.flag) next.flags[choice.flag] = hero.id;
+  next.log = [...(next.log || []), {
+    id: `secret-${Date.now()}-${hero.id}`,
+    type: "secret",
+    text: `${hero.name} locked in a private decision.`,
+    private: true,
+  }].slice(-120);
+
+  const humanHeroIds = members
+    .filter((member) => !member.isRobot)
+    .map((member) => state.seatHeroes?.[member.uid])
+    .filter(Boolean);
+  const everyoneLocked = humanHeroIds.every((heroId) => next.privateChoices[`${scene.id}:${heroId}`]);
+  return everyoneLocked ? moveToScene(next, scene.next) : next;
+}
+
 export function reducePixelQuest(state, actorUid, action, members) {
   if (!action?.type) throw new Error("Choose an action.");
   if (state.phase === "hero-select") {
@@ -144,7 +168,8 @@ export function reducePixelQuest(state, actorUid, action, members) {
     }
     case "private-choice":
       if (!myHero) throw new Error("No hero is assigned to your seat.");
-      campaign = applyPrivateChoice(campaign, myHero.id, action.choiceId);
+      if (scene?.type !== "private") throw new Error("There is no private decision right now.");
+      campaign = resolveIndividualPrivateChoice(campaign, scene, myHero, action.choiceId, members, next);
       break;
     case "skill-check":
       if (!myHero) throw new Error("No hero is assigned to your seat.");
@@ -202,7 +227,7 @@ export function reducePixelQuest(state, actorUid, action, members) {
 
   next.campaign = campaign;
   next.roundNumber = campaign.combat?.round || next.roundNumber;
-  next.message = scene?.title || "The adventure continues.";
+  next.message = currentScene(campaign)?.title || scene?.title || "The adventure continues.";
   return next;
 }
 
