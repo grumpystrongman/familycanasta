@@ -178,6 +178,25 @@ export default function usePartyRoom(definition) {
     window.location.assign(window.location.pathname);
   }
 
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    window.__familyPartyLifecycle = {
+      roomCode,
+      isHost,
+      status: room?.status || "",
+      phase: room?.gameState?.phase || "",
+      busy,
+      replay,
+      leave,
+      close,
+      gameRoom,
+    };
+    window.dispatchEvent(new CustomEvent("family-party-lifecycle"));
+    return () => {
+      if (window.__familyPartyLifecycle?.roomCode === roomCode) delete window.__familyPartyLifecycle;
+    };
+  }, [roomCode, isHost, room?.status, room?.gameState?.phase, busy]);
+
   return {
     firebaseReady,
     user,
