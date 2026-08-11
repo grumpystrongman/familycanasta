@@ -46,6 +46,7 @@ import {
   tenantPressure,
   upgradePropertyChaos,
 } from "./chaos.js";
+import { botActionActor, runBotStep } from "./botAutomation.js";
 import { districtForSpace, districtSchemeMultiplier } from "./districts.js";
 import "./styles.css";
 import "./n64-overrides.css";
@@ -185,16 +186,30 @@ function BoardSpace({ state, space, selected, onSelect }) {
 function PlayerRail({ state }) {
   const current = currentPlayer(state);
   return (
-    <aside className="sl-player-rail">
-      {state.players.map((player, index) => (
-        <section key={player.id} className={`sl-player-card ${current?.id === player.id ? "current" : ""} ${player.bankrupt ? "bankrupt" : ""}`} style={{ "--player": PLAYER_COLORS[index] }}>
-          <div className="sl-player-card-token"><Token player={player} index={index} active={current?.id === player.id} compact /></div>
-          <div><strong>{player.name}</strong><small>{player.isBot ? "CPU" : "LOCAL"}{player.inCourt ? " · IN COURT" : ""}</small></div>
-          <b>{player.bankrupt ? "BANKRUPT" : cash(player.cash)}</b>
-          <span>Net {cash(calculateChaosNetWorth(state, player.id))} · Heat 🔥{portfolioHeat(state, player.id)}</span>
-        </section>
-      ))}
-    </aside>
+    <div className="sl-player-rail">
+      {state.players.map((player, index) => {
+        const properties = getPlayerProperties(state, player.id);
+        const highPressure = properties.filter(({ ownership }) => tenantPressure(ownership) >= 3).length;
+        return (
+          <section key={player.id} className={`sl-player-card ${current?.id === player.id ? "current" : ""} ${player.bankrupt ? "bankrupt" : ""}`} style={{ "--player": PLAYER_COLORS[index] }}>
+            <div className="sl-player-card-token"><Token player={player} index={index} active={current?.id === player.id} compact /></div>
+            <div><strong>{player.name}</strong><small>{player.isBot ? "CPU" : "LOCAL"}{player.inCourt ? " · IN COURT" : ""}</small></div>
+            <b>{player.bankrupt ? "BANKRUPT" : cash(player.cash)}</b>
+            <span>Net {cash(calculateChaosNetWorth(state, player.id))} · {properties.length} deeds</span>
+            <span>Heat 🔥{portfolioHeat(state, player.id)} · {highPressure} pressured</span>
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+
+function NeighborhoodFeed({ state }) {
+  return (
+    <section className="sl-log-panel sl-left-feed">
+      <h3>Neighborhood feed</h3>
+      <div>{state.log.slice(0, 12).map((entry) => <p key={entry.id} className={entry.kind}>{entry.text}</p>)}</div>
+    </section>
   );
 }
 
@@ -305,7 +320,7 @@ function AuctionModal({ state, onState }) {
   if (!auction) return null;
   const space = BOARD[auction.spaceId];
   const bidder = state.players.find((player) => player.id === auction.currentBidderId);
-  return <div className="sl-modal-backdrop"><section className="sl-game-modal sl-auction-modal"><p className="sl-kicker">Bank auction</p><h2>{space.name}</h2><div className="sl-auction-price"><small>High bid</small><strong>{auction.highBid ? cash(auction.highBid) : "No bids"}</strong></div><p><b style={{ color: ownerColor(state, bidder.id) }}>{bidder.name}</b>, your move.</p>{bidder.isBot ? <p className="sl-thinking">CPU landlord is checking the crime map and pretending not to…</p> : <><input type="number" min={Math.max(10, auction.highBid + 10)} step="10" value={bid} onChange={(event) => setBid(Number(event.target.value))} /><div className="sl-modal-actions"><button type="button" className="sl-button sl-button-secondary" onClick={() => onState(passAuction(state, bidder.id))}>Pass</button><button type="button" className="sl-button sl-button-primary" disabled={bid > bidder.cash || bid <= auction.highBid} onClick={() => onState(placeAuctionBid(state, bidder.id, bid))}>Bid {cash(bid)}</button></div></>}</section></div>;
+  return <div className="sl-modal-backdrop"><section className="sl-game-modal sl-auction-modal"><p className="sl-kicker">Bank auction</p><h2>{space.name}</h2><div className="sl-auction-price"><small>High bid</small><strong>{auction.highBid ? cash(auction.highBid) : "No bids"}</strong></div><p><b style={{ color: ownerColor(state, bidder.id) }}>{bidder.name}</b>, your move.</p>{bidder.isBot ? <p className="sl-thinking">CPU landlord is bidding automatically…</p> : <><input type="number" min={Math.max(10, auction.highBid + 10)} step="10" value={bid} onChange={(event) => setBid(Number(event.target.value))} /><div className="sl-modal-actions"><button type="button" className="sl-button sl-button-secondary" onClick={() => onState(passAuction(state, bidder.id))}>Pass</button><button type="button" className="sl-button sl-button-primary" disabled={bid > bidder.cash || bid <= auction.highBid} onClick={() => onState(placeAuctionBid(state, bidder.id, bid))}>Bid {cash(bid)}</button></div></>}</section></div>;
 }
 
 function DebtModal({ state, onState }) {
@@ -379,30 +394,10 @@ export default function GameBoard() {
   }, [state?.lastNeighborhoodIncident?.title, state?.lastNeighborhoodIncident?.spaceName, state?.turnCount]);
 
   useEffect(() => {
-    if (!state || state.status !== "playing") return undefined;
-    const player = currentPlayer(state);
-    if (!player?.isBot) return undefined;
+    if (!botActionActor(state)) return undefined;
 
     const timer = window.setTimeout(() => {
-      setState((current) => {
-        const bot = currentPlayer(current);
-        if (!bot?.isBot || current.status !== "playing") return current;
-        if (current.debt?.playerId === bot.id) return autoResolveDebt(current, bot.id);
-        if (current.pendingTrade) {
-          if (current.pendingTrade.toId === bot.id) return acceptTrade(current, bot.id);
-          return current;
-        }
-        if (current.auction?.currentBidderId === bot.id) {
-          const limit = botAuctionLimit(current, bot.id, current.auction.spaceId);
-          const nextBid = Math.max(10, current.auction.highBid + 10);
-          return nextBid <= limit ? placeAuctionBid(current, bot.id, nextBid) : passAuction(current, bot.id);
-        }
-        if (current.pendingAction?.playerId === bot.id) return botPurchaseDecision(current, bot.id, current.pendingAction.spaceId) ? buyPendingProperty(current) : startAuction(current);
-        if (!current.rolled) return rollStreetDice(current, "normal");
-        const managed = botChaosAction(current, bot.id);
-        if (managed) return managed;
-        return finishChaosTurn(current);
-      });
+      setState((current) => runBotStep(current));
     }, 650);
 
     return () => window.clearTimeout(timer);
@@ -430,7 +425,10 @@ export default function GameBoard() {
       <header className="sl-game-topbar"><button type="button" className="sl-back" onClick={exit}>← Game Room</button><div className="sl-title"><b>SLUM LORD</b><span>Month {state.round} · {goalLabel(state)}</span></div><div className="sl-pot"><small>Cash Stash · City Pressure {cityPressure(state)}</small><b>{cash(state.pot)}</b></div></header>
 
       <section className="sl-table-layout">
-        <PlayerRail state={state} />
+        <aside className="sl-left-rail">
+          <PlayerRail state={state} />
+          <NeighborhoodFeed state={state} />
+        </aside>
 
         <section className="sl-board-zone">
           <div className="sl-board-perspective"><div className="sl-board">
@@ -454,7 +452,7 @@ export default function GameBoard() {
           </section>
         </section>
 
-        <aside className="sl-info-rail"><PropertyPanel state={state} spaceId={selectedSpace} onState={setState} /><section className="sl-log-panel"><h3>Neighborhood feed</h3><div>{state.log.slice(0, 10).map((entry) => <p key={entry.id} className={entry.kind}>{entry.text}</p>)}</div></section></aside>
+        <aside className="sl-info-rail"><PropertyPanel state={state} spaceId={selectedSpace} onState={setState} /></aside>
       </section>
 
       {selected?.price && selected.owner ? <div className="sl-owner-key" style={{ "--owner": ownerColor(state, selected.owner.id) }}>{selected.owner.name} owns this property{selected.ownership?.schemeId ? ` · ${getScheme(selected.ownership)?.name}` : ""}{selected.ownership?.tenantPressure ? ` · Pressure ${tenantPressure(selected.ownership)}/5` : ""}</div> : null}

@@ -8,6 +8,8 @@ const styles = await readFile(new URL("./n64-overrides.css", import.meta.url), "
 const themes = await readFile(new URL("./themes.css", import.meta.url), "utf8");
 const chaos = await readFile(new URL("./chaos.js", import.meta.url), "utf8");
 const districts = await readFile(new URL("./districts.js", import.meta.url), "utf8");
+const districtStyles = await readFile(new URL("./districts.css", import.meta.url), "utf8");
+const botAutomation = await readFile(new URL("./botAutomation.js", import.meta.url), "utf8");
 
 test("Slum Lord is a local full-board module with no party-stage dependency", () => {
   assert.match(indexSource, /GameBoard/);
@@ -43,6 +45,23 @@ test("Slum Lord gives every property district a mechanical personality", () => {
   }
   assert.match(chaos, /portfolioInspectionExposure/);
   assert.match(chaos, /applyNeighborhoodIncident/);
+});
+
+test("Slum Lord schedules the bot that actually owes the next action", () => {
+  assert.match(gameSource, /botActionActor\(state\)/);
+  assert.match(gameSource, /runBotStep\(current\)/);
+  assert.match(botAutomation, /state\.auction\.currentBidderId/);
+  assert.match(botAutomation, /state\.pendingTrade\.toId/);
+  assert.doesNotMatch(gameSource, /if \(!player\?\.isBot\) return undefined/);
+});
+
+test("Slum Lord uses both side rails for readable game information", () => {
+  assert.match(gameSource, /sl-left-rail/);
+  assert.match(gameSource, /NeighborhoodFeed/);
+  assert.match(districtStyles, /grid-template-columns:\s*215px\s+minmax\(610px,\s*1fr\)\s+370px/);
+  assert.match(districtStyles, /\.sl-panel-header h3 \{[^}]*font-size:\s*24px/s);
+  assert.match(districtStyles, /\.sl-property-facts b \{[^}]*font-size:\s*16px/s);
+  assert.match(districtStyles, /\.sl-district-card > p \{[^}]*font-size:\s*13px/s);
 });
 
 test("Slum Lord replaces round caps with objective-based endings", () => {
