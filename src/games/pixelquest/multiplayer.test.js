@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { HEROES } from "./data.js";
-import { currentCombatActor, currentScene, moveToScene, normalizeCampaign } from "./engine.js";
+import { currentCombatActor, currentScene, moveToScene, normalizeCampaign, reachableCells } from "./engine.js";
 import { createPixelQuestGameState, reducePixelQuest } from "./network.js";
 
 const human = (uid, seat, nickname = uid, isHost = false) => ({
@@ -162,4 +162,31 @@ test("combat controls belong only to the current online player's hero and pass t
   assert.notEqual(second.id, first.id, "the next surviving human hero must receive their own turn before the round cycles back");
   const secondOwnerUid = state.seatHeroes.host === second.id ? "host" : "guest";
   assert.notEqual(secondOwnerUid, firstOwnerUid);
+});
+
+
+test("combat movement is consumed after one move on the current online hero turn", () => {
+  const { members, state: started } = startTwoPlayerCampaign();
+  let state = structuredClone(started);
+  state.campaign = moveToScene(state.campaign, "chapel-fight");
+  state = reducePixelQuest(state, "host", { type: "start-combat" }, members);
+
+  const current = currentCombatActor(state.campaign);
+  assert.equal(current.type, "hero");
+  assert.equal(current.controller, "human");
+  const ownerUid = state.seatHeroes.host === current.id ? "host" : "guest";
+  const cells = reachableCells(state.campaign, current.id);
+  assert.ok(cells.length >= 2, "test encounter should offer at least two movement cells");
+
+  const turnKey = `${state.campaign.combat.round}:${state.campaign.combat.turnIndex}:${current.id}`;
+  state = reducePixelQuest(state, ownerUid, { type: "move", x: cells[0].x, y: cells[0].y }, members);
+  assert.equal(state.campaign.combat.movedTurnKey, turnKey);
+
+  const afterMoveCells = reachableCells(state.campaign, current.id);
+  const second = afterMoveCells[0];
+  assert.ok(second, "a second engine-reachable cell should exist so the shared-state rule can reject it");
+  assert.throws(
+    () => reducePixelQuest(state, ownerUid, { type: "move", x: second.x, y: second.y }, members),
+    /already moved this turn/
+  );
 });

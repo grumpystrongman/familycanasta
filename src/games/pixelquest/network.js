@@ -277,8 +277,11 @@ export function reducePixelQuest(state, actorUid, action, members) {
       break;
     case "move": {
       ensureOwnTurn(next, actorUid);
+      const turnKey = `${campaign.combat?.round}:${campaign.combat?.turnIndex}:${myHero.id}`;
+      if (campaign.combat?.movedTurnKey === turnKey) throw new Error("You already moved this turn. Choose an ability or skip your action.");
       const result = moveCombatActor(campaign, myHero.id, Number(action.x), Number(action.y));
       if (!result.ok) throw new Error(result.reason);
+      result.state.combat.movedTurnKey = turnKey;
       campaign = result.state;
       break;
     }

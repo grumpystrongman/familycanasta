@@ -172,15 +172,15 @@ async function capturePixelQuest() {
       guestPage.locator(".pq-board").waitFor({ state: "visible" }),
     ]);
 
-    const hostTurn = await page.getByRole("button", { name: /end my turn/i }).isVisible().catch(() => false);
-    const guestTurn = await guestPage.getByRole("button", { name: /end my turn/i }).isVisible().catch(() => false);
+    const hostTurn = await page.getByRole("button", { name: /skip action/i }).isVisible().catch(() => false);
+    const guestTurn = await guestPage.getByRole("button", { name: /skip action/i }).isVisible().catch(() => false);
     if (hostTurn === guestTurn) throw new Error(`Exactly one online player must own the current combat controls. host=${hostTurn} guest=${guestTurn}`);
 
     await capture("pixelquest-combat", ".pq-game-screen");
     const firstTurnPage = hostTurn ? page : guestPage;
     const nextTurnPage = hostTurn ? guestPage : page;
-    await firstTurnPage.getByRole("button", { name: /end my turn/i }).click();
-    await nextTurnPage.getByRole("button", { name: /end my turn/i }).waitFor({ state: "visible" });
+    await firstTurnPage.getByRole("button", { name: /skip action/i }).click();
+    await nextTurnPage.getByRole("button", { name: /skip action/i }).waitFor({ state: "visible" });
   } finally {
     await guestContext.close();
   }

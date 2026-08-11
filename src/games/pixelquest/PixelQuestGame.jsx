@@ -254,9 +254,10 @@ function SkillScene({ controller, campaign, scene, myHeroId, audio }) {
   return <section className="pq-skill-stage"><div className="pq-skill-rune"><span>?</span></div><span className="pq-scene-type">EVERY HERO GETS A SKILL TURN</span><h1>{scene.title}</h1><p>{scene.text}</p><div className="pq-skill-card"><PixelSprite heroId={myHeroId} size="lg" /><div><small>{hero?.name}</small><strong>{String(scene.stat).toUpperCase()} CHECK</strong><span>d20 + {stat} + 2 proficiency vs DC {scene.dc}</span></div></div><div className="pq-skill-party-progress">{humanHeroIds.map((heroId) => <span key={heroId} className={attempts[heroId] ? "done" : "waiting"}><PixelSprite heroId={heroId} size="xs" /><b>{HERO_BY_ID[heroId]?.name}</b><small>{attempts[heroId] ? "TURN COMPLETE" : "WAITING"}</small></span>)}</div>{myAttempt ? <div className="pq-skill-result"><strong>Your result: {myAttempt.total} vs DC {scene.dc}</strong><p>{myAttempt.success ? "You added a success to the party challenge." : "Your miss still counts toward the group outcome. The other heroes can still pull it through."}</p><small>{completed}/{humanHeroIds.length} human skill turns complete.</small></div> : <button type="button" className="pq-primary pq-roll-button" disabled={!myHeroId || controller.busy} onClick={() => { audio.tone([120, 180, 260], 0.05); controller.act({ type: "skill-check" }); }}>🎲 ROLL MY d20</button>}</section>;
 }
 
-function Tile({ tile, actor, current, reachable, selectedAbility, onClick }) {
+function Tile({ tile, actor, current, reachable, targetState, onClick }) {
   const enemyTemplate = actor?.type === "enemy" ? actor.templateId : null;
-  return <button type="button" className={`pq-tile tile-${tileLegend(tile)} ${reachable ? "reachable" : ""} ${actor ? `occupied ${actor.type}` : ""} ${current ? "current" : ""} ${actor?.downed ? "downed" : ""}`} onClick={onClick} aria-label={`${tileLegend(tile)}${actor ? `, ${actor.name}` : ""}${reachable ? ", reachable" : ""}`}><span className="pq-tile-texture" />{tile === "C" ? <span className="pq-chest">▣</span> : null}{tile === "F" ? <span className="pq-flame">♨</span> : null}{actor?.type === "hero" ? <PixelSprite heroId={actor.templateId || actor.id} size="board" /> : null}{actor?.type === "enemy" ? <PixelSprite enemyId={enemyTemplate} size={actor.boss ? "boss" : "board"} /> : null}{actor ? <span className="pq-actor-hp"><i style={{ width: `${Math.max(0, Math.round((actor.hp / actor.maxHp) * 100))}%` }} /></span> : null}{current ? <span className="pq-turn-caret">▼</span> : null}{selectedAbility && actor ? <span className="pq-target-reticle">+</span> : null}</button>;
+  const targetLabel = targetState === "legal" ? ", valid target" : targetState === "invalid" ? ", not a valid target" : "";
+  return <button type="button" className={`pq-tile tile-${tileLegend(tile)} ${reachable ? "reachable" : ""} ${actor ? `occupied ${actor.type}` : ""} ${current ? "current" : ""} ${actor?.downed ? "downed" : ""} ${targetState ? `target-${targetState}` : ""}`} onClick={onClick} aria-label={`${tileLegend(tile)}${actor ? `, ${actor.name}` : ""}${reachable ? ", reachable" : ""}${targetLabel}`}><span className="pq-tile-texture" />{tile === "C" ? <span className="pq-chest">▣</span> : null}{tile === "F" ? <span className="pq-flame">♨</span> : null}{actor?.type === "hero" ? <PixelSprite heroId={actor.templateId || actor.id} size="board" /> : null}{actor?.type === "enemy" ? <PixelSprite enemyId={enemyTemplate} size={actor.boss ? "boss" : "board"} /> : null}{actor ? <span className="pq-actor-hp"><i style={{ width: `${Math.max(0, Math.round((actor.hp / actor.maxHp) * 100))}%` }} /></span> : null}{current ? <span className="pq-turn-caret">▼</span> : null}{targetState === "legal" ? <span className="pq-target-reticle">+</span> : null}{targetState === "legal-tile" ? <span className="pq-target-tile">◆</span> : null}</button>;
 }
 
 function CombatStage({ controller, campaign, myHeroId, audio }) {
@@ -264,42 +265,108 @@ function CombatStage({ controller, campaign, myHeroId, audio }) {
   const scene = currentScene(campaign);
   const isHost = controller.room.hostUid === controller.user?.uid;
   const [selectedAbilityId, setSelectedAbilityId] = useState(null);
+  const [actionHint, setActionHint] = useState("");
   const current = currentCombatActor(campaign);
   const mine = current?.id === myHeroId;
   const myActor = combat?.actors.find((actor) => actor.id === myHeroId);
   const heroTemplate = HERO_BY_ID[myHeroId];
-  const reachable = useMemo(() => new Set((mine && !selectedAbilityId ? reachableCells(campaign, myHeroId) : []).map((cell) => `${cell.x},${cell.y}`)), [campaign, mine, myHeroId, selectedAbilityId]);
+  const turnKey = combat && current ? `${combat.round}:${combat.turnIndex}:${current.id}` : "no-combat";
+  const myTurnKey = combat && myActor ? `${combat.round}:${combat.turnIndex}:${myActor.id}` : "";
+  const hasMoved = Boolean(mine && combat?.movedTurnKey === myTurnKey);
+  const reachable = useMemo(() => new Set((mine && !selectedAbilityId && !hasMoved ? reachableCells(campaign, myHeroId) : []).map((cell) => `${cell.x},${cell.y}`)), [campaign, mine, myHeroId, selectedAbilityId, hasMoved]);
   const selectedAbility = myActor?.abilities?.find((ability) => ability.id === selectedAbilityId) || null;
+
+  useEffect(() => {
+    setSelectedAbilityId(null);
+    setActionHint("");
+  }, [turnKey]);
 
   if (!combat) return <section className="pq-combat-intro"><div className="pq-battle-banner"><span>⚔</span><small>ENCOUNTER</small><h1>{scene.title}</h1><p>{scene.text}</p><em>Initiative creates a real turn order. Each human can act only when their own hero reaches the front of the queue.</em></div>{isHost ? <button type="button" className="pq-primary" disabled={controller.busy} onClick={() => { audio.tone([110, 165, 220, 330], 0.07); controller.act({ type: "start-combat" }); }}>ROLL INITIATIVE →</button> : <p className="pq-waiting">Waiting for the party leader to start the encounter…</p>}</section>;
 
-  const actorByCell = new Map(combat.actors.filter((actor) => actor.hp > 0).map((actor) => [`${actor.x},${actor.y}`, actor]));
+  const actorByCell = new Map(combat.actors.filter((actor) => actor.hp > 0 || actor.downed).map((actor) => [`${actor.x},${actor.y}`, actor]));
+  const distance = (a, b) => Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+  const inRange = (target, ability = selectedAbility) => Boolean(myActor && target && ability && distance(myActor, target) <= Number(ability.range || 1));
+  const legalActorTargets = new Set();
+  if (selectedAbility && myActor) {
+    for (const target of combat.actors) {
+      if (selectedAbility.target === "enemy" && target.type !== myActor.type && !target.downed && target.hp > 0 && inRange(target)) legalActorTargets.add(target.id);
+      if (selectedAbility.target === "ally" && target.type === "hero" && target.type === myActor.type && inRange(target) && (!selectedAbility.revive || target.downed)) legalActorTargets.add(target.id);
+      if (selectedAbility.target === "area" && !target.downed && target.hp > 0 && inRange(target)) legalActorTargets.add(target.id);
+    }
+  }
+  const legalTileTargets = new Set();
+  if (selectedAbility?.target === "tile" && myActor) {
+    combat.map.forEach((row, y) => row.split("").forEach((tile, x) => {
+      const occupied = actorByCell.get(`${x},${y}`);
+      const occupiedByLivingActor = occupied && !occupied.downed && occupied.hp > 0;
+      if (tile !== "#" && distance(myActor, { x, y }) <= Number(selectedAbility.range || 1) && !(selectedAbility.movement && occupiedByLivingActor)) legalTileTargets.add(`${x},${y}`);
+    }));
+  }
+
+  const targetPrompt = selectedAbility?.target === "enemy"
+    ? `SELECT AN ENEMY — RANGE ${selectedAbility.range || 1}`
+    : selectedAbility?.target === "ally"
+      ? `SELECT AN ALLY — RANGE ${selectedAbility.range || 1}`
+      : selectedAbility?.target === "tile"
+        ? `SELECT A GLOWING TILE — RANGE ${selectedAbility.range || 1}`
+        : selectedAbility?.target === "area"
+          ? `SELECT A CREATURE TO CENTER ${selectedAbility.name.toUpperCase()} — RANGE ${selectedAbility.range || 1}`
+          : "SELECT A TARGET";
+  const noLegalTargets = Boolean(selectedAbility && selectedAbility.target !== "self" && (selectedAbility.target === "tile" ? legalTileTargets.size === 0 : legalActorTargets.size === 0));
+  const latestCombatEvent = [...(campaign.log || [])].reverse().find((entry) => ["damage", "heal", "miss", "ability", "combat"].includes(entry.type));
+
+  function selectAbility(ability) {
+    audio.tone([190, 240]);
+    if (ability.target === "self") {
+      setActionHint(`Using ${ability.name}…`);
+      controller.act({ type: "ability", abilityId: ability.id, targetId: myActor.id });
+      setSelectedAbilityId(null);
+      return;
+    }
+    setSelectedAbilityId((value) => {
+      const next = value === ability.id ? null : ability.id;
+      setActionHint(next ? "Now choose one of the highlighted targets on the board." : "Targeting cancelled. Choose an action.");
+      return next;
+    });
+  }
+
   function cellClick(x, y) {
     if (!mine || current?.type !== "hero" || controller.busy) return;
     const target = actorByCell.get(`${x},${y}`);
     if (selectedAbility) {
-      if (selectedAbility.target === "self") {
-        controller.act({ type: "ability", abilityId: selectedAbility.id, targetId: current.id });
-        setSelectedAbilityId(null); return;
-      }
       if (selectedAbility.target === "tile") {
+        if (!legalTileTargets.has(`${x},${y}`)) {
+          audio.tone([95], 0.07, 0.02);
+          setActionHint("That tile is not a legal target. Choose a glowing tile or cancel targeting.");
+          return;
+        }
+        setActionHint(`${selectedAbility.name} is resolving…`);
         controller.act({ type: "tile-ability", abilityId: selectedAbility.id, x, y });
-        setSelectedAbilityId(null); return;
+        setSelectedAbilityId(null);
+        return;
       }
-      if (target) {
-        controller.act({ type: "ability", abilityId: selectedAbility.id, targetId: target.id });
-        setSelectedAbilityId(null); return;
+      if (!target || !legalActorTargets.has(target.id)) {
+        audio.tone([95], 0.07, 0.02);
+        setActionHint(`That is not a legal target for ${selectedAbility.name}. Choose a highlighted target.`);
+        return;
       }
+      setActionHint(`${selectedAbility.name} targets ${target.name}…`);
+      controller.act({ type: "ability", abilityId: selectedAbility.id, targetId: target.id });
+      setSelectedAbilityId(null);
       return;
     }
-    if (!target && reachable.has(`${x},${y}`)) {
+    const blocksMovement = target && !target.downed && target.hp > 0;
+    if (!blocksMovement && reachable.has(`${x},${y}`)) {
       audio.tone([160], 0.04, 0.015);
+      setActionHint("Movement used. Now choose an ability, or skip your action.");
       controller.act({ type: "move", x, y });
+    } else if (mine && !hasMoved) {
+      setActionHint("Move by clicking a green square, or choose an ability first.");
     }
   }
 
   const winner = combat.victory;
-  return <section className="pq-combat-stage"><div className="pq-initiative-ribbon">{combat.order.map((id) => { const actor = combat.actors.find((entry) => entry.id === id); if (!actor) return null; return <span key={id} className={`${current?.id === id ? "active" : ""} ${actor.downed ? "downed" : ""}`}><PixelSprite heroId={actor.type === "hero" ? actor.templateId || actor.id : null} enemyId={actor.type === "enemy" ? actor.templateId : null} size="xs" /><b>{actor.name}</b><small>{actor.initiativeRoll}</small></span>; })}</div><div className="pq-board-frame"><div className="pq-board" role="grid" aria-label="PixelQuest tactical battle map">{combat.map.flatMap((row, y) => row.split("").map((tile, x) => { const actor = actorByCell.get(`${x},${y}`); return <Tile key={`${x}-${y}`} tile={tile} actor={actor} current={actor?.id === current?.id} reachable={reachable.has(`${x},${y}`)} selectedAbility={selectedAbility} onClick={() => cellClick(x, y)} />; }))}{(combat.objects || []).map((object) => <span key={object.id} className={`pq-board-object object-${object.type}`} style={{ "--x": object.x, "--y": object.y }}>{object.type === "turret" ? "⌖" : "⌁"}</span>)}</div><div className="pq-board-status"><span>ROUND {combat.round}</span><strong>{combat.lastAction}</strong><em>{current?.type === "enemy" ? "THE DUNGEON MOVES…" : mine ? "YOUR TURN — ONLY YOUR SCREEN HAS CONTROLS" : current?.controller === "ai" ? "AI COMPANION THINKING…" : `WAITING FOR ${current?.name?.toUpperCase()}`}</em></div></div>{winner ? <div className={`pq-combat-result ${winner}`}><h2>{winner === "heroes" ? "VICTORY" : "THE PARTY FALLS"}</h2><p>{winner === "heroes" ? "The last enemy drops. The room is suddenly much quieter." : "No one is eliminated from game night. Defeat costs time and gold, not your seat."}</p>{isHost ? <button type="button" className="pq-primary" disabled={controller.busy} onClick={() => controller.act({ type: winner === "heroes" ? "finish-combat" : "recover-defeat" })}>{winner === "heroes" ? "CLAIM LOOT →" : "WAKE UP LATER →"}</button> : null}</div> : null}<div className="pq-action-deck"><div className="pq-current-hero">{current ? <><PixelSprite heroId={current.type === "hero" ? current.templateId || current.id : null} enemyId={current.type === "enemy" ? current.templateId : null} size="sm" /><div><small>TURN</small><strong>{current.name}</strong><HealthBar hp={current.hp} maxHp={current.maxHp} compact /></div></> : null}</div>{mine && !winner ? <><div className="pq-ability-buttons">{myActor.abilities.map((ability) => { const cd = myActor.cooldowns?.[ability.id] || 0; return <button type="button" key={ability.id} disabled={cd > 0 || controller.busy} className={selectedAbilityId === ability.id ? "selected" : ""} title={ability.description} onClick={() => { audio.tone([190, 240]); if (ability.target === "self") { controller.act({ type: "ability", abilityId: ability.id, targetId: myActor.id }); setSelectedAbilityId(null); } else setSelectedAbilityId((value) => value === ability.id ? null : ability.id); }}><strong>{ability.name}</strong><small>{cd ? `COOLDOWN ${cd}` : ability.target === "tile" ? "CHOOSE TILE" : ability.range ? `RANGE ${ability.range}` : "READY"}</small></button>; })}</div><button type="button" className="pq-end-turn" disabled={controller.busy} onClick={() => { audio.tone([130]); controller.act({ type: "end-turn" }); setSelectedAbilityId(null); }}>END MY TURN</button></> : <div className="pq-turn-help"><strong>{mine ? "Choose an ability or glowing movement tile." : localNarrator.combatQuip(campaign, current?.name || "The enemy")}</strong><small>{selectedAbility ? selectedAbility.description : heroTemplate?.utility || "The battle is resolving through the shared room state."}</small></div>}</div></section>;
+  return <section className="pq-combat-stage"><div className="pq-initiative-ribbon">{combat.order.map((id) => { const actor = combat.actors.find((entry) => entry.id === id); if (!actor) return null; return <span key={id} className={`${current?.id === id ? "active" : ""} ${actor.downed ? "downed" : ""}`}><PixelSprite heroId={actor.type === "hero" ? actor.templateId || actor.id : null} enemyId={actor.type === "enemy" ? actor.templateId : null} size="xs" /><b>{actor.name}</b><small>{actor.initiativeRoll}</small></span>; })}</div><div className="pq-board-frame"><div className="pq-board" role="grid" aria-label="PixelQuest tactical battle map">{combat.map.flatMap((row, y) => row.split("").map((tile, x) => { const actor = actorByCell.get(`${x},${y}`); let targetState = ""; if (selectedAbility?.target === "tile") targetState = legalTileTargets.has(`${x},${y}`) ? "legal-tile" : ""; else if (selectedAbility && actor) targetState = legalActorTargets.has(actor.id) ? "legal" : "invalid"; return <Tile key={`${x}-${y}`} tile={tile} actor={actor} current={actor?.id === current?.id} reachable={reachable.has(`${x},${y}`)} targetState={targetState} onClick={() => cellClick(x, y)} />; }))}{(combat.objects || []).map((object) => <span key={object.id} className={`pq-board-object object-${object.type}`} style={{ "--x": object.x, "--y": object.y }}>{object.type === "turret" ? "⌖" : "⌁"}</span>)}</div><div className={`pq-board-status ${selectedAbility ? "targeting" : ""}`}><span>ROUND {combat.round}</span><strong>{selectedAbility ? targetPrompt : latestCombatEvent?.text || combat.lastAction}</strong><em>{current?.type === "enemy" ? "THE DUNGEON MOVES…" : mine ? selectedAbility ? "CHOOSE A HIGHLIGHTED TARGET" : "YOUR TURN" : current?.controller === "ai" ? "AI COMPANION THINKING…" : `WAITING FOR ${current?.name?.toUpperCase()}`}</em></div></div>{winner ? <div className={`pq-combat-result ${winner}`}><h2>{winner === "heroes" ? "VICTORY" : "THE PARTY FALLS"}</h2><p>{winner === "heroes" ? "The last enemy drops. The room is suddenly much quieter." : "No one is eliminated from game night. Defeat costs time and gold, not your seat."}</p>{isHost ? <button type="button" className="pq-primary" disabled={controller.busy} onClick={() => controller.act({ type: winner === "heroes" ? "finish-combat" : "recover-defeat" })}>{winner === "heroes" ? "CLAIM LOOT →" : "WAKE UP LATER →"}</button> : null}</div> : null}<div className="pq-action-deck"><div className="pq-current-hero">{current ? <><PixelSprite heroId={current.type === "hero" ? current.templateId || current.id : null} enemyId={current.type === "enemy" ? current.templateId : null} size="sm" /><div><small>TURN</small><strong>{current.name}</strong><HealthBar hp={current.hp} maxHp={current.maxHp} compact /></div></> : null}</div>{mine && !winner ? <><div className="pq-action-center"><div className={`pq-combat-guide ${selectedAbility ? "targeting" : ""}`}><div><span className={hasMoved ? "done" : "active"}><b>1</b> MOVE {hasMoved ? "✓" : ""}</span><span className={selectedAbility ? "done" : hasMoved ? "active" : ""}><b>2</b> CHOOSE ACTION</span><span className={selectedAbility ? "active" : ""}><b>3</b> TARGET</span></div><strong>{selectedAbility ? noLegalTargets ? "NO VALID TARGETS IN RANGE — CANCEL AND MOVE CLOSER" : targetPrompt : hasMoved ? "Movement used. Choose your action." : "Move once if you want, then choose an action."}</strong><small>{actionHint || selectedAbility?.description || "Green squares are movement. Choosing most abilities arms them; the board will then show exactly what you can target."}</small></div><div className="pq-ability-buttons">{myActor.abilities.map((ability) => { const cd = myActor.cooldowns?.[ability.id] || 0; const selected = selectedAbilityId === ability.id; return <button type="button" key={ability.id} disabled={cd > 0 || controller.busy} className={selected ? "selected" : ""} title={ability.description} onClick={() => selectAbility(ability)}><strong>{selected ? `▶ ${ability.name}` : ability.name}</strong><small>{cd ? `COOLDOWN ${cd}` : selected ? "SELECT TARGET ON BOARD" : ability.target === "self" ? "USE NOW" : ability.target === "tile" ? `TARGET TILE · ${ability.range}` : `TARGET ${ability.target?.toUpperCase() || "ENEMY"} · ${ability.range || 1}`}</small></button>; })}</div></div><button type="button" className={`pq-end-turn ${selectedAbility ? "cancel" : ""}`} disabled={controller.busy} onClick={() => { if (selectedAbility) { audio.tone([170]); setSelectedAbilityId(null); setActionHint("Targeting cancelled. Choose another action or skip your action."); return; } audio.tone([130]); controller.act({ type: "end-turn" }); }}>{selectedAbility ? "CANCEL TARGETING" : "SKIP ACTION"}</button></> : <div className="pq-turn-help"><strong>{mine ? "Choose an ability or glowing movement tile." : localNarrator.combatQuip(campaign, current?.name || "The enemy")}</strong><small>{heroTemplate?.utility || "The battle is resolving through the shared room state."}</small></div>}</div></section>;
 }
 
 function EndingScene({ controller, campaign, scene, audio }) {
