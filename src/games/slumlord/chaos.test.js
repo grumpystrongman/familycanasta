@@ -8,6 +8,7 @@ import {
   finishChaosTurn,
   installScheme,
   portfolioHeat,
+  removeScheme,
   rollStreetDice,
   upgradePropertyChaos,
 } from "./chaos.js";
@@ -54,6 +55,31 @@ test("the sketchy cab gives exact tactical movement and charges for it", () => {
   assert.equal(next.players[0].cash, beforeCash - 60);
   assert.deepEqual(next.dice, [1, 4]);
   assert.equal(next.extraTurn, false);
+});
+
+test("Heat crackdown still applies when an inspection card immediately sends the landlord to court", () => {
+  let state = setup();
+  state.ownership["3"] = { ownerId: "human", upgrades: 0, mortgaged: false };
+  state = installScheme(state, "human", 3, "drug-lord-lease");
+  state.players[0].position = 8;
+  state.inspectionDeck = ["court"];
+  state.inspectionIndex = 0;
+
+  const next = rollStreetDice(state, "cab", 3);
+  assert.equal(next.players[0].position, 9);
+  assert.equal(next.players[0].inCourt, true);
+  assert.equal(next.pot, 66, "Heat 3 should add a $66 crackdown even after the card moves the player");
+});
+
+test("cleaning up a shady scheme costs money even when it creates debt", () => {
+  let state = setup();
+  state.ownership["3"] = { ownerId: "human", upgrades: 0, mortgaged: false };
+  state = installScheme(state, "human", 3, "landlord-special");
+  state.players[0].cash = 25;
+  const next = removeScheme(state, "human", 3);
+  assert.equal(next.ownership["3"].schemeId, null);
+  assert.equal(next.players[0].cash, -25);
+  assert.equal(next.debt?.playerId, "human");
 });
 
 test("empire mode ends on an objective instead of a round count", () => {
