@@ -25,6 +25,8 @@ await context.addInitScript(() => {
 
 const page = await context.newPage();
 page.setDefaultTimeout(30_000);
+page.on("console", (message) => console.log(`[browser:${message.type()}] ${message.text()}`));
+page.on("pageerror", (error) => console.log(`[browser:error] ${error.stack || error.message}`));
 
 async function open(route, selector) {
   await page.goto(`${baseUrl}${route}`, { waitUntil: "networkidle" });
@@ -99,6 +101,12 @@ async function capturePixelQuest() {
   await page.getByRole("button", { name: /^continue/i }).click();
   await page.getByRole("button", { name: /walk through the front gate openly/i }).click();
   await page.getByRole("button", { name: /enter the abandoned chapel/i }).click();
+  await page.waitForTimeout(1200);
+  console.log("PIXELQUEST_STAGE_AFTER_CHAPEL");
+  console.log(await page.locator(".pq-main-stage").innerText());
+  const visibleErrors = await page.locator(".pq-error").allInnerTexts();
+  if (visibleErrors.length) console.log(`PIXELQUEST_VISIBLE_ERRORS: ${visibleErrors.join(" | ")}`);
+  console.log(`PIXELQUEST_BUTTONS: ${(await page.locator(".pq-main-stage button").allInnerTexts()).join(" || ")}`);
   await page.getByRole("button", { name: /roll initiative/i }).click();
   await page.locator(".pq-board").waitFor({ state: "visible" });
   await page.waitForTimeout(1200);
