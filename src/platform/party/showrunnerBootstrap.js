@@ -1,17 +1,18 @@
 import { partyAudio } from "./audioDirector";
-import { ANNOUNCER_BANKS, introZinger, joinZinger, partyAnnouncer } from "./announcer";
+import { ANNOUNCER_BANKS, introZinger, joinZinger } from "./announcer";
 import "./showrunner.css";
 
-const spokenIntros = new Set();
+const shownIntros = new Set();
 let lastPhaseKey = "";
 let captionTimer = null;
+let lifecycleObserver = null;
 
 function ensureAudibleDefaults() {
   if (typeof window === "undefined") return;
   try {
-    if (window.localStorage.getItem("familyPartyMusicVolume") == null) partyAudio.setMusicVolume(0.52);
-    if (window.localStorage.getItem("familyPartySfxVolume") == null) partyAudio.setSfxVolume(0.82);
-  } catch { /* storage can be blocked; the in-memory defaults still work */ }
+    if (window.localStorage.getItem("familyPartyMusicVolume") == null) partyAudio.setMusicVolume(0.34);
+    if (window.localStorage.getItem("familyPartySfxVolume") == null) partyAudio.setSfxVolume(0.78);
+  } catch { /* in-memory defaults still work */ }
 }
 
 function isHostScreen() {
@@ -42,7 +43,7 @@ function showCaption(text, gameId) {
     node = document.createElement("div");
     node.id = "party-announcer-caption";
     node.className = "party-announcer-caption";
-    node.innerHTML = '<span aria-hidden="true">🎙️</span><p></p>';
+    node.innerHTML = '<span aria-hidden="true">🎙️</span><div><small>SHOW HOST</small><p></p></div>';
     document.body.appendChild(node);
   }
   node.dataset.game = gameId;
@@ -54,10 +55,12 @@ function showCaption(text, gameId) {
   captionTimer = window.setTimeout(() => node.classList.remove("show"), 5600);
 }
 
-function speak(text, gameId, options = {}) {
+// Deliberately text-only. Long comedy lines sounded poor through browser TTS.
+// Short generic game calls now use Kenney's recorded human voice clips in the
+// audio director instead.
+function presentHostLine(text, gameId) {
   if (!text || !isHostScreen()) return;
   showCaption(text, gameId);
-  partyAnnouncer.speak(text, gameId, options);
 }
 
 function currentPanel() {
@@ -149,30 +152,29 @@ function announceCurrentPhase(gameId) {
   const key = `${gameId}:${phase}:${panel.title}`;
   if (key === lastPhaseKey) return;
   lastPhaseKey = key;
-  const line = lineForPhase(gameId, phase, panel);
-  speak(line, gameId, { interrupt: true });
+  if (["finale", "finaleAnswer"].includes(phase)) partyAudio.cue("finalRound");
+  if (phase === "final") partyAudio.cue("winner");
+  presentHostLine(lineForPhase(gameId, phase, panel), gameId);
 }
 
 function announceJoin(gameId) {
   const names = [...document.querySelectorAll(".party-player-tile b")].map((node) => node.textContent?.trim()).filter(Boolean);
   if (!names.length) return;
-  const line = joinZinger({ nickname: names[names.length - 1] }, names.length);
-  speak(line, gameId === "lobby" ? "lobby" : gameId, { interrupt: false });
+  presentHostLine(joinZinger({ nickname: names[names.length - 1] }, names.length), gameId === "lobby" ? "lobby" : gameId);
 }
 
 function handleShowEvent(event) {
   if (!isHostScreen()) return;
   const gameId = gameFromDom(event.theme || "lobby");
-  if (event.type === "music") return;
-  if (event.type !== "sfx") return;
+  if (event.type === "music" || event.type !== "sfx") return;
 
   if (event.name === "join") {
     window.setTimeout(() => announceJoin(gameId), 80);
     return;
   }
-  if (event.name === "go" && gameId !== "lobby" && !spokenIntros.has(gameId)) {
-    spokenIntros.add(gameId);
-    speak(introZinger(gameId), gameId, { interrupt: true });
+  if (event.name === "go" && gameId !== "lobby" && !shownIntros.has(gameId)) {
+    shownIntros.add(gameId);
+    presentHostLine(introZinger(gameId), gameId);
     return;
   }
   if (["tick", "reveal", "vote", "eliminate", "fanfare", "go"].includes(event.name)) {
@@ -180,9 +182,102 @@ function handleShowEvent(event) {
   }
 }
 
+function ensureCreditsButton() {
+  if (!isHostScreen() || document.getElementById("party-audio-credits-button")) return;
+  const button = document.createElement("button");
+  button.id = "party-audio-credits-button";
+  button.className = "party-audio-credits-button";
+  button.type = "button";
+  button.textContent = "Audio credits";
+  button.onclick = () => {
+    let panel = document.getElementById("party-audio-credits");
+    if (panel) { panel.remove(); return; }
+    panel = document.createElement("div");
+    panel.id = "party-audio-credits";
+    panel.className = "party-audio-credits";
+    panel.innerHTML = `<button type="button" aria-label="Close audio credits">×</button><strong>PARTY STAGE AUDIO</strong><p>Music by Kevin MacLeod (incompetech.com), licensed CC BY 4.0: Pinball Spring, Mischief Maker, Giant Wyrm, Marty Gots a Plan, and Boogie Party.</p><p>Interface sounds, impacts, and recorded game voice cues by Kenney, licensed CC0.</p>`;
+    panel.querySelector("button").onclick = () => panel.remove();
+    document.body.appendChild(panel);
+  };
+  document.body.appendChild(button);
+}
+
+function renderLifecycleControls() {
+  if (typeof document === "undefined") return;
+  const api = window.__familyPartyLifecycle;
+  let node = document.getElementById("party-lifecycle-controls");
+  if (!api?.roomCode) {
+    node?.remove();
+    return;
+  }
+
+  const final = api.phase === "final";
+  const shouldShow = final || api.isHost;
+  if (!shouldShow) { node?.remove(); return; }
+  if (!node) {
+    node = document.createElement("div");
+    node.id = "party-lifecycle-controls";
+    node.className = "party-lifecycle-controls";
+    document.body.appendChild(node);
+  }
+  node.classList.toggle("final", final);
+  node.innerHTML = "";
+
+  if (final) {
+    const title = document.createElement("strong");
+    title.textContent = api.isHost ? "WHAT NEXT?" : "GAME COMPLETE";
+    node.appendChild(title);
+
+    if (api.isHost) {
+      const replay = document.createElement("button");
+      replay.type = "button";
+      replay.className = "primary";
+      replay.textContent = "↻ PLAY AGAIN · SAME ROOM";
+      replay.disabled = Boolean(api.busy);
+      replay.onclick = () => api.replay?.();
+      node.appendChild(replay);
+    } else {
+      const stay = document.createElement("span");
+      stay.className = "party-rematch-hint";
+      stay.textContent = "Stay here for a rematch, or return to the game room.";
+      node.appendChild(stay);
+    }
+
+    const home = document.createElement("button");
+    home.type = "button";
+    home.textContent = "⌂ FAMILY GAME ROOM";
+    home.disabled = Boolean(api.busy);
+    home.onclick = () => api.gameRoom?.();
+    node.appendChild(home);
+  } else if (api.isHost && api.status === "playing") {
+    const exit = document.createElement("button");
+    exit.type = "button";
+    exit.className = "quiet";
+    exit.textContent = "End show";
+    exit.onclick = () => {
+      if (window.confirm("End this room for everyone and return to the Family Game Room?")) api.gameRoom?.();
+    };
+    node.appendChild(exit);
+  }
+}
+
+function installLifecycleObserver() {
+  renderLifecycleControls();
+  ensureCreditsButton();
+  window.addEventListener("family-party-lifecycle", renderLifecycleControls);
+  if (!lifecycleObserver && typeof MutationObserver !== "undefined") {
+    lifecycleObserver = new MutationObserver(() => {
+      renderLifecycleControls();
+      ensureCreditsButton();
+    });
+    lifecycleObserver.observe(document.body, { childList: true, subtree: true });
+  }
+}
+
 if (typeof window !== "undefined" && !window.__familyPartyShowrunnerInstalled) {
   window.__familyPartyShowrunnerInstalled = true;
   ensureAudibleDefaults();
-  partyAnnouncer.prepare();
   partyAudio.onEvent(handleShowEvent);
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", installLifecycleObserver, { once: true });
+  else installLifecycleObserver();
 }
