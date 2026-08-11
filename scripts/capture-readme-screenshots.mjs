@@ -40,6 +40,12 @@ async function capture(name, selector = "main") {
   await target.screenshot({ path: `${outputDir}/${name}.png` });
 }
 
+async function captureFrom(targetPage, name, selector = "main") {
+  const target = targetPage.locator(selector).first();
+  await target.waitFor({ state: "visible" });
+  await target.screenshot({ path: `${outputDir}/${name}.png` });
+}
+
 async function captureHub() {
   await open("/", ".family-game-hub");
   await capture("family-card-room-hub", ".family-game-hub");
@@ -88,29 +94,98 @@ async function capturePixelQuest() {
   await open("/?game=pixelquest", ".pq-title-screen");
   await capture("pixelquest-entry", ".pq-title-screen");
 
-  // This is intentionally more than a screenshot. It is a browser-level smoke test
-  // of the real Firebase room, hero roster, authored choices, and tactical board.
+  // This is intentionally more than a screenshot. It proves that two separate
+  // browser sessions can join the same Firebase room and retain independent input.
   await page.getByRole("button", { name: /create adventure room/i }).click();
   await page.locator(".pq-lobby-screen").waitFor({ state: "visible" });
-  await page.getByRole("button", { name: /open character roster/i }).click();
-  await page.locator(".pq-roster-screen").waitFor({ state: "visible" });
-  await page.getByRole("button", { name: /Brom Stoneguard/i }).click();
-  await page.getByRole("button", { name: /begin adventure/i }).click();
-  await page.locator(".pq-game-screen").waitFor({ state: "visible" });
+  const roomCode = (await page.locator(".pq-lobby-banner strong").first().innerText()).trim();
+  if (!/^[A-Z0-9]{6}$/.test(roomCode)) throw new Error(`PixelQuest did not create a valid room code: ${roomCode}`);
 
-  await page.getByRole("button", { name: /^continue/i }).click();
-  await page.getByRole("button", { name: /walk through the front gate openly/i }).click();
-  await page.getByRole("button", { name: /enter the abandoned chapel/i }).click();
-  await page.waitForTimeout(1200);
-  console.log("PIXELQUEST_STAGE_AFTER_CHAPEL");
-  console.log(await page.locator(".pq-main-stage").innerText());
-  const visibleErrors = await page.locator(".pq-error").allInnerTexts();
-  if (visibleErrors.length) console.log(`PIXELQUEST_VISIBLE_ERRORS: ${visibleErrors.join(" | ")}`);
-  console.log(`PIXELQUEST_BUTTONS: ${(await page.locator(".pq-main-stage button").allInnerTexts()).join(" || ")}`);
-  await page.getByRole("button", { name: /roll initiative/i }).click();
-  await page.locator(".pq-board").waitFor({ state: "visible" });
-  await page.waitForTimeout(1200);
-  await capture("pixelquest-combat", ".pq-game-screen");
+  const guestContext = await browser.newContext({
+    viewport: { width: 1600, height: 1000 },
+    deviceScaleFactor: 1,
+    colorScheme: "light",
+  });
+  await guestContext.addInitScript(() => {
+    localStorage.setItem("familyCardNickname", "Remote Guest");
+    localStorage.setItem("familyCardAvatar", "🦉");
+  });
+  const guestPage = await guestContext.newPage();
+  guestPage.setDefaultTimeout(30_000);
+  guestPage.on("pageerror", (error) => console.log(`[pixelquest-guest:error] ${error.stack || error.message}`));
+
+  try {
+    await guestPage.goto(`${baseUrl}/?game=pixelquest`, { waitUntil: "networkidle" });
+    await guestPage.locator(".pq-title-screen").waitFor({ state: "visible" });
+    await guestPage.locator('input[placeholder="ROOM CODE"]').fill(roomCode);
+    await guestPage.getByRole("button", { name: /join party/i }).click();
+    await guestPage.locator(".pq-lobby-screen").waitFor({ state: "visible" });
+    await page.locator(".pq-seat.filled").nth(1).waitFor({ state: "visible" });
+
+    await page.getByRole("button", { name: /open character roster/i }).click();
+    await Promise.all([
+      page.locator(".pq-roster-screen").waitFor({ state: "visible" }),
+      guestPage.locator(".pq-roster-screen").waitFor({ state: "visible" }),
+    ]);
+
+    await page.getByRole("button", { name: /Brom Stoneguard/i }).click();
+    await guestPage.getByRole("button", { name: /Aldren Oathfire/i }).click();
+    await page.getByRole("button", { name: /begin adventure/i }).click();
+    await Promise.all([
+      page.locator(".pq-game-screen").waitFor({ state: "visible" }),
+      guestPage.locator(".pq-game-screen").waitFor({ state: "visible" }),
+    ]);
+
+    await page.getByRole("button", { name: /^continue/i }).click();
+    await guestPage.getByRole("heading", { name: /How do you enter Blackhollow/i }).waitFor({ state: "visible" });
+
+    // Both players cast their own vote from separate sessions. The host cannot
+    // resolve the party decision until the guest has submitted independently.
+    await Promise.all([
+      page.getByRole("button", { name: /Investigate the lit mill/i }).click(),
+      guestPage.getByRole("button", { name: /Investigate the lit mill/i }).click(),
+    ]);
+    await page.getByRole("button", { name: /lock party decision/i }).click();
+    await Promise.all([
+      page.getByRole("heading", { name: /this choice is yours/i }).waitFor({ state: "visible" }),
+      guestPage.getByRole("heading", { name: /this choice is yours/i }).waitFor({ state: "visible" }),
+    ]);
+
+    await page.getByRole("button", { name: /reveal my choice/i }).click();
+    await guestPage.getByRole("button", { name: /reveal my choice/i }).click();
+    await captureFrom(guestPage, "pixelquest-private-choice", ".pq-game-screen");
+
+    await page.getByRole("button", { name: /Pocket the silver key without telling anyone/i }).click();
+    await page.locator(".pq-private-wait").waitFor({ state: "visible" });
+    await guestPage.getByRole("button", { name: /Show the key and ledger to the party/i }).click();
+    await Promise.all([
+      page.getByRole("heading", { name: /Blackhollow Square/i }).waitFor({ state: "visible" }),
+      guestPage.getByRole("heading", { name: /Blackhollow Square/i }).waitFor({ state: "visible" }),
+    ]);
+
+    await Promise.all([
+      page.getByRole("button", { name: /Enter the abandoned chapel/i }).click(),
+      guestPage.getByRole("button", { name: /Enter the abandoned chapel/i }).click(),
+    ]);
+    await page.getByRole("button", { name: /lock party decision/i }).click();
+    await page.getByRole("button", { name: /roll initiative/i }).click();
+    await Promise.all([
+      page.locator(".pq-board").waitFor({ state: "visible" }),
+      guestPage.locator(".pq-board").waitFor({ state: "visible" }),
+    ]);
+
+    const hostTurn = await page.getByRole("button", { name: /end my turn/i }).isVisible().catch(() => false);
+    const guestTurn = await guestPage.getByRole("button", { name: /end my turn/i }).isVisible().catch(() => false);
+    if (hostTurn === guestTurn) throw new Error(`Exactly one online player must own the current combat controls. host=${hostTurn} guest=${guestTurn}`);
+
+    await capture("pixelquest-combat", ".pq-game-screen");
+    const firstTurnPage = hostTurn ? page : guestPage;
+    const nextTurnPage = hostTurn ? guestPage : page;
+    await firstTurnPage.getByRole("button", { name: /end my turn/i }).click();
+    await nextTurnPage.getByRole("button", { name: /end my turn/i }).waitFor({ state: "visible" });
+  } finally {
+    await guestContext.close();
+  }
 }
 
 try {
