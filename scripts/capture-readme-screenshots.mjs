@@ -82,8 +82,34 @@ async function captureChompageddon() {
   await capture("chompageddon-gameplay", ".chompageddon-page");
 }
 
+async function capturePixelQuest() {
+  await open("/?game=pixelquest", ".pq-title-screen");
+  await capture("pixelquest-entry", ".pq-title-screen");
+
+  // This is intentionally more than a screenshot. It is a browser-level smoke test
+  // of the real Firebase room, hero roster, authored choices, and tactical board.
+  await page.getByRole("button", { name: /create adventure room/i }).click();
+  await page.locator(".pq-lobby-screen").waitFor({ state: "visible" });
+  await page.getByRole("button", { name: /open character roster/i }).click();
+  await page.locator(".pq-roster-screen").waitFor({ state: "visible" });
+  await page.getByRole("button", { name: /Brom Stoneguard/i }).click();
+  await page.getByRole("button", { name: /begin adventure/i }).click();
+  await page.locator(".pq-game-screen").waitFor({ state: "visible" });
+
+  await page.getByRole("button", { name: /^continue/i }).click();
+  await page.getByRole("button", { name: /walk through the front gate openly/i }).click();
+  await page.getByRole("button", { name: /lock party decision/i }).click();
+  await page.getByRole("button", { name: /enter the abandoned chapel/i }).click();
+  await page.getByRole("button", { name: /lock party decision/i }).click();
+  await page.getByRole("button", { name: /roll initiative/i }).click();
+  await page.locator(".pq-board").waitFor({ state: "visible" });
+  await page.waitForTimeout(1200);
+  await capture("pixelquest-combat", ".pq-game-screen");
+}
+
 try {
   await captureHub();
+  await capturePixelQuest();
   await captureCanasta();
   await captureHearts();
   await captureSpades();
