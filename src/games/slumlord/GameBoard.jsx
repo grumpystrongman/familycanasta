@@ -32,20 +32,25 @@ import {
   canSellUpgradeChaos,
   cityPressure,
   createChaosGame,
+  districtUpgradeCost,
   finishChaosTurn,
   getScheme,
   goalDescription,
   goalLabel,
   installScheme,
   portfolioHeat,
+  propertyHeat,
   removeScheme,
   rollStreetDice,
   sellUpgradeChaos,
+  tenantPressure,
   upgradePropertyChaos,
 } from "./chaos.js";
+import { districtForSpace, districtSchemeMultiplier } from "./districts.js";
 import "./styles.css";
 import "./n64-overrides.css";
 import "./chaos.css";
+import "./districts.css";
 
 const PLAYER_COLORS = ["#ef5350", "#42a5f5", "#ffca28", "#66bb6a"];
 const TOKEN_NAMES = ["Wrench", "Plunger", "Brick", "Bucket", "Key", "Van", "Toolbox", "Saw"];
@@ -122,7 +127,7 @@ function Setup({ onStart, onExit }) {
           </div>
         </div>
 
-        <div className="sl-adult-warning">Adult satire: drugs, vice, gangs, cops, homelessness, drunken disasters, bureaucracy, taxes, fines, rats, and aggressively questionable landlord behavior.</div>
+        <div className="sl-adult-warning">Adult satire: drugs, vice, gangs, cops, homelessness, drunken disasters, bureaucracy, taxes, fines, rats, and aggressively questionable landlord behavior. Every neighborhood now has different rent, tax, repair, inspection, and tenant-pressure dynamics.</div>
 
         <div className="sl-setup-options">
           <label>Landlords<select value={count} onChange={(event) => setCount(Number(event.target.value))}><option value={2}>2 landlords</option><option value={3}>3 landlords</option><option value={4}>4 landlords</option></select></label>
@@ -154,15 +159,19 @@ function Setup({ onStart, onExit }) {
 function BoardSpace({ state, space, selected, onSelect }) {
   const ownership = state.ownership[String(space.id)];
   const group = space.group ? GROUPS[space.group] : null;
+  const district = districtForSpace(space);
   const current = currentPlayer(state);
   const occupants = state.players.map((player, index) => ({ player, index })).filter(({ player }) => !player.bankrupt && player.position === space.id);
-  const scheme = getScheme(ownership);
+  const pressure = tenantPressure(ownership);
+  const heat = ownership ? propertyHeat(state, space.id) : 0;
 
   return (
     <button type="button" className={`sl-space sl-space-${space.type} ${selected ? "selected" : ""}`} style={{ ...gridPosition(space.id), "--group": group?.color || "#d9d4c7" }} onClick={() => onSelect(space.id)}>
       {group ? <span className="sl-group-band" /> : null}
+      {district ? <span className="sl-district-badge" title={`${district.name}: ${district.archetype}`}>{district.badge}</span> : null}
       {ownership ? <span className="sl-owner-flag" style={{ "--owner": ownerColor(state, ownership.ownerId) }} /> : null}
-      {scheme?.heat ? <span className="sl-space-heat" title={`${scheme.name}: Heat ${scheme.heat}`}>🔥{scheme.heat}</span> : null}
+      {heat ? <span className="sl-space-heat" title={`Portfolio Heat contribution ${heat}`}>🔥{heat}</span> : null}
+      {pressure ? <span className={`sl-pressure-chip ${pressure >= 4 ? "high" : ""}`} title={`Tenant pressure ${pressure}/5`}>P{pressure}</span> : null}
       <span className="sl-space-icon" aria-hidden="true">{iconFor(space)}</span>
       <strong>{space.name}</strong>
       <small>{space.price ? cash(space.price) : space.subtitle || ""}</small>
@@ -189,6 +198,30 @@ function PlayerRail({ state }) {
   );
 }
 
+function DistrictCard({ state, space, ownership, schemeChoice }) {
+  const district = districtForSpace(space);
+  if (!district) return null;
+  const pressure = tenantPressure(ownership);
+  const choice = SCHEMES.find((item) => item.id === schemeChoice) || null;
+  const localFit = choice ? districtSchemeMultiplier(space.group, choice.id) : 1;
+  const taxLabel = `${Math.round(district.assessmentMultiplier * 100)}%`;
+  const repairDelta = Math.round((district.upgradeCostMultiplier - 1) * 100);
+
+  return <div className="sl-district-card" style={{ "--district": GROUPS[space.group]?.color || "#6f6f6f" }}>
+    <header><span className="sl-district-icon">{district.badge}</span><div><small>{district.name}</small><strong>{district.archetype}</strong></div></header>
+    <p>{district.tagline}</p>
+    <span className="sl-district-residents">Typical block: {district.residents}</span>
+    <div className="sl-district-stats">
+      <span><small>Neighborhood rent</small><b>×{district.rentMultiplier.toFixed(2)}</b></span>
+      <span><small>Inspection exposure</small><b>×{district.inspectionMultiplier.toFixed(2)}</b></span>
+      <span><small>City assessment</small><b>{taxLabel}</b></span>
+      <span><small>Repair pricing</small><b>{repairDelta === 0 ? "Normal" : `${repairDelta > 0 ? "+" : ""}${repairDelta}%`}</b></span>
+    </div>
+    {ownership ? <div className={`sl-district-pressure ${pressure >= 4 ? "high" : ""}`}><span>Tenant pressure builds Heat and can trigger escrow, organized complaints, and costly pushback at Rent Day.</span><b>{pressure}/5</b></div> : null}
+    {choice && localFit !== 1 ? <span className="sl-local-fit">Local scheme fit: {choice.name} earns ×{localFit.toFixed(2)} extra in {district.name}.</span> : null}
+  </div>;
+}
+
 function PropertyPanel({ state, spaceId, onState }) {
   const [schemeChoice, setSchemeChoice] = useState(SCHEMES[0].id);
   const space = BOARD[spaceId];
@@ -200,7 +233,11 @@ function PropertyPanel({ state, spaceId, onState }) {
   const mine = ownership?.ownerId === player?.id;
   const scheme = getScheme(ownership);
   const selectedScheme = SCHEMES.find((item) => item.id === schemeChoice) || SCHEMES[0];
+  const district = districtForSpace(space);
+  const selectedLocalFit = district && space?.group ? districtSchemeMultiplier(space.group, selectedScheme.id) : 1;
+  const currentLocalFit = district && scheme && space?.group ? districtSchemeMultiplier(space.group, scheme.id) : 1;
   const upgradeLabel = space?.type === "property" ? UPGRADE_NAMES[Math.min(ownership?.upgrades || 0, UPGRADE_NAMES.length - 1)] : null;
+  const improvementCost = space?.type === "property" ? districtUpgradeCost(state, space.id) : 0;
 
   useEffect(() => {
     setSchemeChoice(SCHEMES[0].id);
@@ -219,18 +256,20 @@ function PropertyPanel({ state, spaceId, onState }) {
         <span><small>Price</small><b>{cash(space.price)}</b></span>
         <span><small>Owner</small><b>{owner?.name || "Bank"}</b></span>
         <span><small>Base rent</small><b>{ownership && !ownership.mortgaged ? cash(currentRent) : "—"}</b></span>
-        <span><small>Heat</small><b>{scheme ? `🔥 ${scheme.heat}` : "Clean-ish"}</b></span>
+        <span><small>Heat</small><b>{ownership ? `🔥 ${propertyHeat(state, space.id)}` : "Clean-ish"}</b></span>
       </div> : <p className="sl-space-description">{space.subtitle || "Special board space."}</p>}
+
+      {space.type === "property" ? <DistrictCard state={state} space={space} ownership={ownership} schemeChoice={schemeChoice} /> : null}
 
       {space.type === "property" ? <div className="sl-rent-ladder"><strong>{upgradeLabel || "Rent schedule"}</strong><div>{space.rent.map((rent, index) => <span key={index} className={(ownership?.upgrades || 0) === index ? "active" : ""}>{UPGRADE_NAMES[index] || `Lv ${index}`} <b>{cash(rent)}</b></span>)}</div></div> : null}
 
-      {scheme ? <div className="sl-scheme-card"><small>Current scheme</small><strong>{scheme.name}</strong><p>{scheme.description}</p><span>Rent ×{scheme.rentMultiplier.toFixed(2)} + {cash(scheme.flatRent)} · Heat 🔥{scheme.heat}</span></div> : null}
+      {scheme ? <div className="sl-scheme-card"><small>Current scheme</small><strong>{scheme.name}</strong><p>{scheme.description}</p><span>Rent ×{(scheme.rentMultiplier * currentLocalFit).toFixed(2)} + {cash(scheme.flatRent)} · Heat 🔥{scheme.heat} · Pressure {scheme.pressureDelta >= 0 ? "+" : ""}{scheme.pressureDelta}</span></div> : null}
 
       {mine && space.type === "property" ? <div className="sl-management-panel">
         <strong>Property management</strong>
-        <p>The first two improvements no longer require the whole color group. Levels 3–4 still require full block control.</p>
+        <p>Improvements reduce tenant pressure by 1. The first two levels do not require the whole color group; levels 3–4 still require full block control.</p>
         <div className="sl-panel-actions">
-          <button type="button" disabled={!canChaosUpgrade(state, player.id, space.id)} onClick={() => onState(upgradePropertyChaos(state, player.id, space.id))}>Improve {cash(space.upgradeCost)}</button>
+          <button type="button" disabled={!canChaosUpgrade(state, player.id, space.id)} onClick={() => onState(upgradePropertyChaos(state, player.id, space.id))}>Improve {cash(improvementCost)}</button>
           <button type="button" disabled={!canSellUpgradeChaos(state, player.id, space.id)} onClick={() => onState(sellUpgradeChaos(state, player.id, space.id))}>Strip upgrade</button>
           {canMortgageProperty(state, player.id, space.id) ? <button type="button" onClick={() => onState(mortgageProperty(state, player.id, space.id))}>Mortgage</button> : null}
           {canUnmortgageProperty(state, player.id, space.id) ? <button type="button" onClick={() => onState(unmortgageProperty(state, player.id, space.id))}>Pay mortgage</button> : null}
@@ -239,7 +278,7 @@ function PropertyPanel({ state, spaceId, onState }) {
         {!scheme ? <div className="sl-scheme-picker">
           <label>Install a rent scheme<select value={schemeChoice} onChange={(event) => setSchemeChoice(event.target.value)}>{SCHEMES.map((item) => <option key={item.id} value={item.id}>{item.name} · {cash(item.cost)}</option>)}</select></label>
           <p>{selectedScheme.description}</p>
-          <div><span>Rent ×{selectedScheme.rentMultiplier.toFixed(2)} + {cash(selectedScheme.flatRent)}</span><span>Heat 🔥{selectedScheme.heat}</span></div>
+          <div><span>Effective rent ×{(selectedScheme.rentMultiplier * selectedLocalFit).toFixed(2)} + {cash(selectedScheme.flatRent)}</span><span>Heat 🔥{selectedScheme.heat} · Pressure {selectedScheme.pressureDelta >= 0 ? "+" : ""}{selectedScheme.pressureDelta}</span></div>
           <button type="button" disabled={!canInstallScheme(state, player.id, space.id, schemeChoice)} onClick={() => onState(installScheme(state, player.id, space.id, schemeChoice))}>Do something questionable</button>
         </div> : <button type="button" className="sl-cleanup-button" onClick={() => onState(removeScheme(state, player.id, space.id))}>Clean up the scheme · $50</button>}
       </div> : null}
@@ -255,7 +294,8 @@ function PurchaseModal({ state, onState }) {
   if (state.pendingAction?.type !== "purchase") return null;
   const space = BOARD[state.pendingAction.spaceId];
   const player = state.players.find((candidate) => candidate.id === state.pendingAction.playerId);
-  return <div className="sl-modal-backdrop"><section className="sl-game-modal"><p className="sl-kicker">Unclaimed property</p><h2>{space.name}</h2><p>{player.name} can buy it for <strong>{cash(space.price)}</strong> or throw it to the vultures at auction.</p><div className="sl-property-ticket" style={{ "--group": space.group ? GROUPS[space.group].color : "#8aa2b0" }}><span /><b>{space.name}</b><small>{space.group ? GROUPS[space.group].name : space.type}</small><strong>{cash(space.price)}</strong></div>{player.isBot ? <p className="sl-thinking">CPU landlord is calculating how little maintenance is legally survivable…</p> : <div className="sl-modal-actions"><button type="button" className="sl-button sl-button-secondary" onClick={() => onState(startAuction(state))}>Auction</button><button type="button" className="sl-button sl-button-primary" disabled={player.cash < space.price} onClick={() => onState(buyPendingProperty(state))}>Buy</button></div>}</section></div>;
+  const district = districtForSpace(space);
+  return <div className="sl-modal-backdrop"><section className="sl-game-modal"><p className="sl-kicker">Unclaimed property</p><h2>{space.name}</h2><p>{player.name} can buy it for <strong>{cash(space.price)}</strong> or throw it to the vultures at auction.</p>{district ? <p className="sl-purchase-district"><b>{district.badge} {district.archetype}:</b> rent ×{district.rentMultiplier.toFixed(2)}, inspections ×{district.inspectionMultiplier.toFixed(2)}, city assessment {Math.round(district.assessmentMultiplier * 100)}%.</p> : null}<div className="sl-property-ticket" style={{ "--group": space.group ? GROUPS[space.group].color : "#8aa2b0" }}><span /><b>{space.name}</b><small>{space.group ? GROUPS[space.group].name : space.type}</small><strong>{cash(space.price)}</strong></div>{player.isBot ? <p className="sl-thinking">CPU landlord is calculating how little maintenance is legally survivable…</p> : <div className="sl-modal-actions"><button type="button" className="sl-button sl-button-secondary" onClick={() => onState(startAuction(state))}>Auction</button><button type="button" className="sl-button sl-button-primary" disabled={player.cash < space.price} onClick={() => onState(buyPendingProperty(state))}>Buy</button></div>}</section></div>;
 }
 
 function AuctionModal({ state, onState }) {
@@ -273,7 +313,7 @@ function DebtModal({ state, onState }) {
   if (!debt) return null;
   const player = state.players.find((candidate) => candidate.id === debt.playerId);
   const properties = getPlayerProperties(state, player.id);
-  return <div className="sl-modal-backdrop"><section className="sl-game-modal sl-debt-modal"><p className="sl-kicker">Cash crisis</p><h2>{player.name} is {cash(player.cash)}</h2><p>Raise cash before the bank takes the keys and immediately lists them as "investment opportunities."</p><div className="sl-debt-assets">{properties.map(({ space, ownership }) => <div key={space.id}><span><b>{space.name}</b><small>{ownership.mortgaged ? "Mortgaged" : `${ownership.upgrades || 0} upgrades${ownership.schemeId ? " · scheme active" : ""}`}</small></span><span>{canSellUpgradeChaos(state, player.id, space.id) ? <button type="button" onClick={() => onState(sellUpgradeChaos(state, player.id, space.id))}>Sell upgrade</button> : null}{canMortgageProperty(state, player.id, space.id) ? <button type="button" onClick={() => onState(mortgageProperty(state, player.id, space.id))}>Mortgage {cash(space.mortgage)}</button> : null}</span></div>)}</div><div className="sl-modal-actions"><button type="button" className="sl-button sl-button-secondary" onClick={() => onState(autoResolveDebt(state, player.id))}>Auto liquidate dignity</button><button type="button" className="sl-button sl-button-danger" onClick={() => onState(declareBankruptcy(state, player.id))}>Bankruptcy</button></div></section></div>;
+  return <div className="sl-modal-backdrop"><section className="sl-game-modal sl-debt-modal"><p className="sl-kicker">Cash crisis</p><h2>{player.name} is {cash(player.cash)}</h2><p>Raise cash before the bank takes the keys and immediately lists them as "investment opportunities."</p><div className="sl-debt-assets">{properties.map(({ space, ownership }) => <div key={space.id}><span><b>{space.name}</b><small>{ownership.mortgaged ? "Mortgaged" : `${ownership.upgrades || 0} upgrades · Pressure ${tenantPressure(ownership)}/5${ownership.schemeId ? " · scheme active" : ""}`}</small></span><span>{canSellUpgradeChaos(state, player.id, space.id) ? <button type="button" onClick={() => onState(sellUpgradeChaos(state, player.id, space.id))}>Sell upgrade</button> : null}{canMortgageProperty(state, player.id, space.id) ? <button type="button" onClick={() => onState(mortgageProperty(state, player.id, space.id))}>Mortgage {cash(space.mortgage)}</button> : null}</span></div>)}</div><div className="sl-modal-actions"><button type="button" className="sl-button sl-button-secondary" onClick={() => onState(autoResolveDebt(state, player.id))}>Auto liquidate dignity</button><button type="button" className="sl-button sl-button-danger" onClick={() => onState(declareBankruptcy(state, player.id))}>Bankruptcy</button></div></section></div>;
 }
 
 function TradeModal({ state, onState, onClose }) {
@@ -306,7 +346,8 @@ function TradeDecision({ state, onState }) {
 
 function CardPopup({ card, onClose }) {
   if (!card) return null;
-  return <div className="sl-card-pop"><div className={`sl-drawn-card ${card.deckType}`}><small>{card.deckType === "inspection" ? "CODE / VICE / RAT POLICE" : "STREET LUCK"}</small><h3>{card.title}</h3><p>{card.text}</p><button type="button" onClick={onClose}>Yeah, that tracks</button></div></div>;
+  const label = card.deckType === "inspection" ? "CODE / VICE / RAT POLICE" : card.deckType === "district" ? `${card.badge || "🏚️"} ${card.districtName || "NEIGHBORHOOD INCIDENT"}` : "STREET LUCK";
+  return <div className="sl-card-pop"><div className={`sl-drawn-card ${card.deckType}`}><small>{label}</small><h3>{card.title}</h3><p>{card.text}</p>{card.deckType === "district" ? <p><b>{card.spaceName}</b> tenant pressure: {card.pressureAfter}/5.</p> : null}<button type="button" onClick={onClose}>Yeah, that tracks</button></div></div>;
 }
 
 function GameOver({ state, onRestart, onExit }) {
@@ -332,6 +373,10 @@ export default function GameBoard() {
   useEffect(() => {
     if (state?.lastCard) setCard(state.lastCard);
   }, [state?.lastCard?.title, state?.turnCount]);
+
+  useEffect(() => {
+    if (state?.lastNeighborhoodIncident) setCard(state.lastNeighborhoodIncident);
+  }, [state?.lastNeighborhoodIncident?.title, state?.lastNeighborhoodIncident?.spaceName, state?.turnCount]);
 
   useEffect(() => {
     if (!state || state.status !== "playing") return undefined;
@@ -390,7 +435,7 @@ export default function GameBoard() {
         <section className="sl-board-zone">
           <div className="sl-board-perspective"><div className="sl-board">
             {BOARD.map((space) => <BoardSpace key={space.id} state={state} space={space} selected={selectedSpace === space.id} onSelect={setSelectedSpace} />)}
-            <div className="sl-board-center"><div className="sl-center-skyline"><i /><i /><i /><i /><i /></div><p>PROPERTY MISMANAGEMENT</p><h1>SLUM<br />LORD</h1><span>Raise rent. Raise Heat. Blame the city.</span></div>
+            <div className="sl-board-center"><div className="sl-center-skyline"><i /><i /><i /><i /><i /></div><p>PROPERTY MISMANAGEMENT</p><h1>SLUM<br />LORD</h1><span>Every block has a personality. Every personality has a fee.</span></div>
           </div></div>
 
           <section className="sl-turn-console sl-chaos-console">
@@ -412,7 +457,7 @@ export default function GameBoard() {
         <aside className="sl-info-rail"><PropertyPanel state={state} spaceId={selectedSpace} onState={setState} /><section className="sl-log-panel"><h3>Neighborhood feed</h3><div>{state.log.slice(0, 10).map((entry) => <p key={entry.id} className={entry.kind}>{entry.text}</p>)}</div></section></aside>
       </section>
 
-      {selected?.price && selected.owner ? <div className="sl-owner-key" style={{ "--owner": ownerColor(state, selected.owner.id) }}>{selected.owner.name} owns this property{selected.ownership?.schemeId ? ` · ${getScheme(selected.ownership)?.name}` : ""}</div> : null}
+      {selected?.price && selected.owner ? <div className="sl-owner-key" style={{ "--owner": ownerColor(state, selected.owner.id) }}>{selected.owner.name} owns this property{selected.ownership?.schemeId ? ` · ${getScheme(selected.ownership)?.name}` : ""}{selected.ownership?.tenantPressure ? ` · Pressure ${tenantPressure(selected.ownership)}/5` : ""}</div> : null}
       <PurchaseModal state={state} onState={setState} />
       <AuctionModal state={state} onState={setState} />
       <DebtModal state={state} onState={setState} />
