@@ -1,0 +1,137 @@
+.sl-theme-root {
+  min-height: 100vh;
+  background: #151b20;
+}
+
+.sl-theme-dock {
+  position: fixed;
+  right: 18px;
+  bottom: 16px;
+  z-index: 45;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 9px 7px 11px;
+  border: 3px solid #10161b;
+  border-radius: 10px;
+  background: rgba(31, 40, 48, .96);
+  color: #f7f0df;
+  box-shadow: 0 5px 0 #0b0f12, 0 12px 24px rgba(0, 0, 0, .25);
+  font: 800 10px Inter, system-ui, sans-serif;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.sl-theme-dock select {
+  min-height: 32px;
+  border: 2px solid #10161b;
+  border-radius: 6px;
+  background: #f5eddc;
+  color: #201f1d;
+  padding: 4px 8px;
+  font: 800 11px Inter, system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.sl-theme-root .sl-game-shell,
+.sl-theme-root .sl-setup-shell,
+.sl-theme-root .sl-board,
+.sl-theme-root .sl-space,
+.sl-theme-root .sl-game-topbar,
+.sl-theme-root .sl-table-layout,
+.sl-theme-root .sl-player-card,
+.sl-theme-root .sl-turn-console,
+.sl-theme-root .sl-info-rail section {
+  transition: background-color .18s ease, border-color .18s ease, color .18s ease, box-shadow .18s ease;
+}
+
+/* Concrete Jungle keeps the original clean late-90s console palette. */
+.sl-theme-concrete .sl-game-shell,
+.sl-theme-concrete .sl-setup-shell {
+  background:
+    radial-gradient(circle at 50% -20%, rgba(120, 151, 167, .35), transparent 38%),
+    linear-gradient(#26323e 0 54%, #171b20 54% 100%);
+}
+
+/* Sunset Motel: warm stucco, neon dusk, still high-contrast and readable. */
+.sl-theme-sunset .sl-game-shell,
+.sl-theme-sunset .sl-setup-shell {
+  background:
+    radial-gradient(circle at 50% -12%, rgba(255, 173, 105, .34), transparent 38%),
+    linear-gradient(#40324f 0 54%, #201b2b 54% 100%);
+}
+.sl-theme-sunset .sl-game-topbar { background: #342842; border-bottom-color: #17121e; }
+.sl-theme-sunset .sl-table-layout {
+  background:
+    linear-gradient(90deg, rgba(255,255,255,.022) 1px, transparent 1px),
+    linear-gradient(rgba(255,255,255,.022) 1px, transparent 1px),
+    #1f1928;
+  background-size: 18px 18px;
+}
+.sl-theme-sunset .sl-board { background: #d7b07b; border-color: #2a1d28; box-shadow: 0 18px 0 #120f15, 0 38px 70px rgba(0,0,0,.44); }
+.sl-theme-sunset .sl-board::before { border-color: rgba(68, 42, 41, .68); }
+.sl-theme-sunset .sl-space { background: #f1ddbd; color: #261c20; }
+.sl-theme-sunset .sl-space-start,
+.sl-theme-sunset .sl-space-court,
+.sl-theme-sunset .sl-space-stash,
+.sl-theme-sunset .sl-space-go-to-court { background: #e6c79e; }
+.sl-theme-sunset .sl-space-inspection { background: #ddd7d1; }
+.sl-theme-sunset .sl-space-street { background: #edd2ba; }
+.sl-theme-sunset .sl-space-fee { background: #efc9c2; }
+.sl-theme-sunset .sl-board-center { color: #4d2e36; }
+.sl-theme-sunset .sl-board-center h1 { color: #4f3f5e; text-shadow: 5px 6px 0 #d46650; }
+.sl-theme-sunset .sl-center-skyline i { background: #65516d; border-color: #3c2d42; }
+.sl-theme-sunset .sl-player-card,
+.sl-theme-sunset .sl-turn-console,
+.sl-theme-sunset .sl-info-rail section { background: #352a40; border-color: #17121e; box-shadow: 0 5px 0 #17121e; }
+.sl-theme-sunset .sl-player-card.current { background: #493858; outline-color: #f3bd6e; }
+.sl-theme-sunset .sl-property-facts { background: #1e1724; }
+.sl-theme-sunset .sl-property-facts span { background: #3b2f47; }
+.sl-theme-sunset .sl-logo-lockup { background: linear-gradient(145deg, transparent 62%, rgba(255,255,255,.07) 62%), #5a4059; }
+.sl-theme-sunset .sl-logo-building { background: #d86c56; }
+
+/* Toxic Tenement: lime industrial signage against deep asphalt. */
+.sl-theme-toxic .sl-game-shell,
+.sl-theme-toxic .sl-setup-shell {
+  background:
+    radial-gradient(circle at 50% -12%, rgba(188, 219, 73, .20), transparent 38%),
+    linear-gradient(#29342f 0 54%, #121815 54% 100%);
+}
+.sl-theme-toxic .sl-game-topbar { background: #1f2a25; border-bottom-color: #0c110f; }
+.sl-theme-toxic .sl-table-layout {
+  background:
+    linear-gradient(90deg, rgba(219,239,118,.025) 1px, transparent 1px),
+    linear-gradient(rgba(219,239,118,.025) 1px, transparent 1px),
+    #111814;
+  background-size: 18px 18px;
+}
+.sl-theme-toxic .sl-board { background: #b9b77c; border-color: #172019; box-shadow: 0 18px 0 #090e0b, 0 38px 70px rgba(0,0,0,.46); }
+.sl-theme-toxic .sl-board::before { border-color: rgba(45, 61, 39, .75); }
+.sl-theme-toxic .sl-space { background: #e5e3bd; color: #1b211b; }
+.sl-theme-toxic .sl-space-start,
+.sl-theme-toxic .sl-space-court,
+.sl-theme-toxic .sl-space-stash,
+.sl-theme-toxic .sl-space-go-to-court { background: #d2d29b; }
+.sl-theme-toxic .sl-space-inspection { background: #d8dfc9; }
+.sl-theme-toxic .sl-space-street { background: #ded6b6; }
+.sl-theme-toxic .sl-space-fee { background: #dfc7b5; }
+.sl-theme-toxic .sl-board-center { color: #2c392c; }
+.sl-theme-toxic .sl-board-center h1 { color: #304438; text-shadow: 5px 6px 0 #9aaf3d; }
+.sl-theme-toxic .sl-center-skyline i { background: #536653; border-color: #303c31; }
+.sl-theme-toxic .sl-player-card,
+.sl-theme-toxic .sl-turn-console,
+.sl-theme-toxic .sl-info-rail section { background: #26342d; border-color: #0d1510; box-shadow: 0 5px 0 #0d1510; }
+.sl-theme-toxic .sl-player-card.current { background: #35493d; outline-color: #c7da58; }
+.sl-theme-toxic .sl-property-facts { background: #121a15; }
+.sl-theme-toxic .sl-property-facts span { background: #2c3c33; }
+.sl-theme-toxic .sl-logo-lockup { background: linear-gradient(145deg, transparent 62%, rgba(255,255,255,.06) 62%), #394b41; }
+.sl-theme-toxic .sl-logo-building { background: #8f9e45; }
+
+@media (max-width: 760px) {
+  .sl-theme-dock {
+    right: 10px;
+    bottom: 10px;
+    padding: 6px 7px;
+  }
+  .sl-theme-dock span { display: none; }
+}

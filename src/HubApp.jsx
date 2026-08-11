@@ -10,6 +10,7 @@ const GAME_CATALOG = [
   { id: "punchline", name: "Punchline", icon: "🎤", eyebrow: "Write it · vote it", description: "A big-screen comedy show where every phone writes the punchlines and the room decides what lands.", players: "3–12 phones", status: "Ready" },
   { id: "lastonealive", name: "Last One Alive", icon: "👻", eyebrow: "Trivia · traps · escape", description: "Horror-comedy trivia with six survival micro-games, ghosts, resurrection, and a final race for the exit.", players: "3–12 phones", status: "Ready" },
   { id: "doodlealibi", name: "Doodle Alibi", icon: "🖍️", eyebrow: "Draw · accuse · deceive", description: "Draw secret assignments on your phone, study the TV evidence wall, and expose the altered prompt.", players: "4–12 phones", status: "Ready" },
+  { id: "slumlord", name: "Slum Lord", icon: "🏚️", eyebrow: "Buy · patch · collect", description: "A full-board property game with terrible maintenance: buy the block, patch the leaks, dodge inspections, trade properties, and collect rent.", players: "2–4 local players", status: "Ready" },
   { id: "hearts", name: "Hearts", icon: "♥", eyebrow: "Avoid the points", description: "Pass three cards, dodge penalty tricks, and try to shoot the moon.", players: "4 players", status: "Planned" },
   { id: "spades", name: "Spades", icon: "♠", eyebrow: "Bid with a partner", description: "Call your contract, manage bags, protect nil bids, and race to 500.", players: "4 players", status: "Planned" },
   { id: "rummy", name: "Rummy", icon: "♦", eyebrow: "Sets and runs", description: "Draw, meld, lay off, and be the first player to empty your hand.", players: "2–6 players", status: "Planned" },
@@ -30,7 +31,7 @@ const gameLoaders = import.meta.glob("./games/*/index.jsx");
 const LEGACY_GUIDANCE_GAMES = new Set(["canasta", "hearts", "spades", "rummy"]);
 const TABLETOP_GUIDANCE_GAMES = new Set(["gofish", "gofyourself", "connect4", "battleship", "hnefatafl", "chompageddon"]);
 const PARTY_STAGE_GAMES = new Set(["punchline", "lastonealive", "doodlealibi"]);
-const IMMERSIVE_FULLSCREEN_GAMES = new Set([...PARTY_STAGE_GAMES, "pixelquest"]);
+const IMMERSIVE_FULLSCREEN_GAMES = new Set([...PARTY_STAGE_GAMES, "pixelquest", "slumlord"]);
 
 function selectedGameId() { return new URLSearchParams(window.location.search).get("game") || ""; }
 function gameModulePath(gameId) { return `./games/${gameId}/index.jsx`; }

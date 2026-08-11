@@ -1,0 +1,117 @@
+.sl-board {
+  grid-template-columns: 1.35fr repeat(8, 1fr) 1.35fr;
+  grid-template-rows: 1.35fr repeat(8, 1fr) 1.35fr;
+}
+
+.sl-board::before {
+  inset: 10.8%;
+}
+
+.sl-board-center {
+  grid-column: 2 / 10;
+  grid-row: 2 / 10;
+}
+
+/* Keep the late-90s console look crisp rather than texture-heavy. */
+.sl-board,
+.sl-space,
+.sl-token-base,
+.sl-token-body,
+.sl-dice span,
+.sl-game-modal,
+.sl-player-card,
+.sl-turn-console,
+.sl-info-rail section {
+  image-rendering: pixelated;
+}
+
+.sl-space:focus-visible,
+.sl-turn-buttons button:focus-visible,
+.sl-panel-actions button:focus-visible,
+.sl-button:focus-visible {
+  outline: 4px solid #fff2a8;
+  outline-offset: 2px;
+}
+
+.sl-debt-modal {
+  width: min(620px, 100%);
+}
+
+.sl-debt-assets {
+  max-height: 330px;
+  overflow-y: auto;
+  display: grid;
+  gap: 7px;
+  margin-top: 14px;
+  padding-right: 3px;
+}
+
+.sl-debt-assets > div {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
+  padding: 9px 10px;
+  border: 2px solid #51483d;
+  border-radius: 7px;
+  background: #ded4bf;
+}
+
+.sl-debt-assets > div > span:first-child b,
+.sl-debt-assets > div > span:first-child small {
+  display: block;
+}
+
+.sl-debt-assets > div > span:first-child b {
+  font-size: 12px;
+}
+
+.sl-debt-assets > div > span:first-child small {
+  margin-top: 2px;
+  font-size: 9px;
+  opacity: .62;
+}
+
+.sl-debt-assets > div > span:last-child {
+  display: flex;
+  gap: 6px;
+}
+
+.sl-debt-assets button {
+  min-height: 34px;
+  border: 2px solid #181d22;
+  border-radius: 6px;
+  background: #f2e9d5;
+  box-shadow: 0 3px 0 #181d22;
+  padding: 6px 8px;
+  color: #25211c;
+  font: 800 9px Inter, system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.sl-player-card-token .sl-token.compact {
+  pointer-events: none;
+}
+
+@media (max-height: 820px) and (min-width: 981px) {
+  .sl-table-layout {
+    grid-template-columns: 176px minmax(590px, 1fr) 252px;
+  }
+
+  .sl-board-perspective {
+    min-height: 500px;
+    padding: 6px;
+  }
+
+  .sl-board {
+    width: min(68vh, 700px);
+  }
+
+  .sl-player-card {
+    min-height: 90px;
+  }
+
+  .sl-turn-console {
+    min-height: 96px;
+  }
+}
