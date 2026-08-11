@@ -52,6 +52,20 @@ class AudioDirector {
     this.step = 0;
     this.nextNoteTime = 0;
     this.ducked = false;
+    this.listeners = new Set();
+  }
+
+  onEvent(listener) {
+    if (typeof listener !== "function") return () => {};
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  }
+
+  emit(type, detail = {}) {
+    this.listeners.forEach((listener) => {
+      try { listener({ type, ...detail }); }
+      catch { /* a show-effect listener must never break gameplay audio */ }
+    });
   }
 
   async enable() {
@@ -188,7 +202,11 @@ class AudioDirector {
   }
 
   sfx(name) {
-    if (!this.context) return;
+    if (!this.context) {
+      this.enable().then((ok) => { if (ok) this.sfx(name); }).catch(() => {});
+      return;
+    }
+    this.emit("sfx", { name, theme: this.loopName || "lobby" });
     const n = (midi, duration, when = 0, gain = 0.16, wave = "triangle") => this.tone(midiToHz(midi), duration, this.sfxGain, wave, gain, when);
     switch (name) {
       case "join":
@@ -217,7 +235,9 @@ class AudioDirector {
         for (let i = 0; i < 10; i += 1) this.noise(.11, .028 + Math.random() * .018, i * .055, "bandpass", 1500 + Math.random() * 2200); break;
       case "fanfare":
         this.impact(0, .22); [60, 64, 67, 72, 76, 79].forEach((m, i) => n(m, .18, i * .07, .11));
-        this.chord(72, [0, 4, 7, 12], .62, this.sfxGain, .52, .34, "triangle", 4200); this.sfx("applause"); break;
+        this.chord(72, [0, 4, 7, 12], .62, this.sfxGain, .52, .34, "triangle", 4200);
+        for (let i = 0; i < 10; i += 1) this.noise(.11, .028 + Math.random() * .018, .18 + i * .055, "bandpass", 1500 + Math.random() * 2200);
+        break;
       default: n(82, .05, 0, .1); break;
     }
   }
@@ -248,13 +268,17 @@ class AudioDirector {
   }
 
   startMusic(name = "lobby") {
-    if (!this.context || !this.musicGain) return;
+    if (!this.context || !this.musicGain) {
+      this.enable().then((ok) => { if (ok) this.startMusic(name); }).catch(() => {});
+      return;
+    }
     if (this.loopName === name && this.loopTimer) return;
     this.stopMusic();
     const theme = themes[name] || themes.lobby;
     this.loopName = name;
     this.step = 0;
     this.nextNoteTime = this.context.currentTime + 0.03;
+    this.emit("music", { name });
     const sixteenth = (60 / theme.bpm) / 4;
     const scheduler = () => {
       if (!this.context || !this.loopName) return;
