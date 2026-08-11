@@ -242,8 +242,16 @@ export function reducePixelQuest(state, actorUid, action, members) {
     case "vote":
       if (!myHero) throw new Error("No hero is assigned to your seat.");
       if (scene?.type !== "party-choice") throw new Error("There is no party decision right now.");
-      if (humanHeroIds(members, next).length === 1) campaign = resolveSoloPartyChoice(campaign, scene, myHero, action.choiceId);
-      else campaign = castPartyVote(campaign, myHero.id, action.choiceId);
+      if (humanHeroIds(members, next).length === 1) {
+        campaign = resolveSoloPartyChoice(campaign, scene, myHero, action.choiceId);
+      } else {
+        campaign = castPartyVote(campaign, myHero.id, action.choiceId);
+        const allHumansVoted = humanHeroIds(members, next).every((heroId) => campaign.votes?.[heroId]);
+        if (allHumansVoted) {
+          const resolved = resolvePartyVote(campaign);
+          campaign = resolved.state;
+        }
+      }
       break;
     case "resolve-vote": {
       requireHost(actorUid, members);
