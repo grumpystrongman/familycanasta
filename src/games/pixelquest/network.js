@@ -13,7 +13,7 @@ import {
   moveToScene,
   recoverFromDefeat,
   resolvePartyVote,
-  resolveSkillScene,
+  rollCheck,
   runAutomaticTurns,
   startCombat,
   useAbility,
@@ -53,6 +53,20 @@ function humanHeroIds(members, state) {
     .filter((member) => !member.isRobot)
     .map((member) => state.seatHeroes?.[member.uid])
     .filter(Boolean);
+}
+
+function appendNetworkLog(campaign, entry) {
+  campaign.log = [...(campaign.log || []), {
+    id: `${entry.type || "event"}-${Date.now()}-${campaign.log?.length || 0}`,
+    ...entry,
+  }].slice(-120);
+}
+
+function addHeroFlag(flags, flag, heroId) {
+  if (!flag) return;
+  const current = flags[flag];
+  const heroes = Array.isArray(current) ? current : current ? [current] : [];
+  flags[flag] = Array.from(new Set([...heroes, heroId]));
 }
 
 export function createPixelQuestGameState(members, rules = {}) {
@@ -125,11 +139,10 @@ function resolveSoloPartyChoice(campaign, scene, hero, choiceId) {
   const next = clone(campaign);
   next.votes = { [hero.id]: choiceId };
   if (choice.flag) next.flags[choice.flag] = true;
-  next.log = [...(next.log || []), {
-    id: `solo-decision-${Date.now()}-${hero.id}`,
+  appendNetworkLog(next, {
     type: "decision",
     text: `${hero.name} chose for the party: ${choice.label}.`,
-  }].slice(-120);
+  });
   return moveToScene(next, choice.next);
 }
 
@@ -141,16 +154,70 @@ function resolveIndividualPrivateChoice(campaign, scene, hero, choiceId, members
   const next = clone(campaign);
   next.privateChoices ||= {};
   next.privateChoices[key] = choiceId;
-  if (choice.flag) next.flags[choice.flag] = hero.id;
-  next.log = [...(next.log || []), {
-    id: `secret-${Date.now()}-${hero.id}`,
+  addHeroFlag(next.flags, choice.flag, hero.id);
+  appendNetworkLog(next, {
     type: "secret",
     text: `${hero.name} locked in a private decision.`,
     private: true,
-  }].slice(-120);
+  });
 
   const everyoneLocked = humanHeroIds(members, state).every((heroId) => next.privateChoices[`${scene.id}:${heroId}`]);
   return everyoneLocked ? moveToScene(next, scene.next) : next;
+}
+
+function recordSkillAttempt(campaign, scene, hero) {
+  const sceneAttempts = campaign.skillAttempts?.[scene.id] || {};
+  if (sceneAttempts[hero.id]) throw new Error("Your hero already took this skill turn.");
+  const result = rollCheck(campaign, {
+    actorName: hero.name,
+    statValue: Number(hero.stats?.[scene.stat] || 0),
+    dc: scene.dc,
+    label: `${scene.title} · ${scene.stat}`,
+  });
+  const next = result.state;
+  next.skillAttempts ||= {};
+  next.skillAttempts[scene.id] ||= {};
+  next.skillAttempts[scene.id][hero.id] = {
+    heroId: hero.id,
+    success: result.success,
+    raw: result.raw,
+    total: result.total,
+  };
+  if (result.success) next.stats.checksPassed += 1;
+  else next.stats.checksFailed += 1;
+  appendNetworkLog(next, {
+    type: "check",
+    text: `${hero.name} ${result.success ? "succeeds" : "fails"} their part of the challenge (${result.total} vs DC ${scene.dc}).`,
+    success: result.success,
+  });
+  return next;
+}
+
+function resolveGroupSkillTurn(campaign, scene, hero, members, state) {
+  let next = recordSkillAttempt(campaign, scene, hero);
+  const humanIds = humanHeroIds(members, state);
+  const humanDone = humanIds.every((heroId) => next.skillAttempts?.[scene.id]?.[heroId]);
+  if (!humanDone) return next;
+
+  for (const aiHero of next.heroes.filter((entry) => entry.controller === "ai" && !entry.downed)) {
+    if (!next.skillAttempts?.[scene.id]?.[aiHero.id]) next = recordSkillAttempt(next, scene, aiHero);
+  }
+
+  const participating = next.heroes.filter((entry) => !entry.downed);
+  const attempts = participating.map((entry) => next.skillAttempts?.[scene.id]?.[entry.id]).filter(Boolean);
+  const successes = attempts.filter((attempt) => attempt.success).length;
+  const required = Math.max(1, Math.ceil(attempts.length / 2));
+  const success = successes >= required;
+  if (success && scene.flagOnSuccess) next.flags[scene.flagOnSuccess] = true;
+  appendNetworkLog(next, {
+    type: "check",
+    text: `${successes}/${attempts.length} heroes succeeded. ${success ? scene.successText || "The party clears the challenge." : scene.failText || "The party suffers the consequence."}`,
+    success,
+  });
+  const finalRoll = next.lastRoll;
+  next = moveToScene(next, success ? scene.successNext : scene.failNext);
+  next.lastRoll = finalRoll;
+  return next;
 }
 
 export function reducePixelQuest(state, actorUid, action, members) {
@@ -192,7 +259,8 @@ export function reducePixelQuest(state, actorUid, action, members) {
       break;
     case "skill-check":
       if (!myHero) throw new Error("No hero is assigned to your seat.");
-      campaign = resolveSkillScene(campaign, myHero.id);
+      if (scene?.type !== "skill") throw new Error("There is no skill challenge right now.");
+      campaign = resolveGroupSkillTurn(campaign, scene, myHero, members, next);
       break;
     case "start-combat":
       requireHost(actorUid, members);
