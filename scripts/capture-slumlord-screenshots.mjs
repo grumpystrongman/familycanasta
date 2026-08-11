@@ -43,7 +43,7 @@ try {
   await page.getByRole("button", { name: /sketchy cab/i }).click();
   await page.locator(".sl-cab-picker").waitFor({ state: "visible" });
   await page.locator(".sl-cab-picker button").filter({ hasText: /^3$/ }).click();
-  await page.getByRole("heading", { name: "Leaky Roof Lane" }).waitFor({ state: "visible" });
+  await page.locator(".sl-game-modal h2", { hasText: "Leaky Roof Lane" }).waitFor({ state: "visible" });
   await page.getByRole("button", { name: /^buy$/i }).click();
   await page.getByText("Property management", { exact: true }).waitFor({ state: "visible" });
 
