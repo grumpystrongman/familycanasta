@@ -1,116 +1,178 @@
 # Slum Lord
 
-**Slum Lord** is a single-screen property-trading board game built as an isolated game module inside Family Game Room. It uses the familiar rhythm of moving around a square board, buying properties, collecting rent, trading, upgrading, mortgaging, surviving bad events, and bankrupting rivals, but the presentation and rules are original to this project.
+**Slum Lord** is an 18+ single-screen property-trading game inside Family Game Room. The original prototype had the right board-game skeleton but too many turns boiled down to “roll, move, maybe buy.” This redesign turns it into a dirtier neighborhood-management game where movement, improvements, rent schemes, Heat, inspections, taxes, auctions, trades, and cash pressure all create real decisions.
 
-The satire is aimed at predatory property-management behavior and neglected buildings, not at the people who live in them.
+The satire is aimed primarily at predatory landlords, bureaucracy, cops, inspectors, neighborhood rackets, gentrification, and bad incentives. Vulnerable people are part of the setting, not the default punchline.
 
 ## Screenshots
 
 ### Default solo setup
 
-Opening Slum Lord now defaults to **one human vs one CPU landlord**. Nothing has to be configured to start a two-player solo match.
+Slum Lord defaults to **one human vs one CPU landlord** and **Last Landlord Standing**. There is no arbitrary 25-round ending.
 
 ![Slum Lord default human vs CPU setup](../../../docs/images/slumlord-setup.png)
 
-### Full board experience
+### Tactical property management
 
-The game is intentionally a full digital tabletop rather than a host/phone party game. The entire board, both player balances, ownership, rent information, dice, turn controls, upgrades, and recent events remain visible on one screen.
+The gameplay capture intentionally proves the new loop: the human uses a paid exact-movement cab, targets Leaky Roof Lane, buys it, and installs a high-Heat rent scheme.
 
-![Slum Lord full board gameplay](../../../docs/images/slumlord-gameplay.png)
+![Slum Lord tactical property management](../../../docs/images/slumlord-gameplay.png)
 
 ### Alternate N64-style palette
 
-Board themes change the palette while keeping exactly the same geometry and information hierarchy.
+Themes still change presentation only; mechanics and board geometry are identical.
 
 ![Slum Lord Sunset Motel theme](../../../docs/images/slumlord-sunset.png)
+
+## Adult tone
+
+The event deck and property systems use tongue-in-cheek 18+ material involving:
+
+- drug-lord cash leases;
+- prostitution / vice stings;
+- gang “protection” contracts;
+- meth-lab fallout;
+- drunken tenant disasters;
+- cops breaking the wrong door;
+- Code Enforcement and Housing Court;
+- Rat Police;
+- homelessness and outreach bureaucracy;
+- taxes, fines, assessments, permits, and emergency repairs;
+- gentrification, “luxury” rebranding, and landlord-special renovations.
+
+The intended joke is usually that the landlord is greedy, the city is absurd, the cops are destructive, or the entire incentive system is broken.
 
 ## Default play mode
 
 The default configuration is:
 
-- **2 players**
+- **2 landlords**
 - **Player 1:** local human (`You`)
 - **Player 2:** CPU landlord
-- **Standard game:** 25 rounds
+- **Goal:** Last Landlord Standing
 - **Theme:** Concrete Jungle
 
-The setup screen still supports 2–4 total players. Any seat can be changed between local human and CPU before the game begins.
+Any seat can still be changed between local human and CPU before the game begins.
 
-## Visual direction
+## Win conditions
 
-Slum Lord deliberately uses a **late-1990s console / Nintendo 64-inspired visual language** without trying to imitate a specific copyrighted game or asset set.
+Round limits have been removed from the setup screen. A 25-round net-worth cutoff did not match the bankruptcy game underneath it.
 
-The design rules are simple:
+Three objective modes replace it:
 
-- Fixed, readable tabletop camera instead of a cinematic camera that hides spaces.
-- Chunky low-poly-style pieces with oversized colored bases.
-- Hard-edged shadows and simple materials rather than photorealistic textures.
-- Large dice and obvious active-player highlighting.
-- Strong district color bands and owner markers directly on properties.
-- Upgrades rendered on the property space instead of hidden in a submenu.
-- Property deed, current rent, mortgage value, and ownership visible beside the board.
-- Minimal visual noise so the player can understand the board in one glance.
-
-## Board themes
-
-Themes are cosmetic only. They do not alter prices, rent, AI decisions, cards, or board layout. The chosen theme is saved in local storage for the next session.
-
-| Theme | Look |
+| Goal | Win condition |
 |---|---|
-| **Concrete Jungle** | Gray-blue city backdrop, tan board, muted municipal palette. This is the default. |
-| **Sunset Motel** | Warm stucco, dusty orange board tones, purple dusk panels, retro roadside color. |
-| **Toxic Tenement** | Deep asphalt greens, lime industrial signage, olive board tones, high-contrast utility look. |
+| **Last Landlord Standing** | No clock. Bankrupt every rival. |
+| **Build an Empire** | Reach at least **$6,000 net worth** while holding **8 deeds**. |
+| **Own the Block** | Control **3 complete color groups**. |
 
-The theme selector stays available during play so the palette can be changed without restarting the game.
+This lets players choose between elimination, economic growth, and map-control play without an arbitrary timer.
 
-## Core game loop
+## Tactical movement
 
-1. Roll two dice and move around the 36-space perimeter.
-2. Buy an available property or send it to auction.
-3. Pay rent when landing on another landlord's property.
-4. Complete district sets to increase rent and unlock upgrades.
-5. Upgrade properties, mortgage assets, trade with opponents, and manage cash flow.
-6. Draw Street Luck and Code Inspection events.
-7. Deal with Housing Court, fees, the Cash Stash, inspections, and other board spaces.
-8. Survive debt by selling upgrades or mortgaging property before declaring bankruptcy.
-9. Win by being the last landlord standing or by holding the highest net worth when the configured round limit ends.
+Movement is no longer only “roll two dice and accept fate.” Before rolling, a human landlord can choose:
+
+- **Roll normally** — standard 2d6 movement with doubles.
+- **Cruise slow** — move 3–7 spaces, useful when you want to hover around an area instead of flying past it.
+- **Sketchy cab** — pay **$60** and choose exactly **3–11 spaces**. The cab uses non-double dice pairs, so it does not generate a bonus roll.
+
+That creates meaningful targeting for auctions, unowned properties, Cash Stash, inspections, and dangerous opponents.
+
+## Property improvements
+
+The biggest rules change is that early upgrades no longer require a complete color group.
+
+- **Improvement 1:** available on a single property.
+- **Improvement 2:** available on a single property.
+- **Improvement 3:** requires the complete color group.
+- **Improvement 4:** requires the complete color group.
+
+Improvement names now reflect the tone:
+
+1. Barely Habitable
+2. Fresh Paint Over It
+3. Landlord Special
+4. Luxury-ish Units
+5. Cash Cow Deluxe
+
+The result is that owning one or two properties gives you something productive to do immediately instead of waiting half the game for a monopoly.
+
+## Rent schemes and Heat
+
+Each property can run one optional rent scheme. Schemes boost rent but some generate **Heat**, which makes Code Inspection spaces more dangerous.
+
+| Scheme | Effect | Heat |
+|---|---|---:|
+| **Rat Patrol Deluxe** | Small rent bump, major inspection protection | 0 |
+| **Landlord Special** | Cheap rent increase | 1 |
+| **Vice Motel Conversion** | Strong rent premium | 2 |
+| **Drug Lord Executive Lease** | Very high rent premium | 3 |
+| **Gang Protection Contract** | Rent boost plus partial crackdown protection | 2 |
+| **Luxury Rebrand Package** | High legitimate rent bump | 0 |
+
+Heat is portfolio-wide. The more high-risk schemes you run, the more likely an inspection becomes expensive.
+
+A scheme can be removed for a cleanup cost if the landlord decides the extra rent is no longer worth the attention.
+
+## Inspections and city pressure
+
+Code Inspection is now more than a random card draw.
+
+After the normal inspection event resolves, the game checks the active landlord’s portfolio Heat. High Heat can trigger an **additional crackdown fine**. Rat Patrol and some other schemes can offset part of that penalty.
+
+City pressure also increases as the game goes on. Every four rounds, the city becomes more expensive and less forgiving.
+
+## Rent Day and taxes
+
+Passing Rent Day still pays the normal $200 bonus, but landlords with property also receive a **Blight Improvement Assessment** based on:
+
+- number of deeds;
+- number of improvements;
+- portfolio Heat;
+- current city pressure.
+
+This creates a natural late-game accelerator. Large portfolios make more money, but they also cost more to carry. Games should tighten because of economic pressure rather than because a turn counter suddenly declares a winner.
+
+## Event deck
+
+The expanded Street Luck and Code Inspection decks contain roughly twice as many events as the original build. Examples include:
+
+- Rat Police Task Force
+- Vice Squad, Wrong Door
+- Prostitution Sting in 2B
+- Meth Lab Ventilation Review
+- Drunk Tenant vs. Sprinkler System
+- Homeless Outreach Cleanup Invoice
+- Tax Assessor Smells Fresh Paint
+- Drug Lord Wants a Quiet Lease
+- Neighborhood Crew Offers Security
+- Meth House Next Door Explodes
+- Lost Rent Envelope Returned
+- Cops Park on the Lawn
+- Influencer Calls It “Authentic”
+- Local News Says “Up-and-Coming”
+
+The decks still use the deterministic engine primitives for cash, per-property fines, per-upgrade fines, court movement, Rent Day movement, and court passes.
 
 ## CPU landlord
 
-CPU seats play directly through the same rules engine as human seats. The AI can:
+CPU seats continue to use the same rules engine as humans. In addition to buying, auctions, trading, debt management, and normal movement, CPU landlords can now make one property-management move per turn:
 
-- roll and complete turns automatically;
-- evaluate property purchases;
-- participate in auctions;
-- upgrade owned property;
-- respond to trade offers;
-- raise cash when in debt;
-- mortgage and liquidate when necessary;
-- continue the match without a second device or browser.
+- buy a low-cost improvement when cash allows;
+- install a rent scheme;
+- use more aggressive schemes at harder bot levels.
 
-The CPU is intentionally fast enough to keep a solo game moving, with a short visible thinking delay between actions.
+The CPU remains intentionally fast so solo play does not become a waiting simulator.
 
-## Board structure
+## Board themes
 
-Slum Lord uses a **36-space loop** on a 10×10 perimeter. The four major spaces land on true corners so the board reads immediately as a tabletop game.
+Themes are cosmetic only and persist in local storage.
 
-Property information is split between the board and the deed rail:
-
-- **Board space:** district color, property name, price, owner flag, mortgage state, upgrades, player pieces.
-- **Deed rail:** purchase price, owner, current rent, mortgage value, full rent ladder, and legal property actions.
-- **Player rail:** cash, net worth, current turn, CPU/local status, court status, and bankruptcy status.
-- **Turn console:** active player, location, dice, roll/end-turn controls, court actions, and trading.
-
-## Game length
-
-Four match lengths are supported:
-
-- **Quick:** 15 rounds
-- **Standard:** 25 rounds
-- **Long:** 40 rounds
-- **Last landlord standing:** no round limit
-
-At a round limit, the winner is determined by net worth. In elimination play, the last solvent landlord wins.
+| Theme | Look |
+|---|---|
+| **Concrete Jungle** | Gray-blue city backdrop, tan board, muted municipal palette. |
+| **Sunset Motel** | Warm stucco, dusty orange board tones, purple dusk panels. |
+| **Toxic Tenement** | Asphalt greens, lime industrial signage, olive board tones. |
 
 ## Architecture
 
@@ -123,25 +185,45 @@ src/games/slumlord/
 Key files:
 
 ```text
-GameBoard.jsx        full single-screen board UI and CPU turn orchestration
-data.js              board spaces, districts, cards, tokens, static values
-engine.js            authoritative rules and state transitions
-engine.test.js       rules regression coverage
-isolation.test.js    framework/isolation and single-screen assertions
+GameBoard.jsx        board UI, movement choices, property management, CPU orchestration
+chaos.js             tactical movement, schemes, Heat, city pressure, objective endings
+chaos.test.js        regression tests for the redesigned systems
+data.js              board spaces, adult event decks, districts, tokens, static values
+engine.js            original authoritative property/auction/trade/debt rules
+engine.test.js       original rules regression coverage
+isolation.test.js    framework, defaults, tactical-option and no-round-cap assertions
 styles.css           primary board styling
 n64-overrides.css    late-90s console geometry/readability refinements
+chaos.css            Heat, schemes, movement planner, and adult-mode UI styling
 themes.css           cosmetic board palettes and theme switcher styling
 index.jsx            Family Game Room module entrypoint
 ```
 
-Slum Lord does **not** use Party Stage, phone controllers, a host screen, or Firebase game state. It is a local board game that runs entirely in the shared Family Game Room application shell.
+The redesign intentionally layers new systems on top of the existing engine instead of rewriting auctions, trades, debt, mortgages, court, and base rent logic from scratch.
 
 ## Screenshot automation
 
-The repository includes a dedicated Playwright capture workflow for Slum Lord. On pull requests that change the game, GitHub Actions builds the branch, opens the real game UI, verifies the solo defaults, captures the setup and gameplay screens, switches themes, and commits the generated PNG files into `docs/images/` on the PR branch.
+The Playwright capture workflow now verifies more than the title screen. It:
 
-That means the screenshots above are generated from the actual application rather than hand-built mockups.
+1. confirms the default two-player Human-vs-CPU setup;
+2. confirms Last Landlord Standing is the default goal;
+3. starts the real game;
+4. uses the Sketchy Cab exact-movement system;
+5. buys Leaky Roof Lane;
+6. installs Drug Lord Executive Lease;
+7. captures the live management state;
+8. switches to Sunset Motel and captures the alternate theme.
+
+The screenshots are therefore executable product checks, not hand-built mockups.
 
 ## Validation
 
-The project-level validation workflow runs the full test suite and production build on pull requests. Slum Lord's own tests cover core board behavior and isolation from the phone/host game framework.
+Project CI runs the full test discovery and production build. Slum Lord adds dedicated regression coverage for:
+
+- no default round cap;
+- early standalone property improvements;
+- Heat-producing schemes;
+- exact-movement cab behavior;
+- objective-based endings;
+- tactical options appearing in the single-screen UI;
+- continued isolation from Party Stage / Firebase game state.
