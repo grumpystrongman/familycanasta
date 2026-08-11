@@ -19,7 +19,7 @@ const context = {
     choices: [],
   },
   heroes: [
-    { id: "brom", name: "Brom Stoneguard", className: "Vanguard", hp: 40, maxHp: 40, controller: "human", downed: false },
+    { id: "brom-stoneguard", name: "Brom Stoneguard", className: "Vanguard", hp: 42, maxHp: 42, controller: "human", downed: false },
   ],
   flags: {},
   recentEvents: [],
@@ -32,8 +32,14 @@ const response = await fetch(`${baseUrl}/api/narrate`, {
   headers: { "content-type": "application/json" },
   body: JSON.stringify({ kind: "describe", context }),
 });
-assert.equal(response.status, 200, `Narration request failed: ${await response.text()}`);
-const body = await response.json();
+const raw = await response.text();
+assert.equal(response.status, 200, `Narration request failed: ${raw}`);
+let body;
+try {
+  body = JSON.parse(raw);
+} catch {
+  assert.fail(`Narration response was not JSON: ${raw.slice(0, 500)}`);
+}
 assert.equal(body.model, "gemma4:12b");
 assert.equal(body.provider, "ollama");
 assert.ok(typeof body.narration === "string" && body.narration.length >= 20, "Gemma must return useful narration");
