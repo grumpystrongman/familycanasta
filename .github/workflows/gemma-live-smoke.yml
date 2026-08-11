@@ -3,6 +3,13 @@ name: PixelQuest Gemma Live Smoke
 on:
   push:
     branches: [agent/pixelquest-gemma4-dm]
+  pull_request:
+    paths:
+      - 'services/pixelquest-dm/**'
+      - 'src/games/pixelquest/dm.js'
+      - 'src/games/pixelquest/dm.test.js'
+      - 'docker-compose.gemma.yml'
+      - '.github/workflows/gemma-live-smoke.yml'
   workflow_dispatch:
 
 permissions:
@@ -10,6 +17,7 @@ permissions:
 
 jobs:
   gemma-live-smoke:
+    if: github.event_name != 'pull_request' || github.head_ref == 'agent/pixelquest-gemma4-dm'
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
