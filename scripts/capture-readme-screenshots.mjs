@@ -98,9 +98,7 @@ async function capturePixelQuest() {
 
   await page.getByRole("button", { name: /^continue/i }).click();
   await page.getByRole("button", { name: /walk through the front gate openly/i }).click();
-  await page.getByRole("button", { name: /lock party decision/i }).click();
   await page.getByRole("button", { name: /enter the abandoned chapel/i }).click();
-  await page.getByRole("button", { name: /lock party decision/i }).click();
   await page.getByRole("button", { name: /roll initiative/i }).click();
   await page.locator(".pq-board").waitFor({ state: "visible" });
   await page.waitForTimeout(1200);
