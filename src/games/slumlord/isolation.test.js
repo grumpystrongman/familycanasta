@@ -7,6 +7,7 @@ const indexSource = await readFile(new URL("./index.jsx", import.meta.url), "utf
 const styles = await readFile(new URL("./n64-overrides.css", import.meta.url), "utf8");
 const themes = await readFile(new URL("./themes.css", import.meta.url), "utf8");
 const chaos = await readFile(new URL("./chaos.js", import.meta.url), "utf8");
+const districts = await readFile(new URL("./districts.js", import.meta.url), "utf8");
 
 test("Slum Lord is a local full-board module with no party-stage dependency", () => {
   assert.match(indexSource, /GameBoard/);
@@ -31,8 +32,17 @@ test("Slum Lord exposes tactical movement and property-management choices on one
   for (const label of ["Roll normally", "Cruise slow", "Sketchy cab", "End turn", "Trade", "Auction", "Mortgage", "Improve", "rent scheme"]) {
     assert.match(gameSource, new RegExp(label, "i"));
   }
-  assert.match(chaos, /Heat-driven inspection crackdown/i);
+  assert.match(chaos, /district-weighted inspection crackdown/i);
   assert.match(chaos, /Blight Improvement Assessment/i);
+  assert.match(gameSource, /Tenant pressure/i);
+});
+
+test("Slum Lord gives every property district a mechanical personality", () => {
+  for (const archetype of ["Repair Trap", "Complaint Corridor", "Family Block", "Vice Economy", "Crew Territory", "Quiet Money", "Gentrification Machine", "Vertical Chaos"]) {
+    assert.match(districts, new RegExp(archetype));
+  }
+  assert.match(chaos, /portfolioInspectionExposure/);
+  assert.match(chaos, /applyNeighborhoodIncident/);
 });
 
 test("Slum Lord replaces round caps with objective-based endings", () => {
