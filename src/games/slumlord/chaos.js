@@ -129,6 +129,10 @@ function groupHasMortgage(state, groupId) {
   return groupSpaces(groupId).some((space) => ownershipFor(state, space.id)?.mortgaged);
 }
 
+function completedGroups(state, playerId) {
+  return Object.keys(GROUPS).filter((groupId) => ownsWholeGroup(state, playerId, groupId)).length;
+}
+
 export function getScheme(ownership) {
   return SCHEMES.find((scheme) => scheme.id === ownership?.schemeId) || null;
 }
@@ -148,6 +152,19 @@ export function cityPressure(state) {
 export function calculateChaosNetWorth(state, playerId) {
   const schemeValue = getPlayerProperties(state, playerId).reduce((sum, { ownership }) => sum + Math.floor((getScheme(ownership)?.cost || 0) / 2), 0);
   return calculateNetWorth(state, playerId) + schemeValue;
+}
+
+export function goalProgress(state, playerId) {
+  const player = playerById(state, playerId);
+  if (!player) return "";
+  if (state.goalMode === "empire") {
+    return `${money(calculateChaosNetWorth(state, playerId))} / $6,000 · ${getPlayerProperties(state, playerId).length}/8 deeds`;
+  }
+  if (state.goalMode === "takeover") {
+    return `${completedGroups(state, playerId)}/3 complete blocks`;
+  }
+  const rivals = state.players.filter((candidate) => candidate.id !== playerId && !candidate.bankrupt).length;
+  return `${rivals} rival${rivals === 1 ? "" : "s"} left`;
 }
 
 export function createChaosGame(setupPlayers, options = {}) {
@@ -226,15 +243,13 @@ export function installScheme(state, playerId, spaceId, schemeId) {
 
 export function removeScheme(state, playerId, spaceId) {
   const ownership = ownershipFor(state, spaceId);
-  if (ownership?.ownerId !== playerId || !ownership.schemeId) return state;
+  if (ownership?.ownerId !== playerId || !ownership.schemeId || state.debt) return state;
   const next = clone(state);
   const space = BOARD[spaceId];
-  const player = playerById(next, playerId);
   const old = getScheme(ownershipFor(next, spaceId));
   ownershipFor(next, spaceId).schemeId = null;
-  const cleanup = 50;
-  if (player.cash >= cleanup) player.cash -= cleanup;
-  appendLog(next, `${player.name} removes ${old?.name || "the scheme"} from ${space.name}. Cleanup costs ${money(cleanup)} and several awkward explanations.`, "info");
+  charge(next, playerId, 50, { reason: `${old?.name || "scheme"} cleanup` });
+  appendLog(next, `${playerById(next, playerId).name} removes ${old?.name || "the scheme"} from ${space.name}. Cleanup costs $50 and several awkward explanations.`, "info");
   return next;
 }
 
@@ -275,10 +290,10 @@ function applyCityAssessment(state, playerId, beforePosition, beforeInCourt) {
   appendLog(state, `${player.name} passes Rent Day, collects rent money, then pays ${money(assessment)} in taxes, fees, assessments, and whatever the city invented this month.`, "warning");
 }
 
-function applyInspectionCrackdown(state, playerId) {
+function applyInspectionCrackdown(state, playerId, landedSpaceId) {
   const player = playerById(state, playerId);
-  const space = BOARD[player?.position];
-  if (!player || space?.type !== "inspection") return;
+  const landedSpace = BOARD[landedSpaceId];
+  if (!player || landedSpace?.type !== "inspection") return;
   const heat = portfolioHeat(state, playerId);
   if (!heat) return;
   const pressure = cityPressure(state);
@@ -299,6 +314,8 @@ export function rollStreetDice(state, mode = "normal", cabSteps = null, rng = Ma
   const playerId = active.id;
   const beforePosition = active.position;
   const beforeInCourt = active.inCourt;
+  const beforeCourtTurns = active.courtTurns || 0;
+  const beforeDoublesStreak = state.doublesStreak || 0;
   let prepared = state;
   let forcedDice = null;
 
@@ -314,14 +331,18 @@ export function rollStreetDice(state, mode = "normal", cabSteps = null, rng = Ma
 
   const next = rollDice(prepared, forcedDice, rng);
   if (next === state || !next.rolled) return next;
+
+  const isDouble = next.dice[0] === next.dice[1];
+  const movedFromCourt = !beforeInCourt || isDouble || beforeCourtTurns >= 2;
+  const jailedForTripleDoubles = !beforeInCourt && isDouble && beforeDoublesStreak >= 2;
+  const landedSpaceId = movedFromCourt && !jailedForTripleDoubles
+    ? (beforePosition + next.lastRollTotal) % BOARD.length
+    : beforePosition;
+
   applySchemeRent(next, playerId);
   applyCityAssessment(next, playerId, beforePosition, beforeInCourt);
-  applyInspectionCrackdown(next, playerId);
+  applyInspectionCrackdown(next, playerId, landedSpaceId);
   return next;
-}
-
-function completedGroups(state, playerId) {
-  return Object.keys(GROUPS).filter((groupId) => ownsWholeGroup(state, playerId, groupId)).length;
 }
 
 function objectiveWinner(state) {
