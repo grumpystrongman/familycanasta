@@ -14,6 +14,10 @@ jobs:
         with:
           node-version: 22
       - run: npm install
+      - name: PixelQuest Gemma DM tests
+        run: npm run pixelquest:dm:test
+      - name: PixelQuest Gemma compose validation
+        run: docker compose -f docker-compose.gemma.yml config
       - name: Grouped meld planner tests
         run: node --test src/game/multiMeldPlanner.test.js
       - name: Opening requirement tests
