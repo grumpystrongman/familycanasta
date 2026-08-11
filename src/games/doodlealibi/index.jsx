@@ -1,5 +1,6 @@
 import React from "react";
 import "../../partyStage.css";
+import "../../platform/party/showrunnerBootstrap";
 import PartyStageGame from "../../platform/party/PartyStageGame";
 import { PARTY_INTRO_VIDEOS } from "../../platform/party/introVideos";
 import { doodleAlibiDefinition } from "./model";
