@@ -18,6 +18,9 @@ await context.addInitScript(() => {
   localStorage.setItem("familyCardNickname", "Family Host");
   localStorage.setItem("canastaAvatar", "🦊");
   localStorage.setItem("familyCardAvatar", "🦊");
+  // Documentation capture is an automated test browser, not an age-verification flow.
+  // Set the existing consent flag so the README can show the actual adults-only game screen.
+  localStorage.setItem("familyGameAdultAccepted", "yes");
 });
 
 const page = await context.newPage();
@@ -60,7 +63,7 @@ async function captureRummy() {
   await capture("rummy-entry", ".rummy-shell .modular-game-panel");
 }
 
-async function captureTabletopEntry(gameId, name) {
+async function captureGameEntry(gameId, name) {
   await open(`/?game=${gameId}`, ".game-start-panel");
   await capture(name, ".game-start-panel");
 }
@@ -85,13 +88,27 @@ try {
   await captureHearts();
   await captureSpades();
   await captureRummy();
+
+  // Party Stage games added this week.
   await capturePartyEntry("punchline", "punchline-entry");
   await capturePartyEntry("lastonealive", "last-one-alive-entry");
   await capturePartyEntry("doodlealibi", "doodle-alibi-entry");
-  await captureTabletopEntry("hnefatafl", "hnefatafl-entry");
-  await captureTabletopEntry("connect4", "connect4-entry");
-  await captureTabletopEntry("battleship", "battleship-entry");
-  await captureTabletopEntry("gofish", "gofish-entry");
+
+  // Strategy, board, and family table games added this week.
+  await captureGameEntry("hnefatafl", "hnefatafl-entry");
+  await captureGameEntry("connect4", "connect4-entry");
+  await captureGameEntry("battleship", "battleship-entry");
+  await captureGameEntry("gofish", "gofish-entry");
+  await captureGameEntry("gofyourself", "go-f-yourself-entry");
+
+  // Card-room expansion games added this week.
+  await captureGameEntry("ers", "egyptian-rat-screw-entry");
+  await captureGameEntry("spoons", "spoons-entry");
+  await captureGameEntry("indians", "indians-entry");
+  await captureGameEntry("poker", "five-card-draw-entry");
+  await captureGameEntry("golf", "six-card-golf-entry");
+
+  // Local physics arcade game added this week.
   await captureChompageddon();
 } finally {
   await browser.close();
