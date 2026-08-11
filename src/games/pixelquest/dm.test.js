@@ -3,15 +3,15 @@ import test from "node:test";
 import { buildNarratorContext, GemmaNarrator, LocalNarrator, localNarrator } from "./dm.js";
 import { createCampaign, moveToScene } from "./engine.js";
 
-function campaignAt(sceneId = "blackhollow-road") {
-  let campaign = createCampaign({ adventureId: "bells-blackhollow", heroIds: ["vanguard"], controllers: ["human"], seed: "dm-test" });
+function campaignAt(sceneId = null) {
+  let campaign = createCampaign({ adventureId: "bells-blackhollow", heroIds: ["brom-stoneguard"], controllers: ["human"], seed: "dm-test" });
   if (sceneId && campaign.sceneId !== sceneId) campaign = moveToScene(campaign, sceneId);
   return campaign;
 }
 
 test("narrator context omits private choice content and preserves immutable rules boundary", () => {
   const campaign = campaignAt();
-  campaign.log.push({ id: "secret", type: "secret", text: "Mara stole the black key.", private: true });
+  campaign.log.push({ id: "secret", type: "secret", text: "Brom stole the black key.", private: true });
   const context = buildNarratorContext(campaign);
   assert.match(context.immutableRulesNotice, /deterministic PixelQuest engine owns all dice/i);
   assert.equal(context.recentEvents.at(-1).text, "An adventurer made a private decision.");
