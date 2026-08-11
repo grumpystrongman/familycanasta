@@ -31,26 +31,34 @@ jobs:
           df -h
       - name: Install Ollama
         run: curl -fsSL https://ollama.com/install.sh | sh
-      - name: Start Ollama
+      - name: Confirm Ollama API
         run: |
-          nohup ollama serve > /tmp/ollama.log 2>&1 &
+          if ! curl -fsS http://127.0.0.1:11434/api/tags >/dev/null; then
+            nohup ollama serve > /tmp/ollama.log 2>&1 &
+          fi
           for i in {1..30}; do
             if curl -fsS http://127.0.0.1:11434/api/tags >/dev/null; then exit 0; fi
             sleep 2
           done
-          cat /tmp/ollama.log
+          cat /tmp/ollama.log || true
           exit 1
       - name: Install Gemma 4 12B
         run: |
           ollama pull gemma4:12b
           ollama list
           ollama list | grep -q 'gemma4:12b'
+      - name: Warm Gemma model on CPU runner
+        run: |
+          curl --fail --max-time 240 http://127.0.0.1:11434/api/generate \
+            -H 'content-type: application/json' \
+            -d '{"model":"gemma4:12b","prompt":"Reply with OK only.","stream":false,"options":{"num_predict":4}}'
       - name: Start PixelQuest DM service
         env:
           DM_AUTH_MODE: off
           OLLAMA_BASE_URL: http://127.0.0.1:11434
           GEMMA_MODEL: gemma4:12b
           DM_ALLOWED_ORIGIN: '*'
+          DM_TIMEOUT_MS: 180000
           PORT: 8787
         run: |
           nohup node services/pixelquest-dm/server.mjs > /tmp/pixelquest-dm.log 2>&1 &
