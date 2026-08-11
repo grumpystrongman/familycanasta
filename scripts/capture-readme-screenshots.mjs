@@ -139,13 +139,11 @@ async function capturePixelQuest() {
     await page.getByRole("button", { name: /^continue/i }).click();
     await guestPage.getByRole("heading", { name: /How do you enter Blackhollow/i }).waitFor({ state: "visible" });
 
-    // Both players cast their own vote from separate sessions. The host cannot
-    // resolve the party decision until the guest has submitted independently.
-    await Promise.all([
-      page.getByRole("button", { name: /Investigate the lit mill/i }).click(),
-      guestPage.getByRole("button", { name: /Investigate the lit mill/i }).click(),
-    ]);
-    await page.getByRole("button", { name: /lock party decision/i }).click();
+    // The host votes first and remains on the decision scene. The remote guest's
+    // independently submitted vote is the final required human input and advances it.
+    await page.getByRole("button", { name: /Investigate the lit mill/i }).click();
+    await page.getByText(/Your vote: Investigate the lit mill/i).waitFor({ state: "visible" });
+    await guestPage.getByRole("button", { name: /Investigate the lit mill/i }).click();
     await Promise.all([
       page.getByRole("heading", { name: /this choice is yours/i }).waitFor({ state: "visible" }),
       guestPage.getByRole("heading", { name: /this choice is yours/i }).waitFor({ state: "visible" }),
@@ -163,11 +161,9 @@ async function capturePixelQuest() {
       guestPage.getByRole("heading", { name: /Blackhollow Square/i }).waitFor({ state: "visible" }),
     ]);
 
-    await Promise.all([
-      page.getByRole("button", { name: /Enter the abandoned chapel/i }).click(),
-      guestPage.getByRole("button", { name: /Enter the abandoned chapel/i }).click(),
-    ]);
-    await page.getByRole("button", { name: /lock party decision/i }).click();
+    await page.getByRole("button", { name: /Enter the abandoned chapel/i }).click();
+    await page.getByText(/Your vote: Enter the abandoned chapel/i).waitFor({ state: "visible" });
+    await guestPage.getByRole("button", { name: /Enter the abandoned chapel/i }).click();
     await page.getByRole("button", { name: /roll initiative/i }).click();
     await Promise.all([
       page.locator(".pq-board").waitFor({ state: "visible" }),
