@@ -33,7 +33,7 @@ test("each online human owns exactly one unique hero", () => {
   assert.equal(members.length, 2);
 });
 
-test("party decisions require an independent vote from every online human", () => {
+test("party decisions require an independent vote from every online human and resolve on the final vote", () => {
   const { members, state: started } = startTwoPlayerCampaign();
   let state = structuredClone(started);
   state.campaign = moveToScene(state.campaign, "gate-choice");
@@ -46,9 +46,8 @@ test("party decisions require an independent vote from every online human", () =
   assert.throws(() => reducePixelQuest(state, "host", { type: "resolve-vote" }, members), /Every human adventurer/);
 
   state = reducePixelQuest(state, "guest", { type: "vote", choiceId: "mill" }, members);
-  assert.equal(state.campaign.votes[HEROES[6].id], "mill");
-  state = reducePixelQuest(state, "host", { type: "resolve-vote" }, members);
-  assert.equal(currentScene(state.campaign).id, "mill-private");
+  assert.equal(currentScene(state.campaign).id, "mill-private", "the last human vote should advance the shared story without another host-only click");
+  assert.equal(state.campaign.log.at(-1)?.type, "story");
 });
 
 test("private turns are independent, hidden in the public log, and preserve every hero's impact", () => {
