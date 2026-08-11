@@ -1,5 +1,5 @@
 import React from "react";
-import SlumLordGame from "./SlumLordGame.jsx";
+import GameBoard from "./GameBoard.jsx";
 
 export const metadata = {
   id: "slumlord",
@@ -8,5 +8,5 @@ export const metadata = {
 };
 
 export default function SlumLordEntry() {
-  return <SlumLordGame />;
+  return <GameBoard />;
 }
