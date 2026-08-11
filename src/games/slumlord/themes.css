@@ -1,12 +1,14 @@
 .sl-theme-root {
   min-height: 100vh;
+  position: relative;
   background: #151b20;
 }
 
 .sl-theme-dock {
-  position: fixed;
-  right: 18px;
-  bottom: 16px;
+  position: absolute;
+  top: 10px;
+  right: 210px;
+  bottom: auto;
   z-index: 45;
   display: flex;
   align-items: center;
@@ -127,10 +129,21 @@
 .sl-theme-toxic .sl-logo-lockup { background: linear-gradient(145deg, transparent 62%, rgba(255,255,255,.06) 62%), #394b41; }
 .sl-theme-toxic .sl-logo-building { background: #8f9e45; }
 
+@media (max-width: 1180px) {
+  .sl-theme-dock {
+    right: 188px;
+  }
+}
+
+@media (max-width: 980px) {
+  .sl-theme-dock {
+    top: 74px;
+    right: 10px;
+  }
+}
+
 @media (max-width: 760px) {
   .sl-theme-dock {
-    right: 10px;
-    bottom: 10px;
     padding: 6px 7px;
   }
   .sl-theme-dock span { display: none; }
