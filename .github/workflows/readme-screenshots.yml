@@ -5,8 +5,8 @@ on:
     paths:
       - README.md
       - scripts/capture-readme-screenshots.mjs
-      - .github/workflows/readme-screenshots.yml
       - src/**
+      - '!src/games/slumlord/**'
   workflow_dispatch:
 
 permissions:

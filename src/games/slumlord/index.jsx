@@ -11,7 +11,7 @@ const THEMES = [
 export const metadata = {
   id: "slumlord",
   name: "Slum Lord",
-  players: "1 human + CPU by default · 2–4 local/CPU players",
+  players: "18+ · 1 human + CPU by default · 2–4 local/CPU players",
 };
 
 export default function SlumLordEntry() {

@@ -27,16 +27,31 @@ try {
   await page.waitForTimeout(600);
 
   const playerCount = page.locator(".sl-setup-options select").first();
+  const goalMode = page.locator(".sl-setup-options select").nth(1);
   const secondSeat = page.getByLabel("Player 2 type");
   if (await playerCount.inputValue() !== "2") throw new Error("Slum Lord must default to two players.");
   if (await secondSeat.inputValue() !== "bot") throw new Error("Slum Lord player two must default to CPU.");
+  if (await goalMode.inputValue() !== "bankruptcy") throw new Error("Slum Lord must default to Last Landlord Standing, not a round cap.");
 
   await screenshot("slumlord-setup");
 
-  await page.getByRole("button", { name: /start game/i }).click();
+  await page.getByRole("button", { name: /start the bad decisions/i }).click();
   await page.locator(".sl-game-shell").waitFor({ state: "visible" });
   await page.getByText("CPU", { exact: true }).first().waitFor({ state: "visible" });
-  await page.waitForTimeout(700);
+
+  // Prove tactical movement and property schemes in the real application.
+  await page.getByRole("button", { name: /sketchy cab/i }).click();
+  await page.locator(".sl-cab-picker").waitFor({ state: "visible" });
+  await page.locator(".sl-cab-picker button").filter({ hasText: /^3$/ }).click();
+  await page.locator(".sl-game-modal h2", { hasText: "Leaky Roof Lane" }).waitFor({ state: "visible" });
+  await page.getByRole("button", { name: /^buy$/i }).click();
+  await page.getByText("Property management", { exact: true }).waitFor({ state: "visible" });
+
+  const schemeSelect = page.getByLabel("Install a rent scheme");
+  await schemeSelect.selectOption("drug-lord-lease");
+  await page.getByRole("button", { name: /do something questionable/i }).click();
+  await page.getByText("Drug Lord Executive Lease", { exact: true }).first().waitFor({ state: "visible" });
+  await page.waitForTimeout(500);
   await screenshot("slumlord-gameplay");
 
   const themeSelect = page.getByLabel("Slum Lord board theme");
