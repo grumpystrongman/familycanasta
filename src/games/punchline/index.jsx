@@ -3,9 +3,10 @@ import "../../partyStage.css";
 import "../../platform/party/showrunnerBootstrap";
 import PartyStageGame from "../../platform/party/PartyStageGame";
 import { PARTY_INTRO_VIDEOS } from "../../platform/party/introVideos";
-import { punchlineDefinition } from "./model";
+import { PUNCHLINE_PROMPTS, punchlineDefinition } from "./model";
+import { PUNCHLINE_EXTRA_PROMPTS, PUNCHLINE_EXTRA_SPICY_PROMPTS } from "./contentExpansion";
 
-const SPICIER_PROMPTS = [
+const ORIGINAL_SPICY_PROMPTS = [
   "The worst possible text to accidentally send your ex at 2:00 a.m.: ____.",
   "A phrase that instantly kills the mood on a romantic weekend: ____.",
   "The least sexy thing someone can whisper while opening a bottle of wine: ____.",
@@ -32,32 +33,57 @@ const SPICIER_PROMPTS = [
   "The least believable explanation for a mysterious pair of handcuffs: ____.",
 ];
 
-function applyPromptTone(state, settings) {
-  if (!state || settings?.spice !== "spicier") return state;
-  if (state.phase === "answer" && state.spiceAppliedRound !== state.round) {
-    const prompts = { ...(state.prompts || {}) };
-    Object.keys(prompts).forEach((promptId, index) => {
-      prompts[promptId] = SPICIER_PROMPTS[(state.round * 7 + index) % SPICIER_PROMPTS.length];
-    });
-    return { ...state, prompts, spiceAppliedRound: state.round };
+const CLEAN_POOL = [...PUNCHLINE_PROMPTS, ...PUNCHLINE_EXTRA_PROMPTS];
+const SPICY_POOL = [...ORIGINAL_SPICY_PROMPTS, ...PUNCHLINE_EXTRA_SPICY_PROMPTS];
+
+function drawPrompts(pool, count, used = []) {
+  const usedSet = new Set(used);
+  let available = pool.filter((prompt) => !usedSet.has(prompt));
+  if (available.length < count) available = [...pool];
+  for (let i = available.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [available[i], available[j]] = [available[j], available[i]];
   }
-  if (state.phase === "finaleAnswer" && state.spiceAppliedRound !== 4) {
+  return available.slice(0, count);
+}
+
+function applyPromptPool(state, settings) {
+  if (!state) return state;
+  const pool = settings?.spice === "spicier" ? SPICY_POOL : CLEAN_POOL;
+  const used = state.usedPromptTexts || [];
+
+  if (state.phase === "answer" && state.contentAppliedRound !== state.round) {
+    const ids = Object.keys(state.prompts || {});
+    const selected = drawPrompts(pool, ids.length, used);
+    const prompts = Object.fromEntries(ids.map((id, index) => [id, selected[index] || state.prompts[id]]));
     return {
       ...state,
-      finalePrompt: `FINAL CROWD PLEASER — ${SPICIER_PROMPTS[(state.highlights?.length || 0) % SPICIER_PROMPTS.length]}`,
-      spiceAppliedRound: 4,
+      prompts,
+      contentAppliedRound: state.round,
+      usedPromptTexts: [...used, ...selected].slice(-Math.min(pool.length, 240)),
+    };
+  }
+
+  if (state.phase === "finaleAnswer" && state.contentAppliedRound !== 4) {
+    const [selected] = drawPrompts(pool, 1, used);
+    return {
+      ...state,
+      finalePrompt: `FINAL CROWD PLEASER — ${selected || state.finalePrompt}`,
+      contentAppliedRound: 4,
+      usedPromptTexts: selected ? [...used, selected].slice(-Math.min(pool.length, 240)) : used,
     };
   }
   return state;
 }
 
 function createGameState(players, settings) {
-  return applyPromptTone(punchlineDefinition.createGameState(players, settings), settings);
+  return applyPromptPool(punchlineDefinition.createGameState(players, settings), settings);
 }
 
 function reduceGameState(state, actor, action, players, settings, hostUid) {
-  const next = punchlineDefinition.reduceGameState(state, actor, action, players, settings, hostUid);
-  return applyPromptTone(next, settings);
+  let next = punchlineDefinition.reduceGameState(state, actor, action, players, settings, hostUid);
+  if (!next.usedPromptTexts?.length && state?.usedPromptTexts?.length) next = { ...next, usedPromptTexts: state.usedPromptTexts };
+  return applyPromptPool(next, settings);
 }
 
 const definition = {

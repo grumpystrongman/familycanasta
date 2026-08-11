@@ -37,7 +37,7 @@ export async function createPartyRoom({ user, gameId, maxPlayers = 12, settings 
       roomCode: code,
       gameId,
       kind: "party",
-      schemaVersion: 1,
+      schemaVersion: 2,
       hostUid: user.uid,
       status: "lobby",
       maxPlayers,
@@ -128,6 +128,29 @@ export async function startPartyGame(code, hostUid, createGameState, minimumPlay
   return result.snapshot.val()?.gameState;
 }
 
+export async function resetPartyRoomToLobby(code, hostUid) {
+  let reason = "The room could not be reset.";
+  const result = await runTransaction(ref(db, `rooms/${code}`), (room) => {
+    if (!room) { reason = "Room not found."; return; }
+    if (room.hostUid !== hostUid) { reason = "Only the TV host can start a rematch."; return; }
+    const members = Object.fromEntries(Object.entries(room.members || {}).map(([uid, member]) => [uid, {
+      ...member,
+      ready: Boolean(member.displayOnly),
+      connected: member.connected !== false,
+    }]));
+    return {
+      ...room,
+      status: "lobby",
+      startedAt: null,
+      rematchAt: Date.now(),
+      members,
+      gameState: { phase: "lobby", message: "Rematch ready. Everyone tap Ready on a phone." },
+    };
+  }, { applyLocally: false });
+  if (!result.committed) throw new Error(reason);
+  return result.snapshot.val();
+}
+
 export async function applyPartyAction(code, actorUid, action, reduceGameState) {
   let actionError = null;
   const result = await runTransaction(ref(db, `rooms/${code}`), (room) => {
@@ -161,6 +184,14 @@ export async function kickPartyPlayer(code, hostUid, uid) {
   if (!room || room.hostUid !== hostUid) throw new Error("Only the TV host can remove a player.");
   if (uid === hostUid) throw new Error("The TV host cannot remove itself.");
   await remove(ref(db, `rooms/${code}/members/${uid}`));
+}
+
+export async function leavePartyRoom(code, uid) {
+  const snapshot = await get(ref(db, `rooms/${code}`));
+  const room = snapshot.val();
+  if (!room) return;
+  if (room.hostUid === uid) throw new Error("The TV host must end the room for everyone.");
+  if (room.members?.[uid]) await remove(ref(db, `rooms/${code}/members/${uid}`));
 }
 
 export async function closePartyRoom(code, hostUid) {

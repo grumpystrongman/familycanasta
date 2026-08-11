@@ -8,23 +8,39 @@ import {
   createPartyRoom,
   joinPartyRoom,
   kickPartyPlayer,
+  leavePartyRoom,
   partyPlayers,
+  resetPartyRoomToLobby,
   setPartyReady,
   startPartyGame,
   updatePartySettings,
   watchPartyRoom,
 } from "./partyRoomService";
 
+const SESSION_MAX_AGE = 12 * 60 * 60 * 1000;
+
 function roomFromUrl() {
   return new URLSearchParams(window.location.search).get("room") || "";
 }
 function sessionKey(gameId) { return `familyPartySession:${gameId}`; }
 function savedSession(gameId) {
-  try { return JSON.parse(localStorage.getItem(sessionKey(gameId)) || "null"); }
-  catch { return null; }
+  try {
+    const saved = JSON.parse(localStorage.getItem(sessionKey(gameId)) || "null");
+    // Sessions written before the lifecycle fix had no age metadata and are the
+    // exact entries that could resurrect an already-finished room forever.
+    if (saved && !saved.savedAt) {
+      localStorage.removeItem(sessionKey(gameId));
+      return null;
+    }
+    if (saved?.savedAt && Date.now() - saved.savedAt > SESSION_MAX_AGE) {
+      localStorage.removeItem(sessionKey(gameId));
+      return null;
+    }
+    return saved;
+  } catch { return null; }
 }
 function saveSession(gameId, roomCode, role) {
-  localStorage.setItem(sessionKey(gameId), JSON.stringify({ roomCode, role }));
+  localStorage.setItem(sessionKey(gameId), JSON.stringify({ roomCode, role, savedAt: Date.now() }));
   const next = new URL(window.location.href);
   next.searchParams.set("room", roomCode);
   next.searchParams.set("role", role);
@@ -50,8 +66,6 @@ export default function usePartyRoom(definition) {
     ensureAnonymousAuth().then(setUser).catch((event) => setError(event.message));
   }, []);
 
-  // Existing Firebase room rules require membership. On refresh, wait for
-  // anonymous auth to restore the same uid before attaching the room listener.
   useEffect(() => {
     if (!roomCode || !user) return undefined;
     return watchPartyRoom(roomCode, (nextRoom) => {
@@ -82,6 +96,19 @@ export default function usePartyRoom(definition) {
     try { return await operation(); }
     catch (event) { setError(event.message || String(event)); throw event; }
     finally { setBusy(false); }
+  }
+
+  function resetLocal({ removeGame = false } = {}) {
+    clearSession(definition.id);
+    setRoomCode("");
+    setRoom(null);
+    setMode("choose");
+    setJoinCode("");
+    const next = new URL(window.location.href);
+    next.searchParams.delete("room");
+    next.searchParams.delete("role");
+    if (removeGame) next.searchParams.delete("game");
+    window.history.replaceState({}, "", next.toString());
   }
 
   async function host() {
@@ -117,6 +144,11 @@ export default function usePartyRoom(definition) {
     run(() => startPartyGame(roomCode, user.uid, definition.createGameState, definition.minPlayers)).catch(() => {});
   }
 
+  function replay() {
+    if (!roomCode || !user || !isHost) return;
+    run(() => resetPartyRoomToLobby(roomCode, user.uid)).catch(() => {});
+  }
+
   function act(action, actorUid = user?.uid) {
     if (!roomCode || !actorUid) return Promise.resolve();
     return run(() => applyPartyAction(roomCode, actorUid, action, definition.reduceGameState)).catch(() => {});
@@ -132,18 +164,44 @@ export default function usePartyRoom(definition) {
     run(() => kickPartyPlayer(roomCode, user.uid, uid)).catch(() => {});
   }
 
+  async function leave() {
+    if (roomCode && user && !isHost) await run(() => leavePartyRoom(roomCode, user.uid)).catch(() => {});
+    resetLocal();
+  }
+
   async function close() {
     if (!roomCode || !user || !isHost) return;
     await run(() => closePartyRoom(roomCode, user.uid)).catch(() => {});
-    clearSession(definition.id);
-    setRoomCode("");
-    setRoom(null);
-    setMode("choose");
-    const next = new URL(window.location.href);
-    next.searchParams.delete("room");
-    next.searchParams.delete("role");
-    window.history.replaceState({}, "", next.toString());
+    resetLocal();
   }
+
+  async function gameRoom() {
+    if (roomCode && user) {
+      if (isHost) await run(() => closePartyRoom(roomCode, user.uid)).catch(() => {});
+      else await run(() => leavePartyRoom(roomCode, user.uid)).catch(() => {});
+    }
+    resetLocal({ removeGame: true });
+    window.location.assign(window.location.pathname);
+  }
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    window.__familyPartyLifecycle = {
+      roomCode,
+      isHost,
+      status: room?.status || "",
+      phase: room?.gameState?.phase || "",
+      busy,
+      replay,
+      leave,
+      close,
+      gameRoom,
+    };
+    window.dispatchEvent(new CustomEvent("family-party-lifecycle"));
+    return () => {
+      if (window.__familyPartyLifecycle?.roomCode === roomCode) delete window.__familyPartyLifecycle;
+    };
+  }, [roomCode, isHost, room?.status, room?.gameState?.phase, busy]);
 
   return {
     firebaseReady,
@@ -167,9 +225,12 @@ export default function usePartyRoom(definition) {
     join,
     ready,
     start,
+    replay,
     act,
     setSettings,
     kick,
+    leave,
     close,
+    gameRoom,
   };
 }

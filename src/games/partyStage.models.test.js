@@ -1,8 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { PUNCHLINE_PROMPTS, createPunchlineGameState, punchlineDefinition, reducePunchlineGameState } from "./punchline/model.js";
+import { PUNCHLINE_EXTRA_PROMPTS, PUNCHLINE_EXTRA_SPICY_PROMPTS } from "./punchline/contentExpansion.js";
 import { LAST_ONE_ALIVE_TRIVIA, MICRO_TYPES, createLastOneAliveState, lastOneAliveDefinition, reduceLastOneAliveState } from "./lastonealive/model.js";
+import { LAST_ONE_ALIVE_EXTRA_TRIVIA } from "./lastonealive/triviaExpansion.js";
 import { DOODLE_CASES, createDoodleAlibiState, doodleAlibiDefinition, reduceDoodleAlibiState } from "./doodlealibi/model.js";
+import { DOODLE_EXTRA_CASES } from "./doodlealibi/contentExpansion.js";
 
 const players = Array.from({ length: 6 }, (_, index) => ({
   uid: `player-${index + 1}`,
@@ -12,8 +15,10 @@ const players = Array.from({ length: 6 }, (_, index) => ({
 }));
 const host = { uid: "tv-host", isHost: true, displayOnly: true };
 
-test("Punchline ships a full prompt library and balanced opening round", () => {
-  assert.ok(PUNCHLINE_PROMPTS.length >= 80);
+test("Punchline has deep clean and PG-13 prompt banks", () => {
+  assert.ok(PUNCHLINE_PROMPTS.length + PUNCHLINE_EXTRA_PROMPTS.length >= 240);
+  assert.ok(PUNCHLINE_EXTRA_SPICY_PROMPTS.length >= 55);
+  assert.equal(new Set(PUNCHLINE_EXTRA_PROMPTS).size, PUNCHLINE_EXTRA_PROMPTS.length);
   const state = createPunchlineGameState(players);
   assert.equal(state.phase, "answer");
   assert.equal(state.matchups.length, players.length);
@@ -72,8 +77,13 @@ test("Last One Alive supports two players and solo Majority Grave remains fair",
   assert.equal(state.stats[duelPlayers[0].uid].hearts, 3);
 });
 
-test("Last One Alive ships a full trivia library and every promised trap", () => {
-  assert.ok(LAST_ONE_ALIVE_TRIVIA.length >= 60);
+test("Last One Alive ships 200+ trivia questions across difficulty tiers", () => {
+  const fullBank = [...LAST_ONE_ALIVE_TRIVIA, ...LAST_ONE_ALIVE_EXTRA_TRIVIA];
+  assert.ok(fullBank.length >= 200);
+  assert.ok(LAST_ONE_ALIVE_EXTRA_TRIVIA.filter((q) => q.d === 1).length >= 40);
+  assert.ok(LAST_ONE_ALIVE_EXTRA_TRIVIA.filter((q) => q.d === 2).length >= 55);
+  assert.ok(LAST_ONE_ALIVE_EXTRA_TRIVIA.filter((q) => q.d === 3).length >= 40);
+  assert.equal(new Set(fullBank.map((q) => q.q)).size, fullBank.length);
   assert.deepEqual(MICRO_TYPES, ["deadButton", "safeDial", "oddOneOut", "majorityGrave", "memoryMorgue", "cutWire"]);
   const state = createLastOneAliveState(players);
   assert.equal(state.phase, "trivia");
@@ -111,8 +121,10 @@ test("Doodle Alibi supports a two-player Detective Mode judged by the TV", () =>
   assert.equal(state.scores[suspectUid].score, 250);
 });
 
-test("Doodle Alibi ships at least 45 cases and supports a two-suspect large room", () => {
-  assert.ok(DOODLE_CASES.length >= 45);
+test("Doodle Alibi ships roughly 200 varied cases and supports large rooms", () => {
+  const fullCases = [...DOODLE_CASES, ...DOODLE_EXTRA_CASES];
+  assert.ok(fullCases.length >= 180);
+  assert.equal(new Set(fullCases.map((item) => item.id)).size, fullCases.length);
   const state = createDoodleAlibiState([...players, { uid: "player-7", nickname: "P7", avatar: "🐻", seat: 6 }, { uid: "player-8", nickname: "P8", avatar: "🐼", seat: 7 }]);
   assert.equal(state.phase, "draw");
   assert.equal(state.suspectUids.length, 2);
