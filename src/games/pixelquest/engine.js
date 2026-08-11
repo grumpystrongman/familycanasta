@@ -13,6 +13,37 @@ const clone = (value) => JSON.parse(JSON.stringify(value));
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const key = (x, y) => `${x},${y}`;
 
+function normalizeActor(actor) {
+  if (!actor) return actor;
+  return {
+    ...actor,
+    abilities: Array.isArray(actor.abilities) ? actor.abilities : [],
+    cooldowns: actor.cooldowns && typeof actor.cooldowns === "object" ? actor.cooldowns : {},
+    conditions: Array.isArray(actor.conditions) ? actor.conditions : [],
+    buffs: Array.isArray(actor.buffs) ? actor.buffs : [],
+    inventory: Array.isArray(actor.inventory) ? actor.inventory : [],
+  };
+}
+
+export function normalizeCampaign(campaign) {
+  if (!campaign) return campaign;
+  const state = clone(campaign);
+  state.flags = state.flags && typeof state.flags === "object" ? state.flags : {};
+  state.votes = state.votes && typeof state.votes === "object" ? state.votes : {};
+  state.privateChoices = state.privateChoices && typeof state.privateChoices === "object" ? state.privateChoices : {};
+  state.skillAttempts = state.skillAttempts && typeof state.skillAttempts === "object" ? state.skillAttempts : {};
+  state.rollHistory = Array.isArray(state.rollHistory) ? state.rollHistory : [];
+  state.log = Array.isArray(state.log) ? state.log : [];
+  state.legends = Array.isArray(state.legends) ? state.legends : [];
+  state.heroes = Array.isArray(state.heroes) ? state.heroes.map(normalizeActor) : [];
+  if (state.combat) {
+    state.combat.actors = Array.isArray(state.combat.actors) ? state.combat.actors.map(normalizeActor) : [];
+    state.combat.order = Array.isArray(state.combat.order) ? state.combat.order : [];
+    state.combat.objects = Array.isArray(state.combat.objects) ? state.combat.objects : [];
+  }
+  return state;
+}
+
 export function normalizeSeed(seed) {
   const text = String(seed ?? "pixelquest");
   let hash = 2166136261;
@@ -86,7 +117,7 @@ function appendRoll(state, record) {
 }
 
 export function rollCheck(campaign, { actorName, statValue = 0, dc = 10, label = "Skill Check", advantage = 0 }) {
-  const state = clone(campaign);
+  const state = normalizeCampaign(campaign);
   const first = rollDieFromState(state.rngState, 20);
   state.rngState = first.rngState;
   let raw = first.raw;
@@ -162,6 +193,7 @@ export function createCampaign({ adventureId = ADVENTURES[0].id, heroIds = [HERO
     combat: null,
     votes: {},
     privateChoices: {},
+    skillAttempts: {},
     rollHistory: [],
     lastRoll: null,
     log: [],
@@ -182,7 +214,7 @@ export function currentScene(campaign) {
 }
 
 export function moveToScene(campaign, sceneId) {
-  const state = clone(campaign);
+  const state = normalizeCampaign(campaign);
   const scene = adventureScene(currentAdventure(state), sceneId);
   if (!scene) throw new Error(`Unknown scene ${sceneId}`);
   state.sceneId = sceneId;
@@ -199,7 +231,7 @@ export function continueStoryScene(campaign) {
 }
 
 export function castPartyVote(campaign, heroId, choiceId) {
-  const state = clone(campaign);
+  const state = normalizeCampaign(campaign);
   const scene = currentScene(state);
   if (scene?.type !== "party-choice") throw new Error("Current scene is not a party choice.");
   if (!state.heroes.some((hero) => hero.id === heroId)) throw new Error("Unknown hero voting.");
@@ -218,7 +250,7 @@ function aiVoteFor(hero, choices) {
 }
 
 export function autoFillAiVotes(campaign) {
-  let state = clone(campaign);
+  let state = normalizeCampaign(campaign);
   const scene = currentScene(state);
   if (scene?.type !== "party-choice") return state;
   for (const hero of state.heroes) {
@@ -259,7 +291,7 @@ export function resolvePartyVote(campaign) {
 }
 
 export function applyPrivateChoice(campaign, heroId, choiceId) {
-  let state = clone(campaign);
+  let state = normalizeCampaign(campaign);
   const scene = currentScene(state);
   if (scene?.type !== "private") throw new Error("Current scene is not private.");
   const hero = state.heroes.find((entry) => entry.id === heroId);
@@ -311,7 +343,7 @@ function occupiedBy(combat, x, y, exceptId = null) {
 function placeActors(heroes, enemies, map) {
   const heroSpots = [[1, 1], [1, 2], [1, 3], [1, 4], [1, 5], [2, 1], [2, 5], [2, 6]].filter(([x, y]) => isWalkable(map, x, y));
   const enemySpots = [[10, 1], [10, 2], [10, 3], [10, 4], [10, 5], [9, 1], [9, 5], [9, 6]].filter(([x, y]) => isWalkable(map, x, y));
-  const heroActors = heroes.map((hero, index) => ({ ...clone(hero), x: heroSpots[index % heroSpots.length][0], y: heroSpots[index % heroSpots.length][1], acted: false }));
+  const heroActors = heroes.map((hero, index) => ({ ...normalizeActor(hero), x: heroSpots[index % heroSpots.length][0], y: heroSpots[index % heroSpots.length][1], acted: false }));
   const enemyActors = enemies.map((templateId, index) => {
     const template = ENEMIES[templateId];
     const spot = enemySpots[index % enemySpots.length];
@@ -330,7 +362,8 @@ function placeActors(heroes, enemies, map) {
       move: template.move,
       initiative: template.initiative,
       attack: clone(template.attack),
-      conditions: [], buffs: [], cooldowns: {},
+      abilities: [],
+      conditions: [], buffs: [], cooldowns: {}, inventory: [],
       x: spot[0], y: spot[1], downed: false, acted: false,
     };
   });
@@ -338,7 +371,7 @@ function placeActors(heroes, enemies, map) {
 }
 
 export function startCombat(campaign) {
-  const state = clone(campaign);
+  const state = normalizeCampaign(campaign);
   const scene = currentScene(state);
   if (scene?.type !== "combat") throw new Error("Current scene is not combat.");
   const map = MAPS[scene.map] || MAPS.genericDungeon;
@@ -357,6 +390,7 @@ export function startCombat(campaign) {
     map: clone(map),
     actors,
     order,
+    objects: [],
     turnIndex: 0,
     round: 1,
     selectedAbilityId: null,
@@ -395,7 +429,7 @@ export function reachableCells(campaign, actorId) {
 }
 
 export function moveCombatActor(campaign, actorId, x, y) {
-  const state = clone(campaign);
+  const state = normalizeCampaign(campaign);
   const actor = currentCombatActor(state);
   if (!state.combat || actor?.id !== actorId || actor.type !== "hero") return { state, ok: false, reason: "It is not that hero's turn." };
   const legal = reachableCells(state, actorId).some((cell) => cell.x === x && cell.y === y);
@@ -426,18 +460,21 @@ function targetInRange(actor, target, range) {
 }
 
 function decrementCooldowns(actor) {
-  for (const [id, value] of Object.entries(actor.cooldowns || {})) {
+  actor.cooldowns ||= {};
+  for (const [id, value] of Object.entries(actor.cooldowns)) {
     actor.cooldowns[id] = Math.max(0, value - 1);
   }
 }
 
 function applyCondition(target, condition) {
   if (!condition) return;
+  target.conditions ||= [];
   if (!target.conditions.includes(condition)) target.conditions.push(condition);
 }
 
 function applyBuff(target, buff) {
   if (!buff) return;
+  target.buffs ||= [];
   if (!target.buffs.includes(buff)) target.buffs.push(buff);
 }
 
@@ -512,14 +549,15 @@ function validAbilityTarget(actor, ability, target) {
 }
 
 export function useAbility(campaign, actorId, abilityId, targetId) {
-  const state = clone(campaign);
+  const state = normalizeCampaign(campaign);
   const combat = state.combat;
   const actor = currentCombatActor(state);
   if (!combat || !actor || actor.id !== actorId || actor.type !== "hero") return { state, ok: false, reason: "Not that hero's turn." };
   if (actor.downed) return { state, ok: false, reason: "Downed heroes cannot act." };
   const ability = abilityFor(actor, abilityId);
   if (!ability) return { state, ok: false, reason: "Unknown ability." };
-  if ((actor.cooldowns?.[ability.id] || 0) > 0) return { state, ok: false, reason: "That ability is cooling down." };
+  actor.cooldowns ||= {};
+  if ((actor.cooldowns[ability.id] || 0) > 0) return { state, ok: false, reason: "That ability is cooling down." };
   const target = ability.target === "self" ? actor : combat.actors.find((entry) => entry.id === targetId);
   if (!target && ability.target !== "area" && ability.target !== "tile") return { state, ok: false, reason: "Choose a target." };
   if (target && !validAbilityTarget(actor, ability, target)) return { state, ok: false, reason: "Target is not legal or is out of range." };
@@ -611,7 +649,7 @@ function enemyAttack(state, enemy, target) {
 }
 
 export function runEnemyTurn(campaign) {
-  let state = clone(campaign);
+  let state = normalizeCampaign(campaign);
   const enemy = currentCombatActor(state);
   if (!enemy || enemy.type !== "enemy" || enemy.downed) return advanceCombatTurn(state);
   const target = nearestLivingHero(state.combat, enemy);
@@ -630,7 +668,7 @@ function resetRoundEffects(actor) {
 }
 
 export function evaluateCombat(campaign) {
-  const state = clone(campaign);
+  const state = normalizeCampaign(campaign);
   if (!state.combat) return state;
   const heroesAlive = state.combat.actors.some((actor) => actor.type === "hero" && !actor.downed && actor.hp > 0);
   const enemiesAlive = state.combat.actors.some((actor) => actor.type === "enemy" && !actor.downed && actor.hp > 0);
@@ -662,11 +700,11 @@ export function advanceCombatTurn(campaign) {
 }
 
 export function endHeroTurn(campaign) {
-  const actor = currentCombatActor(campaign);
-  if (!actor || actor.type !== "hero") return campaign;
-  const state = clone(campaign);
-  appendLog(state, { type: "combat", text: `${actor.name} holds position.` });
-  return advanceCombatTurn(state);
+  const normalized = normalizeCampaign(campaign);
+  const actor = currentCombatActor(normalized);
+  if (!actor || actor.type !== "hero") return normalized;
+  appendLog(normalized, { type: "combat", text: `${actor.name} holds position.` });
+  return advanceCombatTurn(normalized);
 }
 
 export function finishCombat(campaign) {
@@ -687,7 +725,7 @@ export function finishCombat(campaign) {
 }
 
 export function recoverFromDefeat(campaign) {
-  const state = clone(campaign);
+  const state = normalizeCampaign(campaign);
   if (state.combat?.victory !== "enemies") return state;
   state.heroes = state.heroes.map((hero) => ({ ...hero, hp: Math.max(1, Math.ceil(hero.maxHp * 0.5)), downed: false, conditions: [], buffs: [], cooldowns: {} }));
   state.gold = Math.max(0, state.gold - 50);
@@ -699,7 +737,7 @@ export function recoverFromDefeat(campaign) {
 export function completeAdventure(campaign) {
   const scene = currentScene(campaign);
   if (scene?.type !== "ending") return campaign;
-  const state = clone(campaign);
+  const state = normalizeCampaign(campaign);
   state.completed = true;
   state.gold += scene.rewardGold || 0;
   state.xp += scene.rewardXp || 0;
@@ -709,15 +747,15 @@ export function completeAdventure(campaign) {
 }
 
 export function aiHeroAction(campaign) {
-  const state = clone(campaign);
+  const state = normalizeCampaign(campaign);
   const actor = currentCombatActor(state);
   if (!actor || actor.type !== "hero" || actor.controller !== "ai" || actor.downed) return state;
   const enemies = state.combat.actors.filter((entry) => entry.type === "enemy" && !entry.downed && entry.hp > 0).sort((a, b) => manhattan(actor, a) - manhattan(actor, b));
   const allies = state.combat.actors.filter((entry) => entry.type === "hero" && !entry.downed && entry.hp > 0);
-  const healAbility = actor.abilities.find((ability) => ability.heal && ability.target === "ally" && (actor.cooldowns[ability.id] || 0) === 0);
+  const healAbility = actor.abilities.find((ability) => ability.heal && ability.target === "ally" && (actor.cooldowns?.[ability.id] || 0) === 0);
   const hurtAlly = allies.filter((ally) => ally.hp / ally.maxHp < 0.45).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
   if (healAbility && hurtAlly && targetInRange(actor, hurtAlly, healAbility.range)) return useAbility(state, actor.id, healAbility.id, hurtAlly.id).state;
-  const ready = actor.abilities.filter((ability) => ability.damage && ability.target === "enemy" && (actor.cooldowns[ability.id] || 0) === 0);
+  const ready = actor.abilities.filter((ability) => ability.damage && ability.target === "enemy" && (actor.cooldowns?.[ability.id] || 0) === 0);
   const target = enemies[0];
   const attack = ready.find((ability) => target && targetInRange(actor, target, ability.range));
   if (attack) return useAbility(state, actor.id, attack.id, target.id).state;
@@ -727,7 +765,7 @@ export function aiHeroAction(campaign) {
       const moved = moveCombatActor(state, actor.id, options[0].x, options[0].y).state;
       const movedActor = currentCombatActor(moved);
       const movedTarget = moved.combat.actors.find((entry) => entry.id === target.id);
-      const movedAttack = movedActor.abilities.find((ability) => ability.damage && ability.target === "enemy" && (movedActor.cooldowns[ability.id] || 0) === 0 && targetInRange(movedActor, movedTarget, ability.range));
+      const movedAttack = movedActor.abilities.find((ability) => ability.damage && ability.target === "enemy" && (movedActor.cooldowns?.[ability.id] || 0) === 0 && targetInRange(movedActor, movedTarget, ability.range));
       if (movedAttack) return useAbility(moved, movedActor.id, movedAttack.id, movedTarget.id).state;
       return endHeroTurn(moved);
     }
@@ -736,7 +774,7 @@ export function aiHeroAction(campaign) {
 }
 
 export function runAutomaticTurns(campaign, maxSteps = 32) {
-  let state = clone(campaign);
+  let state = normalizeCampaign(campaign);
   let steps = 0;
   while (state.combat && !state.combat.victory && steps < maxSteps) {
     const actor = currentCombatActor(state);
@@ -754,13 +792,13 @@ export function tileLegend(tile) {
 }
 
 export function serializeCampaign(campaign) {
-  return JSON.stringify(campaign);
+  return JSON.stringify(normalizeCampaign(campaign));
 }
 
 export function deserializeCampaign(payload) {
   const parsed = JSON.parse(payload);
   if (!parsed || parsed.version !== 1 || !ADVENTURE_BY_ID[parsed.adventureId]) throw new Error("Invalid PixelQuest save file.");
-  return parsed;
+  return normalizeCampaign(parsed);
 }
 
 export function validateGameData() {
