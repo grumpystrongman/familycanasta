@@ -11,6 +11,7 @@ import {
   finishCombat,
   moveCombatActor,
   moveToScene,
+  normalizeCampaign,
   recoverFromDefeat,
   resolvePartyVote,
   rollCheck,
@@ -136,7 +137,7 @@ function autoResolve(campaign) {
 function resolveSoloPartyChoice(campaign, scene, hero, choiceId) {
   const choice = scene.choices?.find((entry) => entry.id === choiceId);
   if (!choice) throw new Error("Choose a valid party action.");
-  const next = clone(campaign);
+  const next = normalizeCampaign(campaign);
   next.votes = { [hero.id]: choiceId };
   if (choice.flag) next.flags[choice.flag] = true;
   appendNetworkLog(next, {
@@ -151,8 +152,7 @@ function resolveIndividualPrivateChoice(campaign, scene, hero, choiceId, members
   if (!choice) throw new Error("Choose a valid private action.");
   const key = `${scene.id}:${hero.id}`;
   if (campaign.privateChoices?.[key]) throw new Error("Your private decision is already locked in.");
-  const next = clone(campaign);
-  next.privateChoices ||= {};
+  const next = normalizeCampaign(campaign);
   next.privateChoices[key] = choiceId;
   addHeroFlag(next.flags, choice.flag, hero.id);
   appendNetworkLog(next, {
@@ -166,16 +166,16 @@ function resolveIndividualPrivateChoice(campaign, scene, hero, choiceId, members
 }
 
 function recordSkillAttempt(campaign, scene, hero) {
-  const sceneAttempts = campaign.skillAttempts?.[scene.id] || {};
+  const normalized = normalizeCampaign(campaign);
+  const sceneAttempts = normalized.skillAttempts?.[scene.id] || {};
   if (sceneAttempts[hero.id]) throw new Error("Your hero already took this skill turn.");
-  const result = rollCheck(campaign, {
+  const result = rollCheck(normalized, {
     actorName: hero.name,
     statValue: Number(hero.stats?.[scene.stat] || 0),
     dc: scene.dc,
     label: `${scene.title} · ${scene.stat}`,
   });
   const next = result.state;
-  next.skillAttempts ||= {};
   next.skillAttempts[scene.id] ||= {};
   next.skillAttempts[scene.id][hero.id] = {
     heroId: hero.id,
@@ -230,6 +230,7 @@ export function reducePixelQuest(state, actorUid, action, members) {
   if (state.phase !== "playing" || !state.campaign) throw new Error("The adventure is not active.");
 
   let next = clone(state);
+  next.campaign = normalizeCampaign(next.campaign);
   let campaign = next.campaign;
   const scene = currentScene(campaign);
   const myHero = heroForUid(next, actorUid);
