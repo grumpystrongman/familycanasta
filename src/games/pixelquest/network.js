@@ -48,6 +48,13 @@ function availableHeroId(selections, preferredIndex = 0) {
   return HEROES[0].id;
 }
 
+function humanHeroIds(members, state) {
+  return members
+    .filter((member) => !member.isRobot)
+    .map((member) => state.seatHeroes?.[member.uid])
+    .filter(Boolean);
+}
+
 export function createPixelQuestGameState(members, rules = {}) {
   const adventureId = ADVENTURE_BY_ID[rules.adventureId] ? rules.adventureId : "bells-blackhollow";
   const selections = {};
@@ -112,6 +119,20 @@ function autoResolve(campaign) {
   return runAutomaticTurns(campaign, 48);
 }
 
+function resolveSoloPartyChoice(campaign, scene, hero, choiceId) {
+  const choice = scene.choices?.find((entry) => entry.id === choiceId);
+  if (!choice) throw new Error("Choose a valid party action.");
+  const next = clone(campaign);
+  next.votes = { [hero.id]: choiceId };
+  if (choice.flag) next.flags[choice.flag] = true;
+  next.log = [...(next.log || []), {
+    id: `solo-decision-${Date.now()}-${hero.id}`,
+    type: "decision",
+    text: `${hero.name} chose for the party: ${choice.label}.`,
+  }].slice(-120);
+  return moveToScene(next, choice.next);
+}
+
 function resolveIndividualPrivateChoice(campaign, scene, hero, choiceId, members, state) {
   const choice = scene.choices?.find((entry) => entry.id === choiceId);
   if (!choice) throw new Error("Choose a valid private action.");
@@ -128,11 +149,7 @@ function resolveIndividualPrivateChoice(campaign, scene, hero, choiceId, members
     private: true,
   }].slice(-120);
 
-  const humanHeroIds = members
-    .filter((member) => !member.isRobot)
-    .map((member) => state.seatHeroes?.[member.uid])
-    .filter(Boolean);
-  const everyoneLocked = humanHeroIds.every((heroId) => next.privateChoices[`${scene.id}:${heroId}`]);
+  const everyoneLocked = humanHeroIds(members, state).every((heroId) => next.privateChoices[`${scene.id}:${heroId}`]);
   return everyoneLocked ? moveToScene(next, scene.next) : next;
 }
 
@@ -157,7 +174,9 @@ export function reducePixelQuest(state, actorUid, action, members) {
       break;
     case "vote":
       if (!myHero) throw new Error("No hero is assigned to your seat.");
-      campaign = castPartyVote(campaign, myHero.id, action.choiceId);
+      if (scene?.type !== "party-choice") throw new Error("There is no party decision right now.");
+      if (humanHeroIds(members, next).length === 1) campaign = resolveSoloPartyChoice(campaign, scene, myHero, action.choiceId);
+      else campaign = castPartyVote(campaign, myHero.id, action.choiceId);
       break;
     case "resolve-vote": {
       requireHost(actorUid, members);
