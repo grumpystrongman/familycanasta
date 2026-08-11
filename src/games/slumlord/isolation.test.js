@@ -5,11 +5,19 @@ import test from "node:test";
 const gameSource = await readFile(new URL("./GameBoard.jsx", import.meta.url), "utf8");
 const indexSource = await readFile(new URL("./index.jsx", import.meta.url), "utf8");
 const styles = await readFile(new URL("./n64-overrides.css", import.meta.url), "utf8");
+const themes = await readFile(new URL("./themes.css", import.meta.url), "utf8");
 
 test("Slum Lord is a local full-board module with no party-stage dependency", () => {
   assert.match(indexSource, /GameBoard/);
   assert.doesNotMatch(gameSource, /PartyStage|partyRoom|usePartyRoom|phone|controller/i);
   assert.doesNotMatch(gameSource, /firebase/i);
+});
+
+test("Slum Lord defaults to one human versus one CPU landlord", () => {
+  assert.match(gameSource, /useState\(2\)/);
+  assert.match(gameSource, /name:\s*"You",\s*isBot:\s*false/);
+  assert.match(gameSource, /name:\s*"CPU Landlord",\s*isBot:\s*true/);
+  assert.match(indexSource, /1 human \+ CPU by default/);
 });
 
 test("Slum Lord maps its 36 spaces to a ten-by-ten perimeter", () => {
@@ -21,5 +29,14 @@ test("Slum Lord maps its 36 spaces to a ten-by-ten perimeter", () => {
 test("Slum Lord exposes the primary board-game interactions on one screen", () => {
   for (const label of ["Roll dice", "End turn", "Trade", "Auction", "Mortgage", "Upgrade"]) {
     assert.match(gameSource, new RegExp(label, "i"));
+  }
+});
+
+test("Slum Lord offers three cosmetic N64-style board themes", () => {
+  for (const theme of ["Concrete Jungle", "Sunset Motel", "Toxic Tenement"]) {
+    assert.match(indexSource, new RegExp(theme));
+  }
+  for (const className of ["sl-theme-concrete", "sl-theme-sunset", "sl-theme-toxic"]) {
+    assert.match(themes, new RegExp(className));
   }
 });
