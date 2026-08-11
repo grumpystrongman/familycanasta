@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import { auth } from "../../firebase.js";
 import { currentAdventure, currentScene } from "./engine.js";
 
 const OPENERS = [
@@ -88,6 +87,12 @@ export function buildNarratorContext(campaign) {
 function endpointFromEnvironment() {
   const configured = import.meta.env?.VITE_PIXELQUEST_DM_URL;
   return String(configured || "").replace(/\/$/, "");
+}
+
+async function currentFirebaseToken() {
+  if (typeof window === "undefined") return "";
+  const { auth } = await import("../../firebase.js");
+  return auth?.currentUser?.getIdToken?.() || "";
 }
 
 export class GemmaNarrator {
@@ -183,7 +188,7 @@ function GemmaNarration({ campaign, fallback, kind = "describe", plan = "" }) {
     let active = true;
     (async () => {
       try {
-        const token = await auth?.currentUser?.getIdToken?.();
+        const token = await currentFirebaseToken();
         const result = kind === "plan"
           ? await gemmaNarrator.reactToPlan(campaign, plan, { token, signal: controller.signal })
           : await gemmaNarrator.describe(campaign, { token, signal: controller.signal });
