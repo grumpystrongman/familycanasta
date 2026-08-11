@@ -1,0 +1,64 @@
+name: PixelQuest Gemma Live Smoke
+
+on:
+  push:
+    branches: [agent/pixelquest-gemma4-dm]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gemma-live-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Free runner disk space
+        run: |
+          sudo rm -rf /usr/local/lib/android /opt/ghc /usr/share/dotnet || true
+          df -h
+      - name: Install Ollama
+        run: curl -fsSL https://ollama.com/install.sh | sh
+      - name: Start Ollama
+        run: |
+          nohup ollama serve > /tmp/ollama.log 2>&1 &
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:11434/api/tags >/dev/null; then exit 0; fi
+            sleep 2
+          done
+          cat /tmp/ollama.log
+          exit 1
+      - name: Install Gemma 4 12B
+        run: |
+          ollama pull gemma4:12b
+          ollama list
+          ollama list | grep -q 'gemma4:12b'
+      - name: Start PixelQuest DM service
+        env:
+          DM_AUTH_MODE: off
+          OLLAMA_BASE_URL: http://127.0.0.1:11434
+          GEMMA_MODEL: gemma4:12b
+          DM_ALLOWED_ORIGIN: '*'
+          PORT: 8787
+        run: |
+          nohup node services/pixelquest-dm/server.mjs > /tmp/pixelquest-dm.log 2>&1 &
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:8787/health >/dev/null; then exit 0; fi
+            sleep 2
+          done
+          cat /tmp/pixelquest-dm.log
+          exit 1
+      - name: Run actual Gemma narration smoke
+        run: node services/pixelquest-dm/live-smoke.mjs
+      - name: Diagnostics on failure
+        if: failure()
+        run: |
+          echo '--- Ollama ---'
+          cat /tmp/ollama.log || true
+          echo '--- DM service ---'
+          cat /tmp/pixelquest-dm.log || true
+          df -h || true
