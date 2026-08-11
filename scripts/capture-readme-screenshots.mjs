@@ -18,6 +18,9 @@ await context.addInitScript(() => {
   localStorage.setItem("familyCardNickname", "Family Host");
   localStorage.setItem("canastaAvatar", "🦊");
   localStorage.setItem("familyCardAvatar", "🦊");
+  // Documentation capture is an automated test browser, not an age-verification flow.
+  // Set the existing consent flag so the README can show the actual adults-only game screen.
+  localStorage.setItem("familyGameAdultAccepted", "yes");
 });
 
 const page = await context.newPage();
