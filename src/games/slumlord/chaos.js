@@ -8,9 +8,17 @@ import {
   getPlayerProperties,
   rollDice,
 } from "./engine.js";
+import {
+  DISTRICTS,
+  districtForSpace,
+  districtSchemeMultiplier,
+  districtShieldBonus,
+  pickDistrictIncident,
+} from "./districts.js";
 
 const clone = (value) => JSON.parse(JSON.stringify(value));
 const money = (value) => `$${Math.max(0, Math.round(value)).toLocaleString()}`;
+const clampPressure = (value) => Math.max(0, Math.min(5, Number(value) || 0));
 
 export const GOALS = {
   bankruptcy: {
@@ -35,6 +43,7 @@ export const SCHEMES = [
     rentMultiplier: 1.08,
     flatRent: 8,
     heat: 0,
+    pressureDelta: -1,
     crackdownShield: 55,
     description: "Tiny uniforms not included. Cuts inspection pain and makes the place look almost intentional.",
   },
@@ -45,6 +54,7 @@ export const SCHEMES = [
     rentMultiplier: 1.25,
     flatRent: 10,
     heat: 1,
+    pressureDelta: 1,
     crackdownShield: 0,
     description: "Paint the outlet covers, caulk the windows shut, call it renovated, raise rent immediately.",
   },
@@ -55,6 +65,7 @@ export const SCHEMES = [
     rentMultiplier: 1.45,
     flatRent: 20,
     heat: 2,
+    pressureDelta: 1,
     crackdownShield: 0,
     description: "Hourly rooms, cash bookkeeping, and a vacancy sign that never technically turns off.",
   },
@@ -65,6 +76,7 @@ export const SCHEMES = [
     rentMultiplier: 1.6,
     flatRent: 25,
     heat: 3,
+    pressureDelta: 2,
     crackdownShield: 0,
     description: "Six months cash up front, no maintenance calls, and a tenant who keeps asking about camera angles.",
   },
@@ -75,6 +87,7 @@ export const SCHEMES = [
     rentMultiplier: 1.3,
     flatRent: 15,
     heat: 2,
+    pressureDelta: 1,
     crackdownShield: 25,
     description: "The local crew promises security. The invoice simply says: nice boiler you got there.",
   },
@@ -85,6 +98,7 @@ export const SCHEMES = [
     rentMultiplier: 1.38,
     flatRent: 18,
     heat: 0,
+    pressureDelta: 1,
     crackdownShield: 0,
     description: "Add Edison bulbs, rename the hallway, and charge people for exposed brick that was already exposed.",
   },
@@ -120,6 +134,15 @@ function charge(state, playerId, amount, { recipientId = null, toPot = false, re
   }
 }
 
+function credit(state, playerId, amount, reason = "Neighborhood miracle") {
+  if (!amount || amount <= 0) return;
+  const player = playerById(state, playerId);
+  if (!player || player.bankrupt) return;
+  player.cash += amount;
+  appendLog(state, `${player.name} collects ${money(amount)} — ${reason}.`, "good");
+  if (player.cash >= 0 && state.debt?.playerId === playerId) state.debt = null;
+}
+
 function ownsWholeGroup(state, playerId, groupId) {
   const spaces = groupSpaces(groupId);
   return spaces.length > 0 && spaces.every((space) => ownershipFor(state, space.id)?.ownerId === playerId);
@@ -137,12 +160,47 @@ export function getScheme(ownership) {
   return SCHEMES.find((scheme) => scheme.id === ownership?.schemeId) || null;
 }
 
+export function tenantPressure(ownership) {
+  return clampPressure(ownership?.tenantPressure);
+}
+
+function setTenantPressure(ownership, value) {
+  if (!ownership) return 0;
+  ownership.tenantPressure = clampPressure(value);
+  return ownership.tenantPressure;
+}
+
+export function districtUpgradeCost(state, spaceId) {
+  const space = BOARD[spaceId];
+  if (!space || space.type !== "property") return 0;
+  const multiplier = districtForSpace(space)?.upgradeCostMultiplier || 1;
+  return Math.max(10, Math.round((space.upgradeCost * multiplier) / 10) * 10);
+}
+
+export function propertyHeat(state, spaceId) {
+  const ownership = ownershipFor(state, spaceId);
+  if (!ownership) return 0;
+  return (getScheme(ownership)?.heat || 0) + Math.ceil(tenantPressure(ownership) / 2);
+}
+
 export function portfolioHeat(state, playerId) {
-  return getPlayerProperties(state, playerId).reduce((sum, { ownership }) => sum + (getScheme(ownership)?.heat || 0), 0);
+  return getPlayerProperties(state, playerId).reduce((sum, { space }) => sum + propertyHeat(state, space.id), 0);
+}
+
+export function portfolioInspectionExposure(state, playerId) {
+  return getPlayerProperties(state, playerId).reduce((sum, { space, ownership }) => {
+    const district = districtForSpace(space);
+    const rawHeat = (getScheme(ownership)?.heat || 0) + tenantPressure(ownership) * 0.5;
+    return sum + rawHeat * (district?.inspectionMultiplier || 1);
+  }, 0);
 }
 
 export function crackdownShield(state, playerId) {
-  return getPlayerProperties(state, playerId).reduce((sum, { ownership }) => sum + (getScheme(ownership)?.crackdownShield || 0), 0);
+  return getPlayerProperties(state, playerId).reduce((sum, { space, ownership }) => {
+    const scheme = getScheme(ownership);
+    if (!scheme) return sum;
+    return sum + scheme.crackdownShield + districtShieldBonus(space.group, scheme.id);
+  }, 0);
 }
 
 export function cityPressure(state) {
@@ -172,7 +230,8 @@ export function createChaosGame(setupPlayers, options = {}) {
   state.goalMode = GOALS[options.goalMode] ? options.goalMode : "bankruptcy";
   state.roundLimit = null;
   state.chaosActionTurn = null;
-  appendLog(state, `Goal: ${GOALS[state.goalMode].label}. The city has been notified and immediately made everything worse.`, "warning");
+  state.lastNeighborhoodIncident = null;
+  appendLog(state, `Goal: ${GOALS[state.goalMode].label}. Every neighborhood now has its own personality, tax problem, and reason to call the city.`, "warning");
   return state;
 }
 
@@ -180,8 +239,9 @@ export function canChaosUpgrade(state, playerId, spaceId) {
   const space = BOARD[spaceId];
   const ownership = ownershipFor(state, spaceId);
   const player = playerById(state, playerId);
+  const cost = districtUpgradeCost(state, spaceId);
   if (!space || space.type !== "property" || !ownership || ownership.ownerId !== playerId || !player) return false;
-  if (ownership.mortgaged || ownership.upgrades >= MAX_UPGRADES || player.cash < space.upgradeCost || state.debt) return false;
+  if (ownership.mortgaged || ownership.upgrades >= MAX_UPGRADES || player.cash < cost || state.debt) return false;
   if ((ownership.upgrades || 0) < 2) return true;
   return ownsWholeGroup(state, playerId, space.group) && !groupHasMortgage(state, space.group);
 }
@@ -192,10 +252,14 @@ export function upgradePropertyChaos(state, playerId, spaceId) {
   const space = BOARD[spaceId];
   const player = playerById(next, playerId);
   const ownership = ownershipFor(next, spaceId);
-  player.cash -= space.upgradeCost;
+  const cost = districtUpgradeCost(next, spaceId);
+  player.cash -= cost;
   ownership.upgrades = (ownership.upgrades || 0) + 1;
+  const beforePressure = tenantPressure(ownership);
+  setTenantPressure(ownership, beforePressure - 1);
   const label = ownership.upgrades <= 2 ? "questionable improvement" : "full-block improvement";
-  appendLog(next, `${player.name} spends ${money(space.upgradeCost)} on a ${label} at ${space.name}. Rent immediately becomes more ambitious.`, "good");
+  const district = districtForSpace(space);
+  appendLog(next, `${player.name} spends ${money(cost)} on a ${label} at ${space.name}. ${district?.name || "The block"} gives the work a cautious nod; tenant pressure drops to ${tenantPressure(ownership)}/5.`, "good");
   return next;
 }
 
@@ -212,9 +276,10 @@ export function sellUpgradeChaos(state, playerId, spaceId) {
   const player = playerById(next, playerId);
   const ownership = ownershipFor(next, spaceId);
   ownership.upgrades -= 1;
-  const refund = Math.floor(space.upgradeCost / 2);
+  const refund = Math.floor(districtUpgradeCost(next, spaceId) / 2);
   player.cash += refund;
-  appendLog(next, `${player.name} removes an improvement from ${space.name}, sells the fixtures on Marketplace, and pockets ${money(refund)}.`, "warning");
+  setTenantPressure(ownership, tenantPressure(ownership) + 1);
+  appendLog(next, `${player.name} removes an improvement from ${space.name}, sells the fixtures on Marketplace, pockets ${money(refund)}, and adds one point of tenant pressure.`, "warning");
   if (player.cash >= 0 && next.debt?.playerId === playerId) next.debt = null;
   return next;
 }
@@ -237,7 +302,10 @@ export function installScheme(state, playerId, spaceId, schemeId) {
   const scheme = SCHEMES.find((candidate) => candidate.id === schemeId);
   player.cash -= scheme.cost;
   ownership.schemeId = scheme.id;
-  appendLog(next, `${player.name} installs “${scheme.name}” at ${space.name} for ${money(scheme.cost)}. The neighborhood group chat is already typing.`, scheme.heat ? "warning" : "good");
+  setTenantPressure(ownership, tenantPressure(ownership) + (scheme.pressureDelta || 0));
+  const district = districtForSpace(space);
+  const localBoost = districtSchemeMultiplier(space.group, scheme.id);
+  appendLog(next, `${player.name} installs “${scheme.name}” at ${space.name} for ${money(scheme.cost)}. ${district?.name || "The neighborhood"} gives it a ×${localBoost.toFixed(2)} local fit; tenant pressure is ${tenantPressure(ownership)}/5.`, scheme.heat || scheme.pressureDelta > 0 ? "warning" : "good");
   return next;
 }
 
@@ -248,8 +316,9 @@ export function removeScheme(state, playerId, spaceId) {
   const space = BOARD[spaceId];
   const old = getScheme(ownershipFor(next, spaceId));
   ownershipFor(next, spaceId).schemeId = null;
+  setTenantPressure(ownershipFor(next, spaceId), tenantPressure(ownershipFor(next, spaceId)) - 1);
   charge(next, playerId, 50, { reason: `${old?.name || "scheme"} cleanup` });
-  appendLog(next, `${playerById(next, playerId).name} removes ${old?.name || "the scheme"} from ${space.name}. Cleanup costs $50 and several awkward explanations.`, "info");
+  appendLog(next, `${playerById(next, playerId).name} removes ${old?.name || "the scheme"} from ${space.name}. Cleanup costs $50, several awkward explanations, and drops tenant pressure to ${tenantPressure(ownershipFor(next, spaceId))}/5.`, "info");
   return next;
 }
 
@@ -257,6 +326,22 @@ function diceForCab(total) {
   const value = Math.max(3, Math.min(11, Number(total) || 3));
   if (value <= 7) return [1, value - 1];
   return [value - 6, 6];
+}
+
+function applyDistrictRent(state, playerId) {
+  const player = playerById(state, playerId);
+  const space = BOARD[player?.position];
+  const ownership = ownershipFor(state, space?.id);
+  if (!player || space?.type !== "property" || !ownership || ownership.ownerId === playerId || ownership.mortgaged) return;
+  const district = districtForSpace(space);
+  const multiplier = district?.rentMultiplier || 1;
+  if (multiplier <= 1) return;
+  const baseRent = calculateRent(state, space.id, state.lastRollTotal);
+  const premium = Math.max(0, Math.round(baseRent * (multiplier - 1)));
+  if (!premium) return;
+  const owner = playerById(state, ownership.ownerId);
+  charge(state, playerId, premium, { recipientId: ownership.ownerId, reason: `${district.name} neighborhood premium` });
+  appendLog(state, `${player.name} pays ${money(premium)} extra to ${owner?.name || "the owner"} because ${district.badge} ${district.name} runs at ×${multiplier.toFixed(2)} neighborhood rent.`, "warning");
 }
 
 function applySchemeRent(state, playerId) {
@@ -267,11 +352,26 @@ function applySchemeRent(state, playerId) {
   const scheme = getScheme(ownership);
   if (!scheme) return;
   const baseRent = calculateRent(state, space.id, state.lastRollTotal);
-  const premium = Math.max(0, Math.round(baseRent * (scheme.rentMultiplier - 1) + scheme.flatRent));
+  const localFit = districtSchemeMultiplier(space.group, scheme.id);
+  const effectiveMultiplier = scheme.rentMultiplier * localFit;
+  const premium = Math.max(0, Math.round(baseRent * (effectiveMultiplier - 1) + scheme.flatRent));
   if (!premium) return;
   const owner = playerById(state, ownership.ownerId);
   charge(state, playerId, premium, { recipientId: ownership.ownerId, reason: `${scheme.name} premium` });
-  appendLog(state, `${player.name} pays an extra ${money(premium)} to ${owner?.name || "the owner"} because ${space.name} is running “${scheme.name}.”`, "warning");
+  appendLog(state, `${player.name} pays an extra ${money(premium)} to ${owner?.name || "the owner"} because ${space.name} is running “${scheme.name}” with a ×${localFit.toFixed(2)} neighborhood fit.`, "warning");
+}
+
+function applyTenantBacklash(state, playerId) {
+  const properties = getPlayerProperties(state, playerId).filter(({ space, ownership }) => space.type === "property" && tenantPressure(ownership) >= 4);
+  if (!properties.length) return;
+  const pressure = cityPressure(state);
+  for (const { space, ownership } of properties) {
+    const level = tenantPressure(ownership);
+    const fee = 30 + level * 15 + pressure * 5;
+    charge(state, playerId, fee, { toPot: true, reason: `tenant pushback at ${space.name}` });
+    setTenantPressure(ownership, level - 2);
+    appendLog(state, `${space.name} hits tenant pressure ${level}/5. A tenant association, escrow threat, and very organized email cost ${money(fee)}. Pressure cools to ${tenantPressure(ownership)}/5.`, "danger");
+  }
 }
 
 function applyCityAssessment(state, playerId, beforePosition, beforeInCourt) {
@@ -283,11 +383,15 @@ function applyCityAssessment(state, playerId, beforePosition, beforeInCourt) {
   if (!properties.length) return;
   const pressure = cityPressure(state);
   const deedTax = 8 + pressure * 4;
-  const upgrades = properties.reduce((sum, item) => sum + (item.ownership.upgrades || 0), 0);
-  const heat = portfolioHeat(state, playerId);
-  const assessment = properties.length * deedTax + upgrades * 4 + heat * 6;
+  const assessment = Math.round(properties.reduce((sum, { space, ownership }) => {
+    const district = districtForSpace(space);
+    const localMultiplier = district?.assessmentMultiplier || 1;
+    const improvements = (ownership.upgrades || 0) * 4;
+    return sum + (deedTax + improvements) * localMultiplier;
+  }, 0) + portfolioHeat(state, playerId) * 6);
   charge(state, playerId, assessment, { toPot: true, reason: "the city's Blight Improvement Assessment" });
-  appendLog(state, `${player.name} passes Rent Day, collects rent money, then pays ${money(assessment)} in taxes, fees, assessments, and whatever the city invented this month.`, "warning");
+  appendLog(state, `${player.name} passes Rent Day, collects rent money, then pays ${money(assessment)} in district-adjusted taxes, fees, assessments, and whatever the city invented this month.`, "warning");
+  applyTenantBacklash(state, playerId);
 }
 
 function applyInspectionCrackdown(state, playerId, landedSpaceId) {
@@ -295,16 +399,42 @@ function applyInspectionCrackdown(state, playerId, landedSpaceId) {
   const landedSpace = BOARD[landedSpaceId];
   if (!player || landedSpace?.type !== "inspection") return;
   const heat = portfolioHeat(state, playerId);
-  if (!heat) return;
+  const exposure = portfolioInspectionExposure(state, playerId);
+  if (!heat && !exposure) return;
   const pressure = cityPressure(state);
   const shield = crackdownShield(state, playerId);
-  const fine = Math.max(0, heat * (22 + pressure * 5) - shield);
+  const fine = Math.max(0, Math.round(exposure * (22 + pressure * 5) - shield));
   if (!fine) {
-    appendLog(state, `${player.name}'s Heat is ${heat}, but Rat Patrol paperwork somehow absorbs the crackdown.`, "good");
+    appendLog(state, `${player.name}'s portfolio Heat is ${heat}, but local shields and Rat Patrol paperwork somehow absorb the crackdown.`, "good");
     return;
   }
-  charge(state, playerId, fine, { toPot: true, reason: "a Heat-driven inspection crackdown" });
-  appendLog(state, `Heat ${heat}: inspectors tack on another ${money(fine)} because apparently the vice squad, tax office, and Rat Police share a spreadsheet.`, "danger");
+  charge(state, playerId, fine, { toPot: true, reason: "a district-weighted inspection crackdown" });
+  appendLog(state, `Heat ${heat} / exposure ${exposure.toFixed(1)}: inspectors tack on another ${money(fine)} because Neon Strip and Midnight Towers do not get the same clipboard treatment as Vinyl Heights.`, "danger");
+}
+
+function applyNeighborhoodIncident(state, landedSpaceId, rng) {
+  const space = BOARD[landedSpaceId];
+  const ownership = ownershipFor(state, landedSpaceId);
+  if (space?.type !== "property" || !ownership || ownership.mortgaged) return;
+  const district = districtForSpace(space);
+  const incident = pickDistrictIncident(space.group, rng);
+  if (!district || !incident) return;
+  const owner = playerById(state, ownership.ownerId);
+  if (!owner || owner.bankrupt) return;
+
+  if (incident.ownerCash < 0) charge(state, owner.id, Math.abs(incident.ownerCash), { reason: `${district.name}: ${incident.title}` });
+  if (incident.ownerCash > 0) credit(state, owner.id, incident.ownerCash, `${district.name}: ${incident.title}`);
+  if (incident.pressure) setTenantPressure(ownership, tenantPressure(ownership) + incident.pressure);
+
+  state.lastNeighborhoodIncident = {
+    ...incident,
+    deckType: "district",
+    districtName: district.name,
+    badge: district.badge,
+    pressureAfter: tenantPressure(ownership),
+    spaceName: space.name,
+  };
+  appendLog(state, `${district.badge} ${district.name} — ${incident.title}: ${incident.text} Tenant pressure at ${space.name}: ${tenantPressure(ownership)}/5.`, incident.ownerCash < 0 || incident.pressure > 0 ? "warning" : "good");
 }
 
 export function rollStreetDice(state, mode = "normal", cabSteps = null, rng = Math.random) {
@@ -339,9 +469,11 @@ export function rollStreetDice(state, mode = "normal", cabSteps = null, rng = Ma
     ? (beforePosition + next.lastRollTotal) % BOARD.length
     : beforePosition;
 
+  applyDistrictRent(next, playerId);
   applySchemeRent(next, playerId);
   applyCityAssessment(next, playerId, beforePosition, beforeInCourt);
   applyInspectionCrackdown(next, playerId, landedSpaceId);
+  applyNeighborhoodIncident(next, landedSpaceId, rng);
   return next;
 }
 
@@ -367,6 +499,20 @@ export function finishChaosTurn(state) {
   return next;
 }
 
+function botSchemePreference(space, botLevel) {
+  if (botLevel === "easy") return "rat-patrol";
+  if (botLevel === "hard") {
+    if (space.group === "neon" || space.group === "midnight") return "drug-lord-lease";
+    if (space.group === "concrete") return "gang-protection";
+    if (space.group === "gold") return "luxury-rebrand";
+    return "landlord-special";
+  }
+  if (space.group === "neon") return "vice-motel";
+  if (space.group === "concrete") return "gang-protection";
+  if (space.group === "gold" || space.group === "vinyl") return "luxury-rebrand";
+  return "landlord-special";
+}
+
 export function botChaosAction(state, playerId) {
   if (state.chaosActionTurn === state.turnCount) return null;
   const next = clone(state);
@@ -376,17 +522,18 @@ export function botChaosAction(state, playerId) {
 
   const upgradable = getPlayerProperties(next, playerId)
     .filter(({ space }) => canChaosUpgrade(next, playerId, space.id))
-    .sort((a, b) => a.space.upgradeCost - b.space.upgradeCost);
-  if (upgradable.length && player.cash > upgradable[0].space.upgradeCost + 300) {
+    .sort((a, b) => districtUpgradeCost(next, a.space.id) - districtUpgradeCost(next, b.space.id));
+  if (upgradable.length && player.cash > districtUpgradeCost(next, upgradable[0].space.id) + 300) {
     return Object.assign(upgradePropertyChaos(next, playerId, upgradable[0].space.id), { chaosActionTurn: state.turnCount });
   }
 
   const unschemed = getPlayerProperties(next, playerId).filter(({ space, ownership }) => space.type === "property" && !ownership.schemeId && !ownership.mortgaged);
   if (!unschemed.length) return next;
-  const preference = player.botLevel === "hard" ? "drug-lord-lease" : player.botLevel === "easy" ? "rat-patrol" : "landlord-special";
+  const target = [...unschemed].sort((a, b) => (DISTRICTS[b.space.group]?.rentMultiplier || 1) - (DISTRICTS[a.space.group]?.rentMultiplier || 1))[0];
+  const preference = botSchemePreference(target.space, player.botLevel);
   const scheme = SCHEMES.find((item) => item.id === preference);
   if (!scheme || player.cash < scheme.cost + 250) return next;
-  return Object.assign(installScheme(next, playerId, unschemed[0].space.id, scheme.id), { chaosActionTurn: state.turnCount });
+  return Object.assign(installScheme(next, playerId, target.space.id, scheme.id), { chaosActionTurn: state.turnCount });
 }
 
 export function goalLabel(state) {
