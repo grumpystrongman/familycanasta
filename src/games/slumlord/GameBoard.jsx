@@ -86,11 +86,11 @@ function Token({ player, index, active = false, compact = false }) {
 }
 
 function Setup({ onStart, onExit }) {
-  const [count, setCount] = useState(4);
+  const [count, setCount] = useState(2);
   const [roundLimit, setRoundLimit] = useState(25);
   const [players, setPlayers] = useState([
-    { name: "Landlord 1", isBot: false, token: TOKENS[0] },
-    { name: "Landlord 2", isBot: false, token: TOKENS[1] },
+    { name: "You", isBot: false, token: TOKENS[0] },
+    { name: "CPU Landlord", isBot: true, token: TOKENS[1] },
     { name: "Landlord 3", isBot: true, token: TOKENS[2] },
     { name: "Landlord 4", isBot: true, token: TOKENS[3] },
   ]);
