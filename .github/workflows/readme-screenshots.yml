@@ -9,12 +9,19 @@ on:
       - src/**
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   capture:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+        with:
+          # For same-repository PRs, work on the actual head branch so generated
+          # screenshots can be committed directly back to the PR.
+          ref: ${{ github.head_ref || github.ref_name }}
 
       - uses: actions/setup-node@v4
         with:
@@ -61,6 +68,23 @@ jobs:
 
       - name: Capture product screenshots
         run: node scripts/capture-readme-screenshots.mjs
+
+      - name: Commit screenshots to PR branch
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          HEAD_BRANCH: ${{ github.head_ref }}
+        run: |
+          mkdir -p docs/images
+          cp artifacts/readme-screenshots/*.png docs/images/
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/images/*.png
+          if git diff --cached --quiet; then
+            echo "Screenshots are already current."
+          else
+            git commit -m "Add generated README screenshots"
+            git push origin "HEAD:${HEAD_BRANCH}"
+          fi
 
       - uses: actions/upload-artifact@v4
         with:
