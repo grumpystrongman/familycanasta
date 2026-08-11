@@ -42,7 +42,7 @@ test("property schemes trade cash for rent pressure and Heat", () => {
   const beforeCash = state.players[0].cash;
   state = installScheme(state, "human", 3, "drug-lord-lease");
   assert.equal(state.ownership["3"].schemeId, "drug-lord-lease");
-  assert.equal(portfolioHeat(state, "human"), 3);
+  assert.equal(portfolioHeat(state, "human"), 4, "Heat 3 plus tenant pressure should raise the property's total Heat contribution");
   assert.ok(state.players[0].cash < beforeCash);
   assert.ok(calculateChaosNetWorth(state, "human") > state.players[0].cash + BOARD[3].price);
 });
@@ -57,7 +57,7 @@ test("the sketchy cab gives exact tactical movement and charges for it", () => {
   assert.equal(next.extraTurn, false);
 });
 
-test("Heat crackdown still applies when an inspection card immediately sends the landlord to court", () => {
+test("district-weighted Heat crackdown still applies when an inspection card sends the landlord to court", () => {
   let state = setup();
   state.ownership["3"] = { ownerId: "human", upgrades: 0, mortgaged: false };
   state = installScheme(state, "human", 3, "drug-lord-lease");
@@ -68,7 +68,7 @@ test("Heat crackdown still applies when an inspection card immediately sends the
   const next = rollStreetDice(state, "cab", 3);
   assert.equal(next.players[0].position, 9);
   assert.equal(next.players[0].inCourt, true);
-  assert.equal(next.pot, 66, "Heat 3 should add a $66 crackdown even after the card moves the player");
+  assert.equal(next.pot, 110, "Rust Belt exposure should amplify the Heat-driven crackdown even after the card moves the player");
 });
 
 test("cleaning up a shady scheme costs money even when it creates debt", () => {
