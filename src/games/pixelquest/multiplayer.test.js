@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { HEROES } from "./data.js";
-import { currentCombatActor, currentScene, moveToScene } from "./engine.js";
+import { currentCombatActor, currentScene, moveToScene, normalizeCampaign } from "./engine.js";
 import { createPixelQuestGameState, reducePixelQuest } from "./network.js";
 
 const human = (uid, seat, nickname = uid, isHost = false) => ({
@@ -13,6 +13,26 @@ const human = (uid, seat, nickname = uid, isHost = false) => ({
   isRobot: false,
   connected: true,
 });
+
+function firebasePrune(value) {
+  if (value == null) return undefined;
+  if (Array.isArray(value)) {
+    if (!value.length) return undefined;
+    return value.map((entry) => firebasePrune(entry) ?? null);
+  }
+  if (typeof value === "object") {
+    const entries = Object.entries(value)
+      .map(([key, entry]) => [key, firebasePrune(entry)])
+      .filter(([, entry]) => entry !== undefined);
+    if (!entries.length) return undefined;
+    return Object.fromEntries(entries);
+  }
+  return value;
+}
+
+function firebaseRoundTrip(value) {
+  return firebasePrune(structuredClone(value));
+}
 
 function startTwoPlayerCampaign() {
   const members = [human("host", 0, "Host", true), human("guest", 1, "Guest")];
@@ -31,6 +51,37 @@ test("each online human owns exactly one unique hero", () => {
   assert.equal(state.campaign.heroes.find((hero) => hero.id === state.seatHeroes.host)?.controller, "human");
   assert.equal(state.campaign.heroes.find((hero) => hero.id === state.seatHeroes.guest)?.controller, "human");
   assert.equal(members.length, 2);
+});
+
+test("Firebase-pruned empty collections are restored before online rules run", () => {
+  const { members, state: started } = startTwoPlayerCampaign();
+  let state = structuredClone(started);
+  state.campaign = moveToScene(state.campaign, "gate-choice");
+  state = firebaseRoundTrip(state);
+
+  assert.equal(state.campaign.votes, undefined);
+  assert.equal(state.campaign.flags, undefined);
+  assert.equal(state.campaign.privateChoices, undefined);
+  assert.equal(state.campaign.heroes[0].cooldowns, undefined);
+  assert.equal(state.campaign.heroes[0].conditions, undefined);
+  assert.equal(state.campaign.heroes[0].buffs, undefined);
+
+  state = reducePixelQuest(state, "host", { type: "vote", choiceId: "mill" }, members);
+  assert.equal(state.campaign.votes[HEROES[0].id], "mill");
+  state = firebaseRoundTrip(state);
+  state = reducePixelQuest(state, "guest", { type: "vote", choiceId: "mill" }, members);
+  assert.equal(currentScene(state.campaign).id, "mill-private");
+
+  state = firebaseRoundTrip(state);
+  state = reducePixelQuest(state, "host", { type: "private-choice", choiceId: "take-key" }, members);
+  assert.equal(state.campaign.privateChoices[`mill-private:${HEROES[0].id}`], "take-key");
+  assert.deepEqual(state.campaign.flags["silver-key-secret"], [HEROES[0].id]);
+
+  state.campaign = moveToScene(state.campaign, "chapel-fight");
+  state = reducePixelQuest(state, "host", { type: "start-combat" }, members);
+  const prunedCombat = firebaseRoundTrip(state.campaign);
+  const normalized = normalizeCampaign(prunedCombat);
+  assert.ok(normalized.combat.actors.every((actor) => actor.cooldowns && Array.isArray(actor.conditions) && Array.isArray(actor.buffs)));
 });
 
 test("party decisions require an independent vote from every online human and resolve on the final vote", () => {
