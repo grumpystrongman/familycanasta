@@ -1,0 +1,153 @@
+.sl-adult-warning {
+  margin: 22px 42px 0;
+  padding: 11px 14px;
+  border: 2px dashed #7d3c34;
+  border-radius: 9px;
+  background: #f3d9cf;
+  color: #4c2620;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.sl-goal-note {
+  margin: 16px 42px 0;
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 3px solid #3b352e;
+  border-radius: 10px;
+  background: #d8c9a5;
+  color: #302a22;
+  box-shadow: 0 4px 0 rgba(31, 27, 22, .2);
+}
+.sl-goal-note strong { font-size: 13px; }
+.sl-goal-note span { font-size: 11px; line-height: 1.4; }
+
+.sl-space-heat {
+  position: absolute;
+  z-index: 6;
+  left: 2px;
+  bottom: 2px;
+  padding: 1px 3px;
+  border: 1px solid #522d25;
+  border-radius: 4px;
+  background: #f7c46a;
+  color: #3a241c;
+  font-size: 7px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.sl-management-panel {
+  padding: 10px;
+  border-top: 2px solid #11171c;
+  background: #222b33;
+}
+.sl-management-panel > strong {
+  display: block;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+}
+.sl-management-panel > p {
+  margin: 5px 0 8px;
+  color: #bdc8ce;
+  font-size: 9px;
+  line-height: 1.4;
+}
+.sl-management-panel .sl-panel-actions {
+  padding: 0;
+  border: 0;
+}
+.sl-management-panel .sl-panel-actions button:disabled,
+.sl-scheme-picker button:disabled { opacity: .38; cursor: not-allowed; }
+
+.sl-scheme-card,
+.sl-scheme-picker {
+  margin: 9px 10px 0;
+  padding: 10px;
+  border: 2px solid #13191e;
+  border-radius: 8px;
+  background: #36434d;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.05);
+}
+.sl-scheme-card small,
+.sl-scheme-picker label {
+  display: block;
+  color: #c6d1d7;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+.sl-scheme-card strong { display: block; margin-top: 3px; color: #f0cf67; font-size: 12px; }
+.sl-scheme-card p,
+.sl-scheme-picker p { margin: 6px 0; color: #d5dde1; font-size: 9px; line-height: 1.45; }
+.sl-scheme-card span,
+.sl-scheme-picker div { color: #f2cf6d; font-size: 9px; font-weight: 800; }
+.sl-scheme-picker select {
+  width: 100%;
+  margin-top: 5px;
+  min-height: 36px;
+  border: 2px solid #151b20;
+  border-radius: 6px;
+  padding: 6px 8px;
+  background: #f2e9d5;
+  color: #2b2721;
+  font: 800 9px Inter, sans-serif;
+}
+.sl-scheme-picker div { display: flex; justify-content: space-between; gap: 8px; margin: 6px 0 8px; }
+.sl-scheme-picker button,
+.sl-cleanup-button {
+  width: 100%;
+  min-height: 36px;
+  border: 2px solid #151b20;
+  border-radius: 7px;
+  background: #e7bd54;
+  color: #251f17;
+  box-shadow: 0 3px 0 #151b20;
+  font: 900 9px Inter, sans-serif;
+  cursor: pointer;
+}
+.sl-cleanup-button { margin-top: 8px; background: #d3d0c4; }
+
+.sl-chaos-console {
+  grid-template-columns: minmax(150px, .9fr) auto minmax(360px, 1.8fr);
+  position: relative;
+  padding-bottom: 14px;
+}
+
+.sl-cab-picker {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 6px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(255,255,255,.08);
+}
+.sl-cab-picker small { color: #aebbc2; font-size: 8px; line-height: 1.4; }
+.sl-cab-picker > div { display: flex; flex-wrap: wrap; gap: 5px; }
+.sl-cab-picker button {
+  min-width: 34px;
+  min-height: 30px;
+  border: 2px solid #11171c;
+  border-radius: 6px;
+  background: #f2c94c;
+  color: #242019;
+  box-shadow: 0 3px 0 #11171c;
+  font: 900 10px Inter, sans-serif;
+  cursor: pointer;
+}
+
+.sl-game-over > p:not(.sl-kicker) {
+  color: #4e463a;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+@media (max-width: 980px) {
+  .sl-adult-warning,
+  .sl-goal-note { margin-left: 22px; margin-right: 22px; }
+  .sl-chaos-console { grid-template-columns: 1fr; }
+  .sl-cab-picker { grid-column: auto; }
+}
