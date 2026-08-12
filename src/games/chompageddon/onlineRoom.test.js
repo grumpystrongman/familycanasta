@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { chompOnlinePlayers, firstOpenChompSeat } from "./onlineRoom.js";
+import { chompOnlinePlayers, firstOpenChompSeat } from "./onlineRoomModel.js";
 
 test("online Chompageddon players are ordered by monster seat", () => {
   const room = {

@@ -11,6 +11,9 @@ import {
 } from "firebase/database";
 import { db } from "../../firebase";
 
+export { chompOnlinePlayers, firstOpenChompSeat } from "./onlineRoomModel.js";
+import { chompOnlinePlayers, firstOpenChompSeat } from "./onlineRoomModel.js";
+
 export const CHOMP_ONLINE_MAX_PLAYERS = 4;
 export const CHOMP_ONLINE_MIN_PLAYERS = 2;
 
@@ -23,16 +26,6 @@ function roomCode(random = Math.random) {
 
 function cleanNickname(nickname, fallback = "Player") {
   return String(nickname || "").trim().slice(0, 18) || fallback;
-}
-
-export function chompOnlinePlayers(room) {
-  return Object.values(room?.members || {}).sort((a, b) => Number(a.seat) - Number(b.seat));
-}
-
-export function firstOpenChompSeat(room) {
-  const taken = new Set(chompOnlinePlayers(room).map((player) => Number(player.seat)));
-  for (let seat = 0; seat < CHOMP_ONLINE_MAX_PLAYERS; seat += 1) if (!taken.has(seat)) return seat;
-  return -1;
 }
 
 export async function createChompOnlineRoom({ user, nickname }) {
