@@ -10,9 +10,16 @@ import {
   triggerChomp,
   winnersForRound,
 } from "./engine";
+import useChompOnlineRoom from "./useChompOnlineRoom";
 import "./styles.css";
+import "./online.css";
 
 const PLAYER_COLORS = ["#ec4de6", "#73e14d", "#43bdf6", "#ff843c"];
+const ONLINE_SNAPSHOT_INTERVAL = 0.08;
+
+function cloneRound(round) {
+  return round ? JSON.parse(JSON.stringify(round)) : round;
+}
 
 function drawBall(ctx, ball) {
   const r = CHOMP_RULES.ballRadius;
@@ -213,7 +220,63 @@ function Scoreboard({ snapshot }) {
   );
 }
 
-export default function ChompageddonGame() {
+function OnlineScoreboard({ snapshot, players }) {
+  const bySeat = new Map(players.map((player) => [Number(player.seat), player]));
+  return (
+    <div className="chomp-scoreboard chomp-online-scoreboard">
+      {snapshot.chompers.map((chomper, index) => {
+        const player = bySeat.get(index);
+        return (
+          <article key={chomper.id} className={`monster-${index} ${player ? "human" : "bot"} ${player?.connected === false ? "disconnected" : ""}`}>
+            <span className="score-monster">👹</span>
+            <div>
+              <small>{player ? player.nickname : "BOT"} · {chomper.name}</small>
+              <strong>{chomper.score}</strong>
+              {player?.connected === false ? <em>BOT takeover</em> : null}
+            </div>
+          </article>
+        );
+      })}
+    </div>
+  );
+}
+
+function HowTo() {
+  return (
+    <section className="chomp-howto">
+      <article><span>01</span><div><strong>Watch the bounce</strong><p>Every ball carries velocity, ricochets off the bowl, and knocks into other balls.</p></div></article>
+      <article><span>02</span><div><strong>Time the lunge</strong><p>Your head extends fast, bites at full reach, then retracts. Spam badly and you miss the good clusters.</p></div></article>
+      <article><span>03</span><div><strong>Get disgustingly greedy</strong><p>A single bite can capture several balls. Most swallowed when the timer or ball pile runs out wins.</p></div></article>
+    </section>
+  );
+}
+
+function ModeChooser({ onLocal, onOnline }) {
+  return (
+    <main className="chompageddon-shell">
+      <section className="chompageddon-page">
+        <header className="chomp-header">
+          <div><p className="chomp-kicker">Physics party arcade · local or online</p><h1>CHOMPAGEDDON!</h1><p className="chomp-tagline">BALLZ WILL FLY. Monsters lunge. Balls collide. Friendships become temporary.</p></div>
+          <button type="button" className="chomp-back" onClick={navigateToHub}>← All games</button>
+        </header>
+        <section className="chomp-mode-launchpad">
+          <div className="chomp-mode-heading"><span className="warning-tape">CHOOSE YOUR CHAOS</span><h2>How are we destroying friendships today?</h2><p>Play on one device, or give every monster its own browser and settle this over the internet.</p></div>
+          <div className="chomp-mode-grid">
+            <button type="button" className="chomp-mode-card" onClick={onLocal}>
+              <span className="chomp-mode-icon">🛋️</span><small>ONE SCREEN</small><strong>SOLO / COUCH</strong><p>1 human vs bots, or 2–4 humans sharing the same device and keyboard.</p><b>PLAY LOCAL →</b>
+            </button>
+            <button type="button" className="chomp-mode-card online" onClick={onOnline}>
+              <span className="chomp-mode-icon">🌐</span><small>ROOM CODE</small><strong>ONLINE CHOMPAGEDDON</strong><p>2–4 humans on separate devices. Empty seats become bots. One shared arena.</p><b>GO ONLINE →</b>
+            </button>
+          </div>
+        </section>
+        <HowTo />
+      </section>
+    </main>
+  );
+}
+
+function LocalChompageddonGame({ onBackToModes }) {
   const canvasRef = useRef(null);
   const frameRef = useRef(0);
   const roundRef = useRef(createRound({ humanCount: 1 }));
@@ -314,8 +377,8 @@ export default function ChompageddonGame() {
     <main className="chompageddon-shell">
       <section className="chompageddon-page">
         <header className="chomp-header">
-          <div><p className="chomp-kicker">Physics party arcade · 1–4 humans · bots fill the gaps</p><h1>CHOMPAGEDDON!</h1><p className="chomp-tagline">BALLZ WILL FLY. Monsters lunge. Balls collide. Friendships become temporary.</p></div>
-          <button type="button" className="chomp-back" onClick={navigateToHub}>← All games</button>
+          <div><p className="chomp-kicker">Physics party arcade · solo / couch mode</p><h1>CHOMPAGEDDON!</h1><p className="chomp-tagline">BALLZ WILL FLY. Monsters lunge. Balls collide. Friendships become temporary.</p></div>
+          <div className="chomp-header-actions"><button type="button" className="chomp-back" onClick={onBackToModes}>← Modes</button><button type="button" className="chomp-back" onClick={navigateToHub}>All games</button></div>
         </header>
 
         {!started ? (
@@ -352,14 +415,295 @@ export default function ChompageddonGame() {
           </>
         )}
 
-        <section className="chomp-howto">
-          <article><span>01</span><div><strong>Watch the bounce</strong><p>Every ball carries velocity, ricochets off the bowl, and knocks into other balls.</p></div></article>
-          <article><span>02</span><div><strong>Time the lunge</strong><p>Your head extends fast, bites at full reach, then retracts. Spam badly and you miss the good clusters.</p></div></article>
-          <article><span>03</span><div><strong>Get disgustingly greedy</strong><p>A single bite can capture several balls. Most swallowed when the timer or ball pile runs out wins.</p></div></article>
-        </section>
+        <HowTo />
       </section>
     </main>
   );
 }
 
-export const gameInfo = Object.freeze({ id: "chompageddon", name: "Chompageddon!", players: "1–4 local players" });
+function OnlineRoomRoster({ table }) {
+  const bySeat = new Map(table.players.map((player) => [Number(player.seat), player]));
+  return (
+    <div className="chomp-online-roster">
+      {CHOMPERS.map((monster, seat) => {
+        const player = bySeat.get(seat);
+        return (
+          <article key={monster.id} className={`monster-${seat} ${player ? "occupied" : "bot"} ${player?.ready ? "ready" : ""}`}>
+            <span className="chomp-online-monster">👹</span>
+            <div><small>{player ? `PLAYER ${seat + 1}` : "BOT IF EMPTY"}</small><h3>{monster.name}</h3><p>{player ? player.nickname : monster.epithet}</p></div>
+            <strong className="chomp-ready-state">{player ? (player.connected === false ? "OFFLINE" : player.ready ? "READY" : "NOT READY") : "AI"}</strong>
+          </article>
+        );
+      })}
+    </div>
+  );
+}
+
+function OnlineChompageddonGame({ onBackToModes }) {
+  const table = useChompOnlineRoom();
+  const canvasRef = useRef(null);
+  const frameRef = useRef(0);
+  const roundRef = useRef(createRound({ humanCount: 4 }));
+  const lastRef = useRef(0);
+  const publishClockRef = useRef(0);
+  const publishBusyRef = useRef(false);
+  const activeRoundIdRef = useRef("");
+  const lastInputSeqRef = useRef({});
+  const tableRef = useRef(table);
+  const playersRef = useRef(table.players);
+  const statusRef = useRef("Create or join a room. Then get greedy.");
+  const [snapshot, setSnapshot] = useState(() => cloneRound(roundRef.current));
+  const [status, setStatus] = useState(statusRef.current);
+  const [copied, setCopied] = useState(false);
+
+  tableRef.current = table;
+  playersRef.current = table.players;
+
+  const setArenaStatus = useCallback((message) => {
+    statusRef.current = message;
+    setStatus(message);
+  }, []);
+
+  const syncOnlineSnapshot = useCallback(() => {
+    setSnapshot(cloneRound(roundRef.current));
+  }, []);
+
+  const gameVisible = table.room?.status === "playing" || table.room?.status === "finished";
+  const roomSnapshot = table.room?.gameState?.snapshot;
+  const roundId = table.room?.gameState?.roundId || "";
+
+  useEffect(() => {
+    if (!roomSnapshot || !roundId) return;
+    const isNewRound = activeRoundIdRef.current !== roundId;
+    if (isNewRound || !table.isHost) {
+      roundRef.current = cloneRound(roomSnapshot);
+      setSnapshot(cloneRound(roomSnapshot));
+    }
+    if (isNewRound) {
+      activeRoundIdRef.current = roundId;
+      lastRef.current = performance.now();
+      publishClockRef.current = 0;
+      lastInputSeqRef.current = Object.fromEntries(table.players.map((player) => [player.uid, Number(table.room?.inputs?.[player.uid]?.seq || 0)]));
+    }
+    if (table.room?.gameState?.message) setArenaStatus(table.room.gameState.message);
+  }, [roundId, table.room?.gameState?.updatedAt, table.isHost, roomSnapshot, table.players, table.room?.inputs, setArenaStatus]);
+
+  useEffect(() => {
+    if (!table.isHost || table.room?.status !== "playing") return;
+    for (const player of table.players) {
+      if (player.uid === table.user?.uid) continue;
+      const seq = Number(table.room?.inputs?.[player.uid]?.seq || 0);
+      const previous = Number(lastInputSeqRef.current[player.uid] || 0);
+      if (seq <= previous) continue;
+      lastInputSeqRef.current[player.uid] = seq;
+      if (player.connected === false) continue;
+      const seat = Number(player.seat);
+      if (triggerChomp(roundRef.current, seat)) setArenaStatus(`${player.nickname}'s ${CHOMPERS[seat]?.name || "monster"} lunges!`);
+    }
+  }, [table.room?.inputs, table.room?.status, table.players, table.isHost, table.user?.uid, setArenaStatus]);
+
+  useEffect(() => {
+    if (!gameVisible) return undefined;
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    if (!ctx) return undefined;
+    let cancelled = false;
+
+    const render = (now) => {
+      if (cancelled) return;
+      const currentTable = tableRef.current;
+      const round = roundRef.current;
+      const dt = lastRef.current ? Math.min(0.033, (now - lastRef.current) / 1000) : 0;
+      lastRef.current = now;
+
+      if (currentTable.isHost && currentTable.room?.status === "playing" && !round.finished) {
+        const connectedSeats = new Set(playersRef.current.filter((player) => player.connected !== false).map((player) => Number(player.seat)));
+        round.chompers.forEach((chomper) => { chomper.isHuman = connectedSeats.has(chomper.index); });
+        stepRound(round, dt);
+        publishClockRef.current += dt;
+
+        if (round.lastCapture) {
+          const captured = round.lastCapture;
+          const monster = round.chompers[captured.index];
+          const player = playersRef.current.find((candidate) => Number(candidate.seat) === captured.index);
+          const owner = player?.nickname || monster.name;
+          setArenaStatus(captured.count > 1 ? `${owner} MEGA CHOMPED ${captured.count}!` : `${owner} swallowed one!`);
+          round.lastCapture = null;
+        }
+
+        if (publishClockRef.current >= ONLINE_SNAPSHOT_INTERVAL) {
+          publishClockRef.current = 0;
+          syncOnlineSnapshot();
+          if (!publishBusyRef.current) {
+            publishBusyRef.current = true;
+            currentTable.publish(cloneRound(round), statusRef.current, false).finally(() => { publishBusyRef.current = false; });
+          }
+        }
+
+        if (round.finished) {
+          const winners = winnersForRound(round);
+          const playerNames = winners.map((winner) => playersRef.current.find((player) => Number(player.seat) === winner.index)?.nickname || winner.name);
+          const finalStatus = winners.length > 1 ? `${playerNames.join(" & ")} tie for the Ball Throne!` : `${playerNames[0]} is the undisputed Ball Goblin!`;
+          setArenaStatus(finalStatus);
+          syncOnlineSnapshot();
+          currentTable.publish(cloneRound(round), finalStatus, true);
+        }
+      }
+
+      drawArena(ctx, round);
+      frameRef.current = requestAnimationFrame(render);
+    };
+
+    frameRef.current = requestAnimationFrame(render);
+    return () => { cancelled = true; cancelAnimationFrame(frameRef.current); };
+  }, [gameVisible, setArenaStatus, syncOnlineSnapshot]);
+
+  const mySeat = Number(table.me?.seat);
+  const myMonster = Number.isInteger(mySeat) ? CHOMPERS[mySeat] : null;
+
+  const chompOnline = useCallback(() => {
+    const current = tableRef.current;
+    if (current.room?.status !== "playing" || !current.me || current.me.connected === false) return false;
+    const seat = Number(current.me.seat);
+    if (current.isHost) {
+      const fired = triggerChomp(roundRef.current, seat);
+      if (fired) setArenaStatus(`${current.me.nickname}'s ${CHOMPERS[seat]?.name || "monster"} lunges!`);
+      return fired;
+    }
+    current.chomp();
+    return true;
+  }, [setArenaStatus]);
+
+  useEffect(() => {
+    if (table.room?.status !== "playing") return undefined;
+    const handler = (event) => {
+      if (event.code !== "Space" && event.code !== "Enter" && event.code !== myMonster?.controlCode) return;
+      event.preventDefault();
+      chompOnline();
+    };
+    window.addEventListener("keydown", handler, { passive: false });
+    return () => window.removeEventListener("keydown", handler);
+  }, [table.room?.status, myMonster?.controlCode, chompOnline]);
+
+  const buildRound = useCallback(() => {
+    const next = createRound({ humanCount: 4 });
+    const humanSeats = new Set(table.players.filter((player) => player.connected !== false).map((player) => Number(player.seat)));
+    next.chompers.forEach((chomper) => { chomper.isHuman = humanSeats.has(chomper.index); });
+    return next;
+  }, [table.players]);
+
+  const startOnlineRound = useCallback(async (rematch = false) => {
+    const next = buildRound();
+    const gameState = await table.start(cloneRound(next), { rematch });
+    if (!gameState) return;
+    roundRef.current = cloneRound(gameState.snapshot);
+    activeRoundIdRef.current = gameState.roundId;
+    lastRef.current = performance.now();
+    publishClockRef.current = 0;
+    lastInputSeqRef.current = Object.fromEntries(table.players.map((player) => [player.uid, Number(table.room?.inputs?.[player.uid]?.seq || 0)]));
+    setArenaStatus(gameState.message || "BALLZ RELEASED. CHOMP!");
+    syncOnlineSnapshot();
+  }, [buildRound, table, setArenaStatus, syncOnlineSnapshot]);
+
+  const remaining = useMemo(() => snapshot.balls.filter((ball) => ball.capturedBy == null).length, [snapshot]);
+  const timeLeft = Math.max(0, Math.ceil(CHOMP_RULES.roundSeconds - snapshot.elapsed));
+  const winners = snapshot.finished ? winnersForRound(snapshot) : [];
+  const winnerNames = winners.map((winner) => table.players.find((player) => Number(player.seat) === winner.index)?.nickname || winner.name);
+  const readyCount = table.players.filter((player) => player.ready && player.connected !== false).length;
+  const allReady = table.players.length >= 2 && readyCount === table.players.length;
+  const joinUrl = table.roomCode ? `${window.location.origin}${window.location.pathname}?game=chompageddon&room=${table.roomCode}` : "";
+
+  async function copyJoinLink() {
+    try {
+      await navigator.clipboard.writeText(joinUrl);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch {
+      setCopied(false);
+    }
+  }
+
+  async function exitOnline(destination = "modes") {
+    await table.leave();
+    if (destination === "hub") navigateToHub();
+    else onBackToModes();
+  }
+
+  return (
+    <main className="chompageddon-shell">
+      <section className="chompageddon-page">
+        <header className="chomp-header">
+          <div><p className="chomp-kicker">Physics party arcade · online mode</p><h1>CHOMPAGEDDON!</h1><p className="chomp-tagline">One shared ball pit. Up to four browsers. Absolutely no mercy.</p></div>
+          <div className="chomp-header-actions"><button type="button" className="chomp-back" onClick={() => exitOnline("modes")}>← Modes</button><button type="button" className="chomp-back" onClick={() => exitOnline("hub")}>All games</button></div>
+        </header>
+
+        {!table.firebaseReady ? <section className="chomp-online-error"><h2>Online play needs Firebase</h2><p>The local game still works, but this deployment is missing its Firebase configuration.</p></section> : null}
+        {table.error ? <div className="chomp-online-error" role="alert">{table.error}</div> : null}
+
+        {table.firebaseReady && table.mode === "choose" ? (
+          <section className="chomp-online-entry">
+            <span className="warning-tape">INTERNET CHAOS ENABLED</span><h2>Host a fresh disaster or join one already in progress.</h2><p>Each human gets one monster on their own device. Two players minimum; bots take any empty seats.</p>
+            <div className="chomp-online-entry-actions"><button type="button" onClick={() => table.setMode("host")}>HOST A GAME</button><button type="button" className="secondary" onClick={() => table.setMode("join")}>JOIN WITH CODE</button></div>
+          </section>
+        ) : null}
+
+        {table.firebaseReady && (table.mode === "host" || table.mode === "join") ? (
+          <section className="chomp-online-form-wrap">
+            <form className="chomp-online-form" onSubmit={(event) => { event.preventDefault(); if (table.mode === "host") table.host(); else table.join(); }}>
+              <span className="warning-tape">{table.mode === "host" ? "CREATE ROOM" : "JOIN ROOM"}</span>
+              <h2>{table.mode === "host" ? "Name the host monster." : "Enter the arena."}</h2>
+              <label>Nickname<input autoFocus maxLength={18} value={table.nickname} onChange={(event) => table.setNickname(event.target.value)} placeholder="Your name" /></label>
+              {table.mode === "join" ? <label>Room code<input maxLength={4} value={table.joinCode} onChange={(event) => table.setJoinCode(event.target.value.toUpperCase())} placeholder="ABCD" /></label> : null}
+              <div className="chomp-online-entry-actions"><button type="submit" disabled={table.busy || !table.user || !table.nickname.trim()}>{table.busy ? "CONNECTING…" : table.mode === "host" ? "CREATE CHOMP ROOM" : "JOIN CHOMP ROOM"}</button><button type="button" className="secondary" onClick={() => table.setMode("choose")}>BACK</button></div>
+            </form>
+          </section>
+        ) : null}
+
+        {table.firebaseReady && table.mode === "room" && table.room?.status === "lobby" ? (
+          <section className="chomp-online-lobby">
+            <div className="chomp-online-lobby-top">
+              <div><span className="warning-tape">ONLINE LOBBY</span><h2>Room <strong>{table.roomCode}</strong></h2><p>{table.isHost ? "Share the code or link. Start when every connected human is ready." : `You are ${myMonster?.name || "a monster"}. Ready up when your thumbs are prepared.`}</p></div>
+              <div className="chomp-online-code-actions"><button type="button" onClick={copyJoinLink}>{copied ? "COPIED!" : "COPY JOIN LINK"}</button><small>{joinUrl}</small></div>
+            </div>
+            <OnlineRoomRoster table={table} />
+            <div className="chomp-online-lobby-actions">
+              {table.isHost ? <button type="button" className="release-balls" disabled={table.busy || !allReady} onClick={() => startOnlineRound(false)}>RELEASE THE BALLZ ONLINE →</button> : <button type="button" className={`release-balls ${table.me?.ready ? "ready" : ""}`} disabled={table.busy} onClick={() => table.ready(!table.me?.ready)}>{table.me?.ready ? "✓ READY — TAP TO UNREADY" : "I'M READY TO CHOMP"}</button>}
+              <p>{table.players.length}/4 humans · {readyCount}/{table.players.length} ready · empty seats become bots</p>
+            </div>
+          </section>
+        ) : null}
+
+        {table.firebaseReady && table.mode === "room" && gameVisible ? (
+          <>
+            <div className="chomp-online-roombar"><span>🌐 ROOM <b>{table.roomCode}</b></span><span>{table.me?.nickname} = <b>{myMonster?.name}</b></span><span>{table.isHost ? "HOST / PHYSICS AUTHORITY" : "CONNECTED PLAYER"}</span></div>
+            <OnlineScoreboard snapshot={snapshot} players={table.players} />
+            <section className="chomp-hud" aria-live="polite"><div><small>TIME</small><strong>{timeLeft}s</strong></div><p>{status}</p><div><small>BALLZ LEFT</small><strong>{remaining}</strong></div></section>
+
+            <section className="chomp-arena-frame chomp-online-arena">
+              <canvas ref={canvasRef} width={CHOMP_RULES.arenaSize} height={CHOMP_RULES.arenaSize} onPointerDown={chompOnline} aria-label={`Online Chompageddon arena. You control ${myMonster?.name || "your monster"}. Tap or press Space to chomp.`} />
+              {table.room?.status === "finished" ? <div className="chomp-victory"><span>👑</span><h2>{winners.length > 1 ? "ABSURD ONLINE TIE!" : `${winnerNames[0] || "Some monster"} WINS!`}</h2><p>{winners.length > 1 ? `${winnerNames.join(" & ")} achieved identical levels of internet gluttony.` : `${winners[0]?.score || 0} ballz consumed. Across the internet. Disgusting.`}</p>{table.isHost ? <><button type="button" onClick={() => startOnlineRound(true)}>INSTANT REMATCH</button><button type="button" className="secondary" onClick={() => table.lobby()}>RETURN TO LOBBY</button></> : <p className="chomp-online-waiting">Waiting for the host to choose rematch or lobby…</p>}</div> : null}
+            </section>
+
+            {table.room?.status === "playing" ? <section className="chomp-online-control" aria-label="Your online Chompageddon control"><button type="button" className={`monster-${mySeat}`} onPointerDown={(event) => { event.stopPropagation(); chompOnline(); }}><span>👹</span><div><small>{table.me?.nickname} · {myMonster?.name}</small><strong>CHOMP!</strong><kbd>SPACE / TAP</kbd></div></button><p>Only your monster responds on this device. Every other human controls their own browser.</p></section> : null}
+          </>
+        ) : null}
+
+        <HowTo />
+      </section>
+    </main>
+  );
+}
+
+function initialMode() {
+  if (typeof window === "undefined") return "";
+  return new URLSearchParams(window.location.search).get("room") ? "online" : "";
+}
+
+export default function ChompageddonGame() {
+  const [playMode, setPlayMode] = useState(initialMode);
+  if (!playMode) return <ModeChooser onLocal={() => setPlayMode("local")} onOnline={() => setPlayMode("online")} />;
+  if (playMode === "online") return <OnlineChompageddonGame onBackToModes={() => setPlayMode("")} />;
+  return <LocalChompageddonGame onBackToModes={() => setPlayMode("")} />;
+}
+
+export const gameInfo = Object.freeze({ id: "chompageddon", name: "Chompageddon!", players: "1–4 local or 2–4 online players" });

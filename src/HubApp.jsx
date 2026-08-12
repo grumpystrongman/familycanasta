@@ -23,7 +23,7 @@ const GAME_CATALOG = [
   { id: "indians", name: "Indians", icon: "♠", eyebrow: "Progressive Spades", description: "Play partnership Spades while another complete low rank disappears every hand.", players: "4 players", status: "Planned" },
   { id: "poker", name: "Five-Card Draw", icon: "★", eyebrow: "Family poker points", description: "Classic draw poker with game points only: bet, draw, bluff, and compare hands.", players: "2–6 players", status: "Planned" },
   { id: "golf", name: "Six Card Golf", icon: "⛳", eyebrow: "Low score wins", description: "Improve a six-card grid across nine holes and cancel matching columns to zero.", players: "2–4 players", status: "Planned" },
-  { id: "chompageddon", name: "Chompageddon!", icon: "👹", eyebrow: "Physics party arcade", description: "Outrageous monsters lunge into a bouncing ball pit. Time your chomps, steal the clusters, and become the greediest creature at the table.", players: "1–4 local players", status: "Planned" },
+  { id: "chompageddon", name: "Chompageddon!", icon: "👹", eyebrow: "Physics party arcade", description: "Outrageous monsters lunge into a shared bouncing ball pit. Play solo, cause couch chaos, or battle friends online with room codes and bots filling empty seats.", players: "1–4 local · 2–4 online", status: "Planned" },
   { id: "gofyourself", name: "Go F' Yourself", icon: "😈", eyebrow: "Go Fish after dark · 18+", description: "Go Fish with profanity, raunchy innuendo, toxic exes, bad decisions, and absolutely no dignity.", players: "2–6 adults", status: "Planned" },
 ];
 
