@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getAnalytics, isSupported as analyticsIsSupported } from "firebase/analytics";
-import { getAuth, onAuthStateChanged, signInAnonymously } from "firebase/auth";
+import { getAuth, signInAnonymously } from "firebase/auth";
 import { getDatabase } from "firebase/database";
 
 const firebaseConfig = {
@@ -28,6 +28,7 @@ let app;
 let auth;
 let db;
 let analytics = null;
+let anonymousAuthPromise = null;
 
 if (firebaseReady) {
   app = initializeApp(firebaseConfig);
@@ -54,26 +55,22 @@ export function ensureAnonymousAuth() {
     );
   }
 
-  return new Promise((resolve, reject) => {
-    const unsubscribe = onAuthStateChanged(
-      auth,
-      async (user) => {
-        if (user) {
-          unsubscribe();
-          resolve(user);
-          return;
-        }
+  if (auth.currentUser) return Promise.resolve(auth.currentUser);
 
-        try {
-          const credential = await signInAnonymously(auth);
-          unsubscribe();
-          resolve(credential.user);
-        } catch (error) {
-          unsubscribe();
-          reject(error);
-        }
-      },
-      reject
-    );
-  });
+  // Several Party Stage hooks can ask for auth at nearly the same time (initial
+  // page bootstrap plus a quick Host/Join tap). Keep those calls on one promise
+  // so mobile browsers never race multiple anonymous sign-ins against auth-state
+  // restoration.
+  if (!anonymousAuthPromise) {
+    anonymousAuthPromise = (async () => {
+      if (typeof auth.authStateReady === "function") await auth.authStateReady();
+      if (auth.currentUser) return auth.currentUser;
+      const credential = await signInAnonymously(auth);
+      return credential.user;
+    })().finally(() => {
+      anonymousAuthPromise = null;
+    });
+  }
+
+  return anonymousAuthPromise;
 }

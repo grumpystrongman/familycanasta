@@ -18,6 +18,7 @@ import {
 } from "./partyRoomService";
 
 const SESSION_MAX_AGE = 12 * 60 * 60 * 1000;
+const AUTH_PENDING_USER = Object.freeze({ uid: "" });
 
 function roomFromUrl() {
   return new URLSearchParams(window.location.search).get("room") || "";
@@ -51,7 +52,11 @@ function clearSession(gameId) { localStorage.removeItem(sessionKey(gameId)); }
 export default function usePartyRoom(definition) {
   const initialSession = useMemo(() => savedSession(definition.id), [definition.id]);
   const deepLinkRoom = roomFromUrl();
-  const [user, setUser] = useState(null);
+  // The entry screen only needs a truthy value to allow Host/Join taps. Keep a
+  // lightweight pending marker here so a slow mobile auth restore does not make
+  // a fully completed join form look permanently disabled. Every operation that
+  // needs a Firebase uid still calls requireUser() before touching room state.
+  const [user, setUser] = useState(firebaseReady ? AUTH_PENDING_USER : null);
   const [mode, setMode] = useState(initialSession?.role || (deepLinkRoom ? "join" : "choose"));
   const [nickname, setNickname] = useState(localStorage.getItem("familyPartyNickname") || "");
   const [avatar, setAvatar] = useState(localStorage.getItem("familyPartyAvatar") || PARTY_AVATARS[0]);
@@ -66,8 +71,15 @@ export default function usePartyRoom(definition) {
     ensureAnonymousAuth().then(setUser).catch((event) => setError(event.message));
   }, []);
 
+  async function requireUser() {
+    if (user?.uid) return user;
+    const nextUser = await ensureAnonymousAuth();
+    setUser(nextUser);
+    return nextUser;
+  }
+
   useEffect(() => {
-    if (!roomCode || !user) return undefined;
+    if (!roomCode || !user?.uid) return undefined;
     return watchPartyRoom(roomCode, (nextRoom) => {
       setRoom(nextRoom);
       if (!nextRoom) {
@@ -79,16 +91,16 @@ export default function usePartyRoom(definition) {
   }, [roomCode, user?.uid, definition.id, deepLinkRoom]);
 
   const players = useMemo(() => partyPlayers(room), [room]);
-  const me = user ? room?.members?.[user.uid] || null : null;
-  const isHost = Boolean(user && room?.hostUid === user.uid);
+  const me = user?.uid ? room?.members?.[user.uid] || null : null;
+  const isHost = Boolean(user?.uid && room?.hostUid === user.uid);
 
   useEffect(() => {
-    if (!user || !roomCode || !me) return undefined;
+    if (!user?.uid || !roomCode || !me) return undefined;
     const memberRef = ref(db, `rooms/${roomCode}/members/${user.uid}`);
     update(memberRef, { connected: true }).catch(() => {});
     onDisconnect(ref(db, `rooms/${roomCode}/members/${user.uid}/connected`)).set(false).catch(() => {});
     return undefined;
-  }, [user, roomCode, me?.uid]);
+  }, [user?.uid, roomCode, me?.uid]);
 
   async function run(operation) {
     setBusy(true);
@@ -112,9 +124,9 @@ export default function usePartyRoom(definition) {
   }
 
   async function host() {
-    if (!user) return;
     await run(async () => {
-      const code = await createPartyRoom({ user, gameId: definition.id, maxPlayers: definition.maxPlayers, settings: definition.defaultSettings || {} });
+      const currentUser = await requireUser();
+      const code = await createPartyRoom({ user: currentUser, gameId: definition.id, maxPlayers: definition.maxPlayers, settings: definition.defaultSettings || {} });
       saveSession(definition.id, code, "host");
       setJoinCode(code);
       setRoomCode(code);
@@ -123,11 +135,11 @@ export default function usePartyRoom(definition) {
   }
 
   async function join() {
-    if (!user) return;
     await run(async () => {
+      const currentUser = await requireUser();
       localStorage.setItem("familyPartyNickname", nickname.trim());
       localStorage.setItem("familyPartyAvatar", avatar);
-      const code = await joinPartyRoom({ code: joinCode, user, nickname, avatar, gameId: definition.id });
+      const code = await joinPartyRoom({ code: joinCode, user: currentUser, nickname, avatar, gameId: definition.id });
       saveSession(definition.id, code, "player");
       setRoomCode(code);
       setMode("player");
@@ -135,17 +147,17 @@ export default function usePartyRoom(definition) {
   }
 
   function ready(value) {
-    if (!roomCode || !user || isHost) return;
+    if (!roomCode || !user?.uid || isHost) return;
     run(() => setPartyReady(roomCode, user.uid, value)).catch(() => {});
   }
 
   function start() {
-    if (!roomCode || !user || !isHost) return;
+    if (!roomCode || !user?.uid || !isHost) return;
     run(() => startPartyGame(roomCode, user.uid, definition.createGameState, definition.minPlayers)).catch(() => {});
   }
 
   function replay() {
-    if (!roomCode || !user || !isHost) return;
+    if (!roomCode || !user?.uid || !isHost) return;
     run(() => resetPartyRoomToLobby(roomCode, user.uid)).catch(() => {});
   }
 
@@ -155,28 +167,28 @@ export default function usePartyRoom(definition) {
   }
 
   function setSettings(patch) {
-    if (!roomCode || !user || !isHost) return;
+    if (!roomCode || !user?.uid || !isHost) return;
     run(() => updatePartySettings(roomCode, user.uid, patch)).catch(() => {});
   }
 
   function kick(uid) {
-    if (!roomCode || !user || !isHost) return;
+    if (!roomCode || !user?.uid || !isHost) return;
     run(() => kickPartyPlayer(roomCode, user.uid, uid)).catch(() => {});
   }
 
   async function leave() {
-    if (roomCode && user && !isHost) await run(() => leavePartyRoom(roomCode, user.uid)).catch(() => {});
+    if (roomCode && user?.uid && !isHost) await run(() => leavePartyRoom(roomCode, user.uid)).catch(() => {});
     resetLocal();
   }
 
   async function close() {
-    if (!roomCode || !user || !isHost) return;
+    if (!roomCode || !user?.uid || !isHost) return;
     await run(() => closePartyRoom(roomCode, user.uid)).catch(() => {});
     resetLocal();
   }
 
   async function gameRoom() {
-    if (roomCode && user) {
+    if (roomCode && user?.uid) {
       if (isHost) await run(() => closePartyRoom(roomCode, user.uid)).catch(() => {});
       else await run(() => leavePartyRoom(roomCode, user.uid)).catch(() => {});
     }
