@@ -1,0 +1,402 @@
+.chomp-header-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.chomp-mode-launchpad,
+.chomp-online-entry,
+.chomp-online-form-wrap,
+.chomp-online-lobby {
+  margin: 18px 0 22px;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 28px;
+  background: linear-gradient(145deg, rgba(21,53,47,.93), rgba(5,22,21,.96));
+  box-shadow: 0 22px 55px rgba(0,0,0,.28);
+}
+
+.chomp-mode-launchpad,
+.chomp-online-entry,
+.chomp-online-form-wrap {
+  padding: clamp(22px, 4vw, 42px);
+}
+
+.chomp-mode-heading,
+.chomp-online-entry {
+  text-align: center;
+}
+
+.chomp-mode-heading h2,
+.chomp-online-entry h2,
+.chomp-online-form h2,
+.chomp-online-lobby h2 {
+  margin: 12px 0 8px;
+  font-size: clamp(1.55rem, 3vw, 2.45rem);
+  line-height: 1;
+}
+
+.chomp-mode-heading p,
+.chomp-online-entry p,
+.chomp-online-form p,
+.chomp-online-lobby p {
+  color: rgba(255,255,255,.72);
+}
+
+.chomp-mode-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 28px;
+}
+
+.chomp-mode-card {
+  min-height: 280px;
+  padding: 28px;
+  border: 1px solid rgba(255,255,255,.13);
+  border-radius: 24px;
+  background: rgba(0,0,0,.2);
+  color: #fff;
+  text-align: left;
+  cursor: pointer;
+  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+
+.chomp-mode-card:hover,
+.chomp-mode-card:focus-visible {
+  transform: translateY(-4px);
+  border-color: rgba(255,219,90,.72);
+  box-shadow: 0 18px 38px rgba(0,0,0,.26);
+}
+
+.chomp-mode-card.online {
+  background: linear-gradient(145deg, rgba(42,69,108,.55), rgba(13,31,49,.72));
+}
+
+.chomp-mode-icon {
+  display: block;
+  font-size: 3rem;
+  margin-bottom: 18px;
+}
+
+.chomp-mode-card small {
+  color: #ffda62;
+  font-weight: 900;
+  letter-spacing: .12em;
+}
+
+.chomp-mode-card strong {
+  display: block;
+  margin: 8px 0 12px;
+  font-size: clamp(1.35rem, 2.5vw, 2rem);
+}
+
+.chomp-mode-card p {
+  min-height: 70px;
+  color: rgba(255,255,255,.72);
+}
+
+.chomp-mode-card b {
+  display: block;
+  margin-top: 22px;
+  color: #fff;
+}
+
+.chomp-online-entry-actions,
+.chomp-online-lobby-actions,
+.chomp-online-code-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.chomp-online-entry-actions {
+  margin-top: 24px;
+}
+
+.chomp-online-entry-actions button,
+.chomp-online-code-actions button {
+  border: 0;
+  border-radius: 999px;
+  padding: 14px 20px;
+  background: #ffda62;
+  color: #17120b;
+  font-weight: 1000;
+  cursor: pointer;
+}
+
+.chomp-online-entry-actions button.secondary,
+.chomp-online-code-actions button.secondary {
+  background: rgba(255,255,255,.1);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,.18);
+}
+
+.chomp-online-entry-actions button:disabled,
+.chomp-online-code-actions button:disabled,
+.chomp-online-lobby-actions button:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+.chomp-online-form {
+  width: min(520px, 100%);
+  margin: 0 auto;
+}
+
+.chomp-online-form label {
+  display: grid;
+  gap: 8px;
+  margin: 18px 0;
+  font-weight: 900;
+}
+
+.chomp-online-form input {
+  width: 100%;
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: 16px;
+  padding: 15px 16px;
+  background: rgba(0,0,0,.24);
+  color: #fff;
+  font: inherit;
+  font-size: 1.08rem;
+  box-sizing: border-box;
+}
+
+.chomp-online-form input:focus {
+  outline: 2px solid rgba(255,218,98,.58);
+  outline-offset: 2px;
+}
+
+.chomp-online-error {
+  margin: 16px 0;
+  padding: 16px 20px;
+  border: 1px solid rgba(255,103,103,.48);
+  border-radius: 16px;
+  background: rgba(107,23,23,.42);
+  color: #ffe8e8;
+}
+
+.chomp-online-lobby {
+  padding: clamp(18px, 3vw, 32px);
+}
+
+.chomp-online-lobby-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, .65fr);
+  gap: 22px;
+  align-items: start;
+  margin-bottom: 24px;
+}
+
+.chomp-online-lobby-top h2 strong {
+  color: #ffda62;
+  letter-spacing: .12em;
+}
+
+.chomp-online-code-actions {
+  justify-content: flex-end;
+  align-items: flex-end;
+  flex-direction: column;
+}
+
+.chomp-online-code-actions small {
+  max-width: 100%;
+  color: rgba(255,255,255,.52);
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+.chomp-online-roster {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.chomp-online-roster article {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  min-height: 92px;
+  padding: 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,.1);
+  background: rgba(0,0,0,.2);
+}
+
+.chomp-online-roster article.occupied {
+  border-color: rgba(255,255,255,.2);
+}
+
+.chomp-online-roster article.ready {
+  box-shadow: inset 0 0 0 1px rgba(116,225,77,.35);
+}
+
+.chomp-online-roster h3,
+.chomp-online-roster p {
+  margin: 0;
+}
+
+.chomp-online-roster small {
+  color: rgba(255,255,255,.55);
+  font-weight: 900;
+}
+
+.chomp-online-monster {
+  font-size: 2.25rem;
+}
+
+.chomp-ready-state {
+  font-size: .72rem;
+  letter-spacing: .08em;
+  color: #ffda62;
+}
+
+.chomp-online-lobby-actions {
+  margin-top: 24px;
+  flex-direction: column;
+}
+
+.chomp-online-lobby-actions .release-balls {
+  width: min(620px, 100%);
+}
+
+.chomp-online-lobby-actions .release-balls.ready {
+  background: linear-gradient(90deg, #73e14d, #b5f85e);
+}
+
+.chomp-online-lobby-actions p {
+  margin: 0;
+  font-size: .9rem;
+}
+
+.chomp-online-roombar {
+  display: flex;
+  gap: 10px 18px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  margin: 10px 0 12px;
+  padding: 11px 16px;
+  border-radius: 16px;
+  background: rgba(0,0,0,.24);
+  border: 1px solid rgba(255,255,255,.08);
+  color: rgba(255,255,255,.7);
+  font-size: .82rem;
+  letter-spacing: .04em;
+}
+
+.chomp-online-roombar b {
+  color: #ffda62;
+}
+
+.chomp-online-scoreboard article.disconnected {
+  opacity: .72;
+}
+
+.chomp-online-scoreboard em {
+  display: block;
+  margin-top: 3px;
+  color: #ffda62;
+  font-size: .66rem;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.chomp-online-arena canvas {
+  touch-action: manipulation;
+}
+
+.chomp-online-control {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  margin: 18px 0 6px;
+}
+
+.chomp-online-control > button {
+  width: min(520px, 100%);
+  min-height: 96px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  border: 0;
+  border-radius: 24px;
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+  box-shadow: 0 15px 30px rgba(0,0,0,.25);
+}
+
+.chomp-online-control > button.monster-0 { background: linear-gradient(135deg, #8d267e, #ec4de6); }
+.chomp-online-control > button.monster-1 { background: linear-gradient(135deg, #2e7626, #73e14d); color: #10210c; }
+.chomp-online-control > button.monster-2 { background: linear-gradient(135deg, #155f88, #43bdf6); color: #071c29; }
+.chomp-online-control > button.monster-3 { background: linear-gradient(135deg, #b63f23, #ff843c); }
+
+.chomp-online-control > button > span {
+  font-size: 2.5rem;
+}
+
+.chomp-online-control > button div {
+  display: grid;
+  gap: 2px;
+  text-align: left;
+}
+
+.chomp-online-control > button strong {
+  font-size: 1.5rem;
+}
+
+.chomp-online-control > button kbd {
+  justify-self: start;
+  margin-top: 3px;
+  border: 1px solid rgba(255,255,255,.4);
+  border-radius: 7px;
+  padding: 2px 7px;
+  background: rgba(0,0,0,.2);
+  color: inherit;
+}
+
+.chomp-online-control p,
+.chomp-online-waiting {
+  margin: 0;
+  color: rgba(255,255,255,.62);
+  text-align: center;
+}
+
+@media (max-width: 760px) {
+  .chomp-mode-grid,
+  .chomp-online-roster,
+  .chomp-online-lobby-top {
+    grid-template-columns: 1fr;
+  }
+
+  .chomp-mode-card {
+    min-height: 0;
+  }
+
+  .chomp-online-code-actions {
+    align-items: flex-start;
+  }
+
+  .chomp-online-code-actions small {
+    text-align: left;
+  }
+
+  .chomp-online-roster article {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .chomp-ready-state {
+    grid-column: 2;
+  }
+
+  .chomp-header-actions {
+    justify-content: flex-start;
+  }
+}
