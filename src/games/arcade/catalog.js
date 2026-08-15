@@ -78,6 +78,7 @@ export const PERSONAL_ARCADE_GAMES = [
   localGame("40love", "Forty-Love", 1984, "Taito", "Tennis", "mame2003_plus"),
   localGame("64street", "64th. Street: A Detective Story", 1991, "Jaleco", "Beat 'em up", "mame2003_plus"),
   localGame("720", "720°", 1986, "Atari Games", "Skateboarding", "mame2003_plus"),
+  localGame("7jigen", "7jigen no Youseitachi - Mahjong 7 Dimensions", 1990, "Dynax", "Mahjong", "mame2003_plus", "Playable with imperfect graphics."),
   localGame("88games", "'88 Games", 1988, "Konami", "Sports", "mame2003_plus"),
   localGame("8ball", "Video Eight Ball", 1982, "Century Electronics", "Pool", "mame2003_plus", "Playable with imperfect sound."),
   localGame("8ballact", "Eight Ball Action", 1984, "Seatongrove", "Arcade action", "mame2003_plus"),
