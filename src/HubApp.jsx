@@ -4,13 +4,12 @@ import GameLearningCenter from "./platform/GameLearningCenter";
 import TabletopLearningCenter from "./platform/TabletopLearningCenter";
 import LayoutModeControl from "./platform/LayoutModeControl";
 import { GAME_CATALOG, GAME_CATEGORIES } from "./gameCatalog.js";
-import "./arcadeHub.css";
 
 const gameLoaders = import.meta.glob("./games/*/index.jsx");
 const LEGACY_GUIDANCE_GAMES = new Set(["canasta", "hearts", "spades", "rummy"]);
 const TABLETOP_GUIDANCE_GAMES = new Set(["gofish", "gofyourself", "connect4", "battleship", "hnefatafl", "chompageddon"]);
 const PARTY_STAGE_GAMES = new Set(["punchline", "lastonealive", "doodlealibi"]);
-const IMMERSIVE_FULLSCREEN_GAMES = new Set([...PARTY_STAGE_GAMES, "pixelquest", "slumlord", "arcade"]);
+const IMMERSIVE_FULLSCREEN_GAMES = new Set([...PARTY_STAGE_GAMES, "pixelquest", "slumlord"]);
 
 function selectedGameId() { return new URLSearchParams(window.location.search).get("game") || ""; }
 function gameModulePath(gameId) { return `./games/${gameId}/index.jsx`; }
@@ -34,8 +33,8 @@ function GameHub() {
   return (
     <main className="family-game-hub">
       <section className="hub-hero">
-        <div><p className="hub-kicker">Family game night</p><h1>Pick a shelf. Find your game.</h1><p className="hub-intro">The library is organized the way people actually browse a game night: card games, board games, video games, and a dedicated arcade. Every title still keeps its own rules, state, table, and tests while sharing the same front door.</p></div>
-        <div className="hub-deck-mark" aria-hidden="true"><span>🂡</span><span>♟</span><span>🎮</span><span>🕹️</span></div>
+        <div><p className="hub-kicker">Family game night</p><h1>Pick a shelf. Find your game.</h1><p className="hub-intro">The library is organized the way people actually browse a game night: card games, board games, and video games. Every title keeps its own rules, state, table, and tests while sharing the same front door.</p></div>
+        <div className="hub-deck-mark" aria-hidden="true"><span>🂡</span><span>♟</span><span>🎮</span></div>
       </section>
 
       <nav className="hub-category-nav" aria-label="Game library categories">
@@ -70,7 +69,7 @@ function GameHub() {
         })}
       </div>
 
-      <footer className="hub-footer"><strong>Family Game Room</strong><span>Four shelves, one game night: cards, boards, video games, and arcade cabinets.</span></footer>
+      <footer className="hub-footer"><strong>Family Game Room</strong><span>Three shelves, one game night: cards, boards, and video games.</span></footer>
     </main>
   );
 }
