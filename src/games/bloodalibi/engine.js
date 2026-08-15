@@ -190,6 +190,7 @@ export function createBloodAlibiGame(members) {
   const hands = dealEvidence(members, solution);
   const positions = Object.fromEntries(members.map((member, index) => [member.uid, START_SPACES[index % START_SPACES.length]]));
   const suspectPositions = Object.fromEntries(SUSPECTS.map((suspect, index) => [suspect.id, LOCATIONS[index % LOCATIONS.length].id]));
+  const methodPositions = Object.fromEntries(METHODS.map((method, index) => [method.id, LOCATIONS[(index + 3) % LOCATIONS.length].id]));
   return {
     phase: "playing",
     roundNumber: 1,
@@ -202,6 +203,7 @@ export function createBloodAlibiGame(members) {
     eliminated: {},
     reveals: [],
     suspectPositions,
+    methodPositions,
     moveRemaining: 0,
     lastRoll: null,
     caseLog: [{ type: "opening", text: "A body was found before dawn. One suspect, one method, one room form the hidden truth." }],
@@ -281,6 +283,7 @@ export function reduceBloodAlibi(state, actorUid, action, members) {
     const methodId = validateChoice(action, "methodId", METHODS, "method");
     const candidates = [cardId("suspect", suspectId), cardId("method", methodId), cardId("location", investigationRoomId)];
     const suspectPositions = { ...(state.suspectPositions || {}), [suspectId]: investigationRoomId };
+    const methodPositions = { ...(state.methodPositions || {}), [methodId]: investigationRoomId };
     let refuter = null;
     let shownCard = null;
     for (let offset = 1; offset < members.length; offset += 1) {
@@ -291,10 +294,10 @@ export function reduceBloodAlibi(state, actorUid, action, members) {
     if (refuter) {
       reveals.push({ toUid: actorUid, fromUid: refuter.uid, cardId: shownCard, turn: state.turnNumber });
       caseLog.push({ type: "suggestion", uid: actorUid, text: `${current.nickname} placed ${SUSPECTS.find((item) => item.id === suspectId)?.name} in ${LOCATION_MAP[investigationRoomId].name} with ${METHODS.find((item) => item.id === methodId)?.name}; ${refuter.nickname} refuted it.` });
-      return advanceTurn({ ...state, positions, suspectPositions, reveals: reveals.slice(-80), caseLog: caseLog.slice(-50) }, members, currentIndex, `${refuter.nickname} produced an alibi card.`);
+      return advanceTurn({ ...state, positions, suspectPositions, methodPositions, reveals: reveals.slice(-80), caseLog: caseLog.slice(-50) }, members, currentIndex, `${refuter.nickname} produced an alibi card.`);
     }
     caseLog.push({ type: "suggestion", uid: actorUid, text: `${current.nickname}'s theory in ${LOCATION_MAP[investigationRoomId].name} could not be refuted.` });
-    return advanceTurn({ ...state, positions, suspectPositions, reveals: reveals.slice(-80), caseLog: caseLog.slice(-50) }, members, currentIndex, "Nobody at the table could refute the theory.");
+    return advanceTurn({ ...state, positions, suspectPositions, methodPositions, reveals: reveals.slice(-80), caseLog: caseLog.slice(-50) }, members, currentIndex, "Nobody at the table could refute the theory.");
   }
 
   if (action?.type === "accuse") {
