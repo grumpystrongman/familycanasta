@@ -164,7 +164,7 @@ export function chooseCheckersRobotMove(state, members) {
   const moves = legalCheckersMoves(state, current.uid, members);
   if (!moves.length) return null;
   const move = [...moves].sort((a, b) => {
-    if (Boolean(a.capture) !== Boolean(b.capture)) return a.capture != null ? -1 : 1;
+    if ((a.capture != null) !== (b.capture != null)) return a.capture != null ? -1 : 1;
     const ac = Math.abs(3.5 - colOf(a.to));
     const bc = Math.abs(3.5 - colOf(b.to));
     return ac - bc || a.from - b.from || a.to - b.to;
