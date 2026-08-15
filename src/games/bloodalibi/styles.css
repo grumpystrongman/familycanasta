@@ -334,7 +334,8 @@
 .blackglass-pawn.eliminated { filter: grayscale(1) opacity(.55); }
 .blackglass-hall-space .blackglass-pawn { transform: scale(.7); transform-origin: center; }
 
-.blackglass-suspect-marker {
+.blackglass-suspect-marker,
+.blackglass-method-marker {
   min-width: 25px;
   height: 19px;
   padding: 0 4px;
@@ -348,6 +349,12 @@
   font-size: 7px;
   font-weight: 950;
   letter-spacing: .06em;
+}
+.blackglass-method-marker {
+  color: #1b1714;
+  background: linear-gradient(145deg, #e5bf72, #8f6333);
+  border-color: rgba(255,244,212,.42);
+  min-width: 32px;
 }
 
 .blackglass-board-caption {
@@ -376,6 +383,64 @@
 .blackglass-evidence-card.suspect { border-left-color: #88333c; }
 .blackglass-evidence-card.method { border-left-color: #555b68; }
 .blackglass-evidence-card.location { border-left-color: #6b7455; }
+
+.blackglass-notebook {
+  margin-top: 14px;
+  border-top: 1px solid #cfc4bb;
+  padding-top: 12px;
+}
+.blackglass-notebook summary {
+  cursor: pointer;
+  font-weight: 950;
+  color: #3f3035;
+}
+.blackglass-notebook > p {
+  margin: 8px 0 12px;
+  color: #75686c;
+  font-size: 10px;
+  line-height: 1.45;
+}
+.blackglass-notebook section { margin-top: 10px; }
+.blackglass-notebook section h3 {
+  margin: 0 0 5px;
+  color: #8f303a;
+  font-size: 10px;
+  letter-spacing: .11em;
+  text-transform: uppercase;
+}
+.blackglass-notebook section > div { display: grid; gap: 4px; }
+.blackglass-note-row {
+  min-height: 31px;
+  width: 100%;
+  padding: 5px 7px 5px 9px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #d4c8bf;
+  border-radius: 8px;
+  background: #f8f3ed;
+  color: #4b4043;
+  text-align: left;
+  cursor: pointer;
+}
+.blackglass-note-row span { font-size: 11px; font-weight: 750; }
+.blackglass-note-row b {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #ded5ce;
+  color: #65575b;
+}
+.blackglass-note-row.watch { border-color: #bc8b39; background: #fff5da; }
+.blackglass-note-row.watch b { background: #d7a445; color: #24190a; }
+.blackglass-note-row.cleared { border-color: #9ba197; background: #e9ece6; color: #777d73; text-decoration: line-through; }
+.blackglass-note-row.cleared b { background: #697268; color: #fff; }
+.blackglass-note-row:disabled { cursor: default; opacity: .78; }
+
 .blackglass-privacy-note { font-size: 11px; line-height: 1.45; color: #786d70; border-top: 1px solid #cfc4bb; padding-top: 12px; }
 
 .blackglass-theory-panel {
