@@ -48,12 +48,13 @@ test("corner rooms have one-turn secret passages", () => {
   assert.equal(next.turnPhase, "investigate");
 });
 
-test("a theory requires a room and pulls the named suspect into the scene", () => {
+test("a theory requires a room and pulls the named suspect and method into the scene", () => {
   let state = createBloodAlibiGame(members);
   assert.throws(() => reduceBloodAlibi({ ...state, turnPhase:"investigate" }, "a", { type:"suggest", suspectId:"mara-voss", methodId:"nail-gun" }, members), /enter a room/i);
   state = { ...state, positions:{ ...state.positions, a:roomNodeId("atrium") }, turnPhase:"investigate" };
   const next = reduceBloodAlibi(state, "a", { type:"suggest", suspectId:"mara-voss", methodId:"nail-gun" }, members);
   assert.equal(next.suspectPositions["mara-voss"], "atrium");
+  assert.equal(next.methodPositions["nail-gun"], "atrium");
   assert.equal(next.currentPlayerIndex, 1);
   assert.equal(next.turnPhase, "roll");
 });
