@@ -138,7 +138,7 @@ function pseudoMovesForPiece(board, from, state, includeCastle = true) {
       const to = indexOf(captureRow, captureColumn);
       const target = board[to];
       if (target && target.color !== piece.color && target.type !== "k") moves.push({ from, to, capture: target, promotion: captureRow === promotionRow });
-      if (!target && Number(state?.enPassant) === to) {
+      if (!target && state?.enPassant != null && Number(state.enPassant) === to) {
         const captureIndex = indexOf(row, captureColumn);
         const captured = board[captureIndex];
         if (captured?.type === "p" && captured.color !== piece.color) moves.push({ from, to, enPassantCapture: captureIndex, capture: captured });
