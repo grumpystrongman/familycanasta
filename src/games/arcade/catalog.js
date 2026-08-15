@@ -11,12 +11,7 @@ export const LEGAL_ARCADE_GAMES = [
   { id: "fax", title: "FAX", year: 1983, maker: "Exidy", genre: "Trivia", sourceUrl: "https://www.mamedev.org/roms/fax/" },
   { id: "alienar", title: "Alien Arena", year: 1985, maker: "Duncan Brown", genre: "Capture-the-flag action", sourceUrl: "https://www.mamedev.org/roms/alienar/" },
   { id: "topgunnr", title: "Top Gunner / Vertigo", year: 1986, maker: "Exidy", genre: "Vector flight combat", sourceUrl: "https://www.mamedev.org/roms/topgunnr/" },
-  { id: "falcnwld", title: "Falcons Wild - World Wide Poker", year: 1990, maker: "Video Klein", genre: "Video poker", sourceUrl: "https://www.mamedev.org/roms/falcnwld/" },
-  { id: "witchcrd", title: "Witch Card", year: 1991, maker: "Video Klein", genre: "Video poker", sourceUrl: "https://www.mamedev.org/roms/witchcrd/" },
-  { id: "wstrike", title: "Witch Strike", year: 1992, maker: "Video Klein", genre: "Video poker", sourceUrl: "https://www.mamedev.org/roms/wstrike/" },
-  { id: "witchjol", title: "Jolli Witch", year: 1994, maker: "Video Klein", genre: "Video poker", sourceUrl: "https://www.mamedev.org/roms/witchjol/" },
-  { id: "wtchjack", title: "Witch Jack", year: 1996, maker: "Video Klein", genre: "Video poker", sourceUrl: "https://www.mamedev.org/roms/wtchjack/" },
-  { id: "wupndown", title: "Witch Up & Down", year: 1998, maker: "Video Klein", genre: "Video poker", sourceUrl: "https://www.mamedev.org/roms/wupndown/" },
+  { id: "wrally", title: "World Rally", year: 1993, maker: "Gaelco", genre: "Rally racing", sourceUrl: "https://www.mamedev.org/links.php", sourceNote: "MAME's Resources page links to Gaelco's authorized World Rally ROM release." },
 ];
 
 export function findArcadeGameForFile(fileName = "") {
