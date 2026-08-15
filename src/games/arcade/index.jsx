@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { LEGAL_ARCADE_GAMES, findArcadeGameForFile } from "./catalog.js";
-import { listInstalledRoms, loadRom, removeRom, romIdForFile, saveRom } from "./romVault.js";
+import { ARCADE_GAMES, CURATED_ARCADE_GAMES, PERSONAL_ARCADE_GAMES, findArcadeGameForFile } from "./catalog.js";
+import { isSupportedRomArchiveName, listInstalledRoms, loadRom, removeRom, romIdForFile, saveRom } from "./romVault.js";
 import "./styles.css";
 import "./romVault.css";
 
 const EMULATOR_DATA_PATH = "https://cdn.emulatorjs.org/stable/data/";
+const ROM_ARCHIVE_ACCEPT = ".zip,.7z,application/zip,application/x-7z-compressed";
 
 function backToHub() {
   const next = new URL(window.location.href);
@@ -59,7 +60,7 @@ function ArcadeFrame({ rom, game, core, session }) {
       <div className="arcade-screen arcade-screen-empty">
         <span aria-hidden="true">🕹️</span>
         <strong>Your cabinet is ready</strong>
-        <p>Install or import ROM ZIPs once, then launch them directly from the library.</p>
+        <p>Install or import ROM archives once, then launch them directly from the library.</p>
       </div>
     );
   }
@@ -78,7 +79,7 @@ function ArcadeFrame({ rom, game, core, session }) {
 }
 
 export default function Arcade() {
-  const [selectedId, setSelectedId] = useState(LEGAL_ARCADE_GAMES[0].id);
+  const [selectedId, setSelectedId] = useState(ARCADE_GAMES[0].id);
   const [activeRom, setActiveRom] = useState(null);
   const [installed, setInstalled] = useState([]);
   const [installingId, setInstallingId] = useState(null);
@@ -87,7 +88,7 @@ export default function Arcade() {
   const [status, setStatus] = useState("");
 
   const selectedGame = useMemo(
-    () => LEGAL_ARCADE_GAMES.find((game) => game.id === selectedId) || null,
+    () => ARCADE_GAMES.find((game) => game.id === selectedId) || null,
     [selectedId],
   );
 
@@ -109,19 +110,31 @@ export default function Arcade() {
   }, []);
 
   async function importFiles(event) {
-    const files = [...(event.target.files || [])].filter((file) => file.name.toLowerCase().endsWith(".zip"));
-    if (!files.length) return;
+    const selectedFiles = [...(event.target.files || [])];
+    const files = selectedFiles.filter((file) => isSupportedRomArchiveName(file.name));
+    if (!files.length) {
+      setStatus("No .zip or .7z ROM archives were found in that selection.");
+      event.target.value = "";
+      return;
+    }
 
     try {
+      let recognizedCount = 0;
       for (const file of files) {
         const recognized = findArcadeGameForFile(file.name);
+        if (recognized) recognizedCount += 1;
         await saveRom(file, recognized?.id || romIdForFile(file.name));
       }
       await refreshInstalled();
       const first = files[0];
       const recognized = findArcadeGameForFile(first.name);
-      if (recognized) setSelectedId(recognized.id);
-      setStatus(`${files.length} ROM${files.length === 1 ? "" : "s"} installed in this browser.`);
+      if (recognized) {
+        setSelectedId(recognized.id);
+        setCore(recognized.preferredCore || "arcade");
+      }
+      const skippedCount = selectedFiles.length - files.length;
+      const skippedText = skippedCount ? ` ${skippedCount} non-ROM file${skippedCount === 1 ? " was" : "s were"} skipped.` : "";
+      setStatus(`${files.length} ROM${files.length === 1 ? "" : "s"} installed in this browser; ${recognizedCount} matched library titles.${skippedText}`);
       event.target.value = "";
     } catch (error) {
       setStatus(error.message || "ROM import failed.");
@@ -140,6 +153,7 @@ export default function Arcade() {
       await saveRom(file, game.id);
       await refreshInstalled();
       setSelectedId(game.id);
+      setCore(game.preferredCore || "arcade");
       setStatus(`${game.title} installed. Press Play.`);
     } catch (error) {
       setStatus(`Direct install was blocked by the source or browser. Use the ZIP button for ${game.title}, then add the downloaded file to the library.`);
@@ -156,9 +170,13 @@ export default function Arcade() {
         await refreshInstalled();
         return;
       }
-      const game = LEGAL_ARCADE_GAMES.find((item) => item.id === gameId) || null;
-      if (game) setSelectedId(game.id);
-      else setSelectedId(gameId);
+      const game = ARCADE_GAMES.find((item) => item.id === gameId) || null;
+      if (game) {
+        setSelectedId(game.id);
+        setCore(game.preferredCore || "arcade");
+      } else {
+        setSelectedId(gameId);
+      }
       setActiveRom(record);
       setSession((value) => value + 1);
       setStatus(`Playing ${game?.title || record.name}.`);
@@ -179,7 +197,7 @@ export default function Arcade() {
     }
   }
 
-  const activeGame = LEGAL_ARCADE_GAMES.find((game) => game.id === activeRom?.id) || selectedGame;
+  const activeGame = ARCADE_GAMES.find((game) => game.id === activeRom?.id) || selectedGame;
 
   return (
     <main className="arcade-page">
@@ -187,7 +205,7 @@ export default function Arcade() {
         <div>
           <p className="arcade-kicker">Family Game Room · Arcade</p>
           <h1>Browser Arcade</h1>
-          <p>Build a personal arcade library in your browser. Install or import ZIPs once, keep them in local browser storage, and launch installed games directly from their cards.</p>
+          <p>Build a personal arcade library in your browser. Import ZIP or 7-Zip sets once, keep them in local browser storage, and launch installed games directly from their cards.</p>
         </div>
         <button type="button" className="arcade-back" onClick={backToHub}>Back to library</button>
       </header>
@@ -200,29 +218,34 @@ export default function Arcade() {
             Emulator core
             <select value={core} onChange={(event) => setCore(event.target.value)}>
               <option value="arcade">FinalBurn Neo (recommended)</option>
+              <option value="mame2003_plus">MAME 2003-Plus</option>
               <option value="mame2003">MAME 2003 (legacy)</option>
             </select>
           </label>
           <label className="arcade-file-picker">
-            Add ROMs to library
-            <input type="file" accept=".zip,application/zip" multiple onChange={importFiles} />
+            Add ROM archives
+            <input type="file" accept={ROM_ARCHIVE_ACCEPT} multiple onChange={importFiles} />
+          </label>
+          <label className="arcade-file-picker">
+            Add ROM folder
+            <input type="file" accept={ROM_ARCHIVE_ACCEPT} multiple webkitdirectory="" directory="" onChange={importFiles} />
           </label>
           <div className="arcade-installed-count"><strong>{installed.length}</strong><span>installed</span></div>
         </div>
         {status ? <p className="arcade-status" role="status">{status}</p> : null}
-        <p className="arcade-core-note">ROM sets are version-sensitive. If one core does not accept a set, switch cores or use a compatible ROM revision.</p>
+        <p className="arcade-core-note">ROM sets are version-sensitive. Known titles automatically select the best first-choice core; you can switch cores here if a particular set revision needs another one.</p>
       </section>
 
       <section className="arcade-library" aria-labelledby="arcade-library-title">
         <div className="arcade-library-heading">
-          <div><p className="arcade-kicker">Classic shelf</p><h2 id="arcade-library-title">80s &amp; 90s arcade</h2></div>
-          <span>{LEGAL_ARCADE_GAMES.length} titles</span>
+          <div><p className="arcade-kicker">Arcade shelf</p><h2 id="arcade-library-title">Arcade collection</h2></div>
+          <span>{ARCADE_GAMES.length} titles · {PERSONAL_ARCADE_GAMES.length} matched from your ROMS folder</span>
         </div>
         <div className="arcade-legal-note">
-          Curated titles can install directly when the source permits browser fetching. The ZIP fallback and bulk importer are available for everything else.
+          Import your ROMS folder once and recognized filenames become installed library games automatically. ZIP and 7-Zip archives are supported.
         </div>
         <div className="arcade-title-grid">
-          {LEGAL_ARCADE_GAMES.map((game) => {
+          {ARCADE_GAMES.map((game) => {
             const installedRom = installedById.get(game.id);
             const isInstalling = installingId === game.id;
             return (
@@ -234,12 +257,15 @@ export default function Arcade() {
                 <h3>{game.title}</h3>
                 <p>{game.maker}</p>
                 <span>{game.genre}</span>
+                {game.compatibilityNote ? <small>{game.compatibilityNote}</small> : null}
                 <div className="arcade-title-actions arcade-title-actions-wrap">
                   {installedRom ? (
                     <>
                       <button type="button" onClick={() => playInstalled(game.id)}>Play</button>
                       <button type="button" className="arcade-secondary-button" onClick={() => uninstall(game.id)}>Remove</button>
                     </>
+                  ) : game.localOnly ? (
+                    <span>Import <code>{game.id}.7z</code> or <code>{game.id}.zip</code> from your ROMS folder.</span>
                   ) : game.downloadUrl ? (
                     <>
                       <button type="button" onClick={() => installCurated(game)} disabled={isInstalling}>{isInstalling ? "Installing…" : "Install"}</button>
@@ -261,11 +287,11 @@ export default function Arcade() {
       <section className="arcade-own-rom" aria-labelledby="arcade-vault-title">
         <div><p className="arcade-kicker">Your collection</p><h2 id="arcade-vault-title">ROM Vault</h2></div>
         <div className="arcade-vault-content">
-          <p>Bulk-import compatible ZIPs from your collection. Unknown filenames are still stored and playable; recognized set names automatically match the corresponding library card.</p>
+          <p>Bulk-import compatible ZIP or 7-Zip sets from your collection. Unknown filenames are still stored and playable; recognized set names automatically match the corresponding library card.</p>
           {installed.length ? (
             <div className="arcade-vault-list">
               {installed.map((record) => {
-                const game = LEGAL_ARCADE_GAMES.find((item) => item.id === record.id);
+                const game = ARCADE_GAMES.find((item) => item.id === record.id);
                 return (
                   <div key={record.id} className="arcade-vault-row">
                     <div><strong>{game?.title || record.name}</strong><span>{record.name} · {Math.max(1, Math.round(record.size / 1024))} KB</span></div>
@@ -277,9 +303,13 @@ export default function Arcade() {
                 );
               })}
             </div>
-          ) : <p className="arcade-vault-empty">No ROMs installed yet.</p>}
+          ) : <p className="arcade-vault-empty">No ROMs installed yet. Choose “Add ROM folder” and select your ROMS directory.</p>}
         </div>
       </section>
+
+      <footer className="arcade-library-summary">
+        {CURATED_ARCADE_GAMES.length} curated starter titles · {PERSONAL_ARCADE_GAMES.length} compatible titles recognized from your uploaded collection
+      </footer>
     </main>
   );
 }
