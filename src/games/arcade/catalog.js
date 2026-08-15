@@ -1,17 +1,40 @@
+const MAME_ROM_BASE = "https://www.mamedev.org/roms";
+
+function mameGame(id, title, year, maker, genre) {
+  return {
+    id,
+    title,
+    year,
+    maker,
+    genre,
+    sourceUrl: `${MAME_ROM_BASE}/${id}/`,
+    downloadUrl: `${MAME_ROM_BASE}/${id}/${id}.zip`,
+  };
+}
+
 export const LEGAL_ARCADE_GAMES = [
-  { id: "targ", title: "Targ", year: 1980, maker: "Exidy", genre: "Maze shooter", sourceUrl: "https://www.mamedev.org/roms/targ/" },
-  { id: "spectar", title: "Spectar", year: 1980, maker: "Exidy", genre: "Maze shooter", sourceUrl: "https://www.mamedev.org/roms/spectar/" },
-  { id: "robby", title: "Robby Roto", year: 1981, maker: "Bally/Midway", genre: "Maze action", sourceUrl: "https://www.mamedev.org/roms/robby/" },
-  { id: "supertnk", title: "Super Tank", year: 1981, maker: "Video Games GmbH", genre: "Tank action", sourceUrl: "https://www.mamedev.org/roms/supertnk/" },
-  { id: "hardhat", title: "Hard Hat", year: 1982, maker: "Exidy", genre: "Arcade action", sourceUrl: "https://www.mamedev.org/roms/hardhat/" },
-  { id: "victory", title: "Victory", year: 1982, maker: "Exidy", genre: "Shooter", sourceUrl: "https://www.mamedev.org/roms/victory/" },
-  { id: "teetert", title: "Teeter Torture", year: 1982, maker: "Exidy", genre: "Arcade action", sourceUrl: "https://www.mamedev.org/roms/teetert/" },
-  { id: "looping", title: "Looping", year: 1982, maker: "Video Games GmbH", genre: "Flying shooter", sourceUrl: "https://www.mamedev.org/roms/looping/" },
-  { id: "gridlee", title: "Gridlee", year: 1982, maker: "Videa", genre: "Prototype action", sourceUrl: "https://www.mamedev.org/roms/gridlee/" },
-  { id: "fax", title: "FAX", year: 1983, maker: "Exidy", genre: "Trivia", sourceUrl: "https://www.mamedev.org/roms/fax/" },
-  { id: "alienar", title: "Alien Arena", year: 1985, maker: "Duncan Brown", genre: "Capture-the-flag action", sourceUrl: "https://www.mamedev.org/roms/alienar/" },
-  { id: "topgunnr", title: "Top Gunner / Vertigo", year: 1986, maker: "Exidy", genre: "Vector flight combat", sourceUrl: "https://www.mamedev.org/roms/topgunnr/" },
-  { id: "wrally", title: "World Rally", year: 1993, maker: "Gaelco", genre: "Rally racing", sourceUrl: "https://www.mamedev.org/links.php", sourceNote: "MAME's Resources page links to Gaelco's authorized World Rally ROM release." },
+  mameGame("targ", "Targ", 1980, "Exidy", "Maze shooter"),
+  mameGame("spectar", "Spectar", 1980, "Exidy", "Maze shooter"),
+  mameGame("robby", "Robby Roto", 1981, "Bally/Midway", "Maze action"),
+  mameGame("supertnk", "Super Tank", 1981, "Video Games GmbH", "Tank action"),
+  mameGame("hardhat", "Hard Hat", 1982, "Exidy", "Arcade action"),
+  mameGame("victory", "Victory", 1982, "Exidy", "Shooter"),
+  mameGame("teetert", "Teeter Torture", 1982, "Exidy", "Arcade action"),
+  mameGame("looping", "Looping", 1982, "Video Games GmbH", "Flying shooter"),
+  mameGame("gridlee", "Gridlee", 1982, "Videa", "Prototype action"),
+  mameGame("fax", "FAX", 1983, "Exidy", "Trivia"),
+  mameGame("alienar", "Alien Arena", 1985, "Duncan Brown", "Capture-the-flag action"),
+  mameGame("topgunnr", "Top Gunner / Vertigo", 1986, "Exidy", "Vector flight combat"),
+  {
+    id: "wrally",
+    title: "World Rally",
+    year: 1993,
+    maker: "Gaelco",
+    genre: "Rally racing",
+    sourceUrl: "https://www.mamedev.org/links.php",
+    downloadUrl: null,
+    sourceNote: "MAME's Resources page links to Gaelco's World Rally release.",
+  },
 ];
 
 export function findArcadeGameForFile(fileName = "") {
