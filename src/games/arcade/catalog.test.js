@@ -5,7 +5,7 @@ import { ARCADE_GAMES, CURATED_ARCADE_GAMES, PERSONAL_ARCADE_GAMES, arcadeDecade
 test("arcade catalog spans the uploaded collection decades", () => {
   assert.ok(ARCADE_GAMES.length >= 40);
   assert.deepEqual(arcadeDecades(), [1970, 1980, 1990, 2000]);
-  assert.equal(PERSONAL_ARCADE_GAMES.length, 29);
+  assert.equal(PERSONAL_ARCADE_GAMES.length, 30);
   assert.equal(ARCADE_GAMES.some((game) => game.genre === "Video poker"), false);
 });
 
@@ -28,7 +28,7 @@ test("arcade catalog recognizes ZIP and 7-Zip set filenames", () => {
 
 test("uploaded compatible collection includes key arcade sets", () => {
   const ids = new Set(PERSONAL_ARCADE_GAMES.map((game) => game.id));
-  for (const id of ["1942", "19xx", "3countb", "3in1semi", "3kokushi", "3on3dunk", "3wonders", "64street", "720", "88games", "10yard"]) {
+  for (const id of ["1942", "19xx", "3countb", "3in1semi", "3kokushi", "3on3dunk", "3wonders", "64street", "720", "7jigen", "88games", "10yard"]) {
     assert.ok(ids.has(id), `${id} should be recognized from the uploaded ROMS folder`);
   }
 });
