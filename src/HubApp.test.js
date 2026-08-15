@@ -17,6 +17,7 @@ test("Canasta enhancements only mount for the Canasta route", () => {
 });
 
 test("the hub discovers game modules without a shared registry edit", () => {
+  assert.match(hubSource, /from "\.\/gameCatalog\.js"/);
   assert.match(hubSource, /import\.meta\.glob\("\.\/games\/\*\/index\.jsx"\)/);
   assert.match(hubSource, /gameModulePath\(game\.id\)/);
 });
