@@ -79,7 +79,7 @@ export default function Arcade() {
   const [selectedId, setSelectedId] = useState(LEGAL_ARCADE_GAMES[0].id);
   const [pendingFile, setPendingFile] = useState(null);
   const [activeFile, setActiveFile] = useState(null);
-  const [core, setCore] = useState("mame2003");
+  const [core, setCore] = useState("arcade");
   const [session, setSession] = useState(0);
 
   const selectedGame = useMemo(
@@ -118,8 +118,8 @@ export default function Arcade() {
           <label>
             Emulator core
             <select value={core} onChange={(event) => setCore(event.target.value)}>
-              <option value="mame2003">MAME 2003</option>
-              <option value="arcade">FinalBurn Neo</option>
+              <option value="arcade">FinalBurn Neo (recommended)</option>
+              <option value="mame2003">MAME 2003 (legacy)</option>
             </select>
           </label>
           <label className="arcade-file-picker">
@@ -128,7 +128,7 @@ export default function Arcade() {
           </label>
           <button type="button" onClick={startCabinet} disabled={!pendingFile}>Start cabinet</button>
         </div>
-        <p className="arcade-core-note">Arcade ROM sets are version-sensitive. MAME 2003 is the default for the requested MAME-style experience; if an authorized ROM does not match that core, try FinalBurn Neo or a matching legally obtained set.</p>
+        <p className="arcade-core-note">Arcade ROM sets are version-sensitive. FinalBurn Neo is recommended for the curated library; MAME 2003 remains available for older compatible sets. If a ROM does not match a core, use a matching legally obtained set or a current-MAME build.</p>
       </section>
 
       <section className="arcade-library" aria-labelledby="arcade-library-title">
