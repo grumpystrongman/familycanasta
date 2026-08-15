@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { LEGAL_ARCADE_GAMES, findArcadeGameForFile } from "./catalog.js";
 import { listInstalledRoms, loadRom, removeRom, romIdForFile, saveRom } from "./romVault.js";
 import "./styles.css";
+import "./romVault.css";
 
 const EMULATOR_DATA_PATH = "https://cdn.emulatorjs.org/stable/data/";
 
