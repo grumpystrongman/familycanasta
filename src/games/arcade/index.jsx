@@ -59,7 +59,7 @@ function ArcadeFrame({ rom, game, core, session }) {
       <div className="arcade-screen arcade-screen-empty">
         <span aria-hidden="true">🕹️</span>
         <strong>Your cabinet is ready</strong>
-        <p>Import ROM ZIPs once, then launch them directly from the library.</p>
+        <p>Install or import ROM ZIPs once, then launch them directly from the library.</p>
       </div>
     );
   }
@@ -81,6 +81,7 @@ export default function Arcade() {
   const [selectedId, setSelectedId] = useState(LEGAL_ARCADE_GAMES[0].id);
   const [activeRom, setActiveRom] = useState(null);
   const [installed, setInstalled] = useState([]);
+  const [installingId, setInstallingId] = useState(null);
   const [core, setCore] = useState("arcade");
   const [session, setSession] = useState(0);
   const [status, setStatus] = useState("");
@@ -127,6 +128,26 @@ export default function Arcade() {
     }
   }
 
+  async function installCurated(game) {
+    if (!game.downloadUrl) return;
+    setInstallingId(game.id);
+    setStatus(`Installing ${game.title}…`);
+    try {
+      const response = await fetch(game.downloadUrl, { mode: "cors", credentials: "omit" });
+      if (!response.ok) throw new Error(`Download failed (${response.status}).`);
+      const blob = await response.blob();
+      const file = new File([blob], `${game.id}.zip`, { type: blob.type || "application/zip" });
+      await saveRom(file, game.id);
+      await refreshInstalled();
+      setSelectedId(game.id);
+      setStatus(`${game.title} installed. Press Play.`);
+    } catch (error) {
+      setStatus(`Direct install was blocked by the source or browser. Use the ZIP button for ${game.title}, then add the downloaded file to the library.`);
+    } finally {
+      setInstallingId(null);
+    }
+  }
+
   async function playInstalled(gameId) {
     try {
       const record = await loadRom(gameId);
@@ -166,7 +187,7 @@ export default function Arcade() {
         <div>
           <p className="arcade-kicker">Family Game Room · Arcade</p>
           <h1>Browser Arcade</h1>
-          <p>Build a personal arcade library in your browser. Import ZIPs once, keep them in local browser storage, and launch installed games directly from their cards.</p>
+          <p>Build a personal arcade library in your browser. Install or import ZIPs once, keep them in local browser storage, and launch installed games directly from their cards.</p>
         </div>
         <button type="button" className="arcade-back" onClick={backToHub}>Back to library</button>
       </header>
@@ -198,11 +219,12 @@ export default function Arcade() {
           <span>{LEGAL_ARCADE_GAMES.length} titles</span>
         </div>
         <div className="arcade-legal-note">
-          Download a ZIP, add it to the library once, and it remains available in this browser until you remove site data or uninstall it here.
+          Curated titles can install directly when the source permits browser fetching. The ZIP fallback and bulk importer are available for everything else.
         </div>
         <div className="arcade-title-grid">
           {LEGAL_ARCADE_GAMES.map((game) => {
             const installedRom = installedById.get(game.id);
+            const isInstalling = installingId === game.id;
             return (
               <article key={game.id} className={`arcade-title-card ${selectedId === game.id ? "selected" : ""}`}>
                 <div className="arcade-title-card-top">
@@ -218,9 +240,14 @@ export default function Arcade() {
                       <button type="button" onClick={() => playInstalled(game.id)}>Play</button>
                       <button type="button" className="arcade-secondary-button" onClick={() => uninstall(game.id)}>Remove</button>
                     </>
+                  ) : game.downloadUrl ? (
+                    <>
+                      <button type="button" onClick={() => installCurated(game)} disabled={isInstalling}>{isInstalling ? "Installing…" : "Install"}</button>
+                      <a href={game.downloadUrl}>ZIP</a>
+                    </>
                   ) : (
                     <>
-                      {game.downloadUrl ? <a href={game.downloadUrl}>Download ROM</a> : <a href={game.sourceUrl} target="_blank" rel="noreferrer">Get ROM</a>}
+                      <a href={game.sourceUrl} target="_blank" rel="noreferrer">Get ROM</a>
                       <button type="button" className="arcade-secondary-button" onClick={() => setSelectedId(game.id)}>Select</button>
                     </>
                   )}
