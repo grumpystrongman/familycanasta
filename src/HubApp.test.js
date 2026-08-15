@@ -4,6 +4,7 @@ import test from "node:test";
 
 const mainSource = readFileSync(new URL("./main.jsx", import.meta.url), "utf8");
 const hubSource = readFileSync(new URL("./HubApp.jsx", import.meta.url), "utf8");
+const catalogSource = readFileSync(new URL("./gameCatalog.js", import.meta.url), "utf8");
 const canastaModule = readFileSync(new URL("./games/canasta/index.jsx", import.meta.url), "utf8");
 
 test("startup routes through the family game hub", () => {
@@ -24,9 +25,9 @@ test("the Canasta module delegates to the existing application", () => {
   assert.equal(canastaModule.trim().startsWith('export { default } from "../../App";'), true);
 });
 
-test("planned games are visible but disabled until their module is installed", () => {
+test("planned games remain in the catalog but disabled until their module is installed", () => {
   for (const gameId of ["hearts", "spades", "rummy"]) {
-    assert.match(hubSource, new RegExp(`id: "${gameId}"`));
+    assert.match(catalogSource, new RegExp(`id: "${gameId}"`));
   }
   assert.match(hubSource, /disabled=!\{?available\}?|disabled=\{!available\}/);
 });
