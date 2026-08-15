@@ -172,14 +172,17 @@ test("Hnefatafl home offers explicit attacker and defender quick play", async ()
   assert.match(source, /normalizeHnefataflBoard/);
 });
 
-test("the hub expands beyond card games and installs all five new routes", async () => {
+test("the categorized catalog keeps all five tabletop routes visible", async () => {
   const hub = await readFile(new URL("../HubApp.jsx", import.meta.url), "utf8");
+  const catalog = await readFile(new URL("../gameCatalog.js", import.meta.url), "utf8");
   for (const gameId of ["hnefatafl", "connect4", "gofish", "gofyourself", "battleship"]) {
-    assert.match(hub, new RegExp(`id: "${gameId}"`));
+    assert.match(catalog, new RegExp(`id: "${gameId}"`));
   }
   assert.match(hub, /Family Game Room/);
-  assert.match(hub, /cards, boards, strategy/);
-  assert.match(hub, /Go F' Yourself/);
+  assert.match(hub, /GAME_CATEGORIES\.map/);
+  assert.match(catalog, /Card Games/);
+  assert.match(catalog, /Board Games/);
+  assert.match(catalog, /Go F' Yourself/);
 });
 
 test("new tabletop games have dedicated learn-to-play guides", async () => {

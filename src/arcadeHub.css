@@ -1,0 +1,30 @@
+.hub-category-nav {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.hub-category-arcade .hub-category-link-icon,
+.hub-category-section-arcade .hub-category-icon {
+  border-color: rgba(99, 240, 190, 0.34);
+  background: rgba(99, 240, 190, 0.1);
+}
+
+.hub-category-arcade:hover,
+.hub-category-arcade:focus-visible {
+  border-color: rgba(99, 240, 190, 0.5);
+}
+
+.hub-game-arcade .hub-game-icon {
+  filter: drop-shadow(0 0 16px rgba(99, 240, 190, 0.22));
+}
+
+@media (max-width: 980px) {
+  .hub-category-nav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .hub-category-nav {
+    grid-template-columns: 1fr;
+  }
+}
