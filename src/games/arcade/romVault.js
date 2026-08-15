@@ -46,16 +46,23 @@ function withStore(mode, work) {
   }));
 }
 
+export function isSupportedRomArchiveName(fileName = "") {
+  return /\.(zip|7z)$/i.test(String(fileName).trim());
+}
+
 export function romIdForFile(fileName = "") {
-  return String(fileName).trim().toLowerCase().replace(/\.zip$/i, "");
+  return String(fileName).trim().toLowerCase().replace(/\.(zip|7z)$/i, "");
 }
 
 export async function saveRom(file, gameId = romIdForFile(file?.name)) {
-  if (!file || !gameId) throw new Error("A ROM ZIP is required.");
+  if (!file || !gameId) throw new Error("A ROM archive is required.");
+  if (!isSupportedRomArchiveName(file.name || "")) throw new Error("Use a .zip or .7z ROM archive.");
+
+  const is7z = String(file.name || "").toLowerCase().endsWith(".7z");
   const record = {
     id: gameId,
     name: file.name || `${gameId}.zip`,
-    type: file.type || "application/zip",
+    type: file.type || (is7z ? "application/x-7z-compressed" : "application/zip"),
     size: file.size || 0,
     updatedAt: Date.now(),
     blob: file,
