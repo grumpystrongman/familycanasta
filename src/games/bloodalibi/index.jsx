@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import useModularTable from "../../platform/useModularTable";
 import { GameHome, GameLobby, PlayerChips } from "../../platform/ModularGameChrome";
 import { navigateToHub } from "../../HubApp";
@@ -58,6 +58,10 @@ function SuspectMarker({ suspect }) {
   return <span className="blackglass-suspect-marker" title={suspect.name}>{suspect.name.split(" ").map((part) => part[0]).join("")}</span>;
 }
 
+function MethodMarker({ method }) {
+  return <span className="blackglass-method-marker" title={method.name}>⚠ {method.name.split(" ").map((part) => part[0]).join("").slice(0, 3)}</span>;
+}
+
 function HotelBoard({ state, members, user, myTurn, busy, act }) {
   const me = members.find((member) => member.uid === user?.uid);
   const myNodeId = normalizeBoardPosition(state.positions?.[user?.uid], me?.seat);
@@ -72,6 +76,10 @@ function HotelBoard({ state, members, user, myTurn, busy, act }) {
 
   function suspectsInRoom(locationId) {
     return SUSPECTS.filter((suspect) => state.suspectPositions?.[suspect.id] === locationId);
+  }
+
+  function methodsInRoom(locationId) {
+    return METHODS.filter((method) => state.methodPositions?.[method.id] === locationId);
   }
 
   function moveTo(nodeId) {
@@ -90,6 +98,7 @@ function HotelBoard({ state, members, user, myTurn, busy, act }) {
             const here = myNodeId === nodeId;
             const roomOccupants = occupants(nodeId);
             const roomSuspects = suspectsInRoom(location.id);
+            const roomMethods = methodsInRoom(location.id);
             return <button
               key={location.id}
               type="button"
@@ -102,7 +111,7 @@ function HotelBoard({ state, members, user, myTurn, busy, act }) {
               <span className="blackglass-room-light" aria-hidden="true" />
               <span className="blackglass-room-copy"><small>{here ? "YOUR LOCATION" : roomReach ? `${roomReach.distance} MOVE${roomReach.distance === 1 ? "" : "S"}` : "CRIME SCENE"}</small><strong>{location.name}</strong><em>{location.detail}</em></span>
               {location.passageTo ? <span className="blackglass-passage-mark">⇄ {LOCATION_MAP[location.passageTo]?.name}</span> : null}
-              {roomSuspects.length ? <span className="blackglass-suspect-stack">{roomSuspects.map((suspect) => <SuspectMarker key={suspect.id} suspect={suspect} />)}</span> : null}
+              {roomSuspects.length || roomMethods.length ? <span className="blackglass-suspect-stack">{roomSuspects.map((suspect) => <SuspectMarker key={suspect.id} suspect={suspect} />)}{roomMethods.map((method) => <MethodMarker key={method.id} method={method} />)}</span> : null}
               {roomOccupants.length ? <span className="blackglass-token-stack">{roomOccupants.map((member) => <InvestigatorToken key={member.uid} member={member} eliminated={state.eliminated?.[member.uid]} isYou={member.uid === user?.uid} />)}</span> : null}
             </button>;
           })}
@@ -132,7 +141,7 @@ function HotelBoard({ state, members, user, myTurn, busy, act }) {
 }
 
 function BloodAlibiTable({ controller }) {
-  const { room, user, members, busy, error, act } = controller;
+  const { room, roomCode, user, members, busy, error, act } = controller;
   const state = room.gameState;
   const currentIndex = Number(state.currentPlayerIndex || 0);
   const current = members[currentIndex];
@@ -154,6 +163,28 @@ function BloodAlibiTable({ controller }) {
   const canRoll = myTurn && state.turnPhase === "roll" && !eliminated;
   const canInvestigate = myTurn && state.turnPhase === "investigate" && !eliminated && Boolean(myRoomId);
   const solution = state.solution || {};
+
+  const notebookKey = `blackglassNotebook:${roomCode || "local"}`;
+  const [notebook, setNotebook] = useState(() => {
+    try { return JSON.parse(window.localStorage.getItem(notebookKey) || "{}"); }
+    catch { return {}; }
+  });
+  useEffect(() => {
+    try { window.localStorage.setItem(notebookKey, JSON.stringify(notebook)); }
+    catch { /* private notebook remains in memory when storage is unavailable */ }
+  }, [notebook, notebookKey]);
+
+  function notebookState(cardId) {
+    if (knownEvidence.includes(cardId)) return "cleared";
+    return notebook[cardId] || "unknown";
+  }
+
+  function cycleNotebook(cardId) {
+    if (knownEvidence.includes(cardId)) return;
+    const currentMark = notebook[cardId] || "unknown";
+    const next = currentMark === "unknown" ? "watch" : currentMark === "watch" ? "cleared" : "unknown";
+    setNotebook((value) => ({ ...value, [cardId]: next }));
+  }
 
   function locationForMember(member) {
     const node = normalizeBoardPosition(state.positions?.[member.uid], member.seat);
@@ -204,11 +235,25 @@ function BloodAlibiTable({ controller }) {
       <aside className="blackglass-case-panel"><div className="blackglass-section-heading"><div><small>YOUR PRIVATE FILE</small><h2>Known evidence</h2></div><span>{knownEvidence.length} ruled out</span></div>
         {latestReveal ? <div className="blackglass-reveal"><small>LATEST REVEAL</small><strong>{evidenceLabel(latestReveal.cardId)}</strong><span>{members.find((member) => member.uid === latestReveal.fromUid)?.nickname || "Another investigator"} could refute your theory.</span></div> : null}
         <div className="blackglass-evidence-list">{knownEvidence.map((cardId) => <EvidenceCard key={cardId} cardId={cardId} />)}</div>
+
+        <details className="blackglass-notebook" open>
+          <summary>Detective notebook</summary>
+          <p>Tap any line to cycle <strong>?</strong> unknown → <strong>!</strong> watch → <strong>×</strong> cleared. Evidence in your hand or privately revealed is cleared automatically.</p>
+          {[
+            ["suspect", "Suspects", SUSPECTS],
+            ["method", "Methods", METHODS],
+            ["location", "Rooms", LOCATIONS],
+          ].map(([kind, label, items]) => <section key={kind}><h3>{label}</h3><div>{items.map((item) => {
+            const card = `${kind}:${item.id}`;
+            const mark = notebookState(card);
+            return <button key={card} type="button" disabled={knownEvidence.includes(card)} className={`blackglass-note-row ${mark}`} onClick={() => cycleNotebook(card)}><span>{item.name}</span><b>{mark === "watch" ? "!" : mark === "cleared" ? "×" : "?"}</b></button>;
+          })}</div></section>)}
+        </details>
         <p className="blackglass-privacy-note">Hidden-information note: cards and the solution are concealed by the interface, but this version still uses shared modular room state and is not cheat-resistant against someone inspecting raw Firebase data.</p>
       </aside>
     </div>
 
-    <section className="blackglass-theory-panel"><div><p className="game-kicker">Theory desk</p><h2>{canInvestigate ? `What happened in ${myLocation?.name}?` : myRoomId ? `You are in ${myLocation?.name}` : "Get inside a room to test a theory"}</h2><p>Roll and move through the physical hotel board. A normal theory uses the room your pawn occupies and pulls the named suspect marker into that scene. A final accusation can name any room, but one wrong accusation removes you from the investigation.</p></div><div className="blackglass-controls">
+    <section className="blackglass-theory-panel"><div><p className="game-kicker">Theory desk</p><h2>{canInvestigate ? `What happened in ${myLocation?.name}?` : myRoomId ? `You are in ${myLocation?.name}` : "Get inside a room to test a theory"}</h2><p>Roll and move through the physical hotel board. A normal theory uses the room your pawn occupies and pulls the named suspect and method pieces into that scene. A final accusation can name any room, but one wrong accusation removes you from the investigation.</p></div><div className="blackglass-controls">
       <SelectField label="Suspect" value={suspectId} onChange={setSuspectId} options={SUSPECTS} disabled={!canInvestigate || busy} />
       <SelectField label="Method" value={methodId} onChange={setMethodId} options={METHODS} disabled={!canInvestigate || busy} />
       <div className="blackglass-action-row"><button type="button" className="action-button" disabled={!canInvestigate || busy} onClick={() => act({ type: "suggest", suspectId, methodId })}>Test theory in {myLocation?.name || "this room"}</button><button type="button" className="secondary" disabled={!canInvestigate || busy} onClick={() => act({ type: "end" })}>End turn quietly</button></div>
