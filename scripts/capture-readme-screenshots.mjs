@@ -81,7 +81,9 @@ async function capturePartyEntry(gameId, name) {
 }
 
 async function captureChompageddon() {
-  await open("/?game=chompageddon", ".chomp-launchpad");
+  await open("/?game=chompageddon", ".chomp-mode-launchpad");
+  await page.getByRole("button", { name: /solo \/ couch/i }).click();
+  await page.locator(".chomp-launchpad").waitFor({ state: "visible" });
   await capture("chompageddon-entry", ".chompageddon-page");
   await page.getByRole("button", { name: /release the ballz/i }).click();
   await page.locator(".chomp-arena-frame canvas").waitFor({ state: "visible" });
