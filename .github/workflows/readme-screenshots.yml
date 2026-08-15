@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   capture:
@@ -19,8 +19,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          # For same-repository PRs, work on the actual head branch so generated
-          # screenshots can be committed directly back to the PR.
+          # For same-repository PRs, capture the actual head branch rather than
+          # GitHub's synthetic merge commit so screenshots reflect the submitted UI.
           ref: ${{ github.head_ref || github.ref_name }}
 
       - uses: actions/setup-node@v4
@@ -69,23 +69,9 @@ jobs:
       - name: Capture product screenshots
         run: node scripts/capture-readme-screenshots.mjs
 
-      - name: Commit screenshots to PR branch
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
-        env:
-          HEAD_BRANCH: ${{ github.head_ref }}
-        run: |
-          mkdir -p docs/images
-          cp artifacts/readme-screenshots/*.png docs/images/
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/images/*.png
-          if git diff --cached --quiet; then
-            echo "Screenshots are already current."
-          else
-            git commit -m "Add generated README screenshots"
-            git push origin "HEAD:${HEAD_BRANCH}"
-          fi
-
+      # PR verification must be read-only. The screenshots include live/animated
+      # game states, so committing them from CI creates a new bot-authored head on
+      # every run and leaves the next required checks waiting for approval.
       - uses: actions/upload-artifact@v4
         with:
           name: readme-screenshots
