@@ -1,42 +1,34 @@
-export const BLACKGLASS_ASSET_ROOT = "/blackglass";
-export const BLACKGLASS_ATLASES = Object.freeze({
-  cast: `${BLACKGLASS_ASSET_ROOT}/canonical-cast-atlas.jpg`,
-  rooms: `${BLACKGLASS_ASSET_ROOT}/room-atlas.jpg`,
-  weapons: `${BLACKGLASS_ASSET_ROOT}/weapon-atlas.jpg`,
+function fixed(src,canonicalId=null){return Object.freeze({src,canonicalId});}
+export const CHARACTER_ASSETS=Object.freeze({
+  "mara-voss":fixed("https://i.pravatar.cc/500?img=47","mara-voss-v1"),
+  "dex-vale":fixed("https://i.pravatar.cc/500?img=12","dex-vale-v1"),
+  "imani-cross":fixed("https://i.pravatar.cc/500?img=32","imani-cross-v1"),
+  "theo-rook":fixed("https://i.pravatar.cc/500?img=53","theo-rook-v1"),
+  "june-mercer":fixed("https://i.pravatar.cc/500?img=45","june-mercer-v1"),
+  "elias-flint":fixed("https://i.pravatar.cc/500?img=11","elias-flint-v1"),
+  "ruby-ash":fixed("https://i.pravatar.cc/500?img=49","ruby-ash-v1"),
 });
-function sprite(atlas,col,row,cols,rows,canonicalId=null){ return Object.freeze({atlas,col,row,cols,rows,canonicalId}); }
-
-export const CHARACTER_ASSETS = Object.freeze({
-  "mara-voss": sprite(BLACKGLASS_ATLASES.cast,0,0,7,1,"mara-voss-v1"),
-  "dex-vale": sprite(BLACKGLASS_ATLASES.cast,1,0,7,1,"dex-vale-v1"),
-  "imani-cross": sprite(BLACKGLASS_ATLASES.cast,2,0,7,1,"imani-cross-v1"),
-  "theo-rook": sprite(BLACKGLASS_ATLASES.cast,3,0,7,1,"theo-rook-v1"),
-  "june-mercer": sprite(BLACKGLASS_ATLASES.cast,4,0,7,1,"june-mercer-v1"),
-  "elias-flint": sprite(BLACKGLASS_ATLASES.cast,5,0,7,1,"elias-flint-v1"),
-  "ruby-ash": sprite(BLACKGLASS_ATLASES.cast,6,0,7,1,"ruby-ash-v1"),
+export const ROOM_SCENE_ASSETS=Object.freeze({
+  greenhouse:fixed("https://loremflickr.com/1000/700/greenhouse,night?lock=301"),
+  penthouse:fixed("https://loremflickr.com/1000/700/penthouse,hotel?lock=302"),
+  security:fixed("https://loremflickr.com/1000/700/security,control-room?lock=303"),
+  laundry:fixed("https://loremflickr.com/1000/700/laundry,industrial?lock=304"),
+  atrium:fixed("https://loremflickr.com/1000/700/hotel,atrium?lock=305"),
+  kitchen:fixed("https://loremflickr.com/1000/700/commercial,kitchen?lock=306"),
+  garage:fixed("https://loremflickr.com/1000/700/parking,garage?lock=307"),
+  nightclub:fixed("https://loremflickr.com/1000/700/nightclub,interior?lock=308"),
+  boiler:fixed("https://loremflickr.com/1000/700/boiler,industrial?lock=309"),
 });
-export const ROOM_SCENE_ASSETS = Object.freeze({
-  greenhouse:sprite(BLACKGLASS_ATLASES.rooms,0,0,3,3), penthouse:sprite(BLACKGLASS_ATLASES.rooms,1,0,3,3), security:sprite(BLACKGLASS_ATLASES.rooms,2,0,3,3),
-  laundry:sprite(BLACKGLASS_ATLASES.rooms,0,1,3,3), atrium:sprite(BLACKGLASS_ATLASES.rooms,1,1,3,3), kitchen:sprite(BLACKGLASS_ATLASES.rooms,2,1,3,3),
-  garage:sprite(BLACKGLASS_ATLASES.rooms,0,2,3,3), nightclub:sprite(BLACKGLASS_ATLASES.rooms,1,2,3,3), boiler:sprite(BLACKGLASS_ATLASES.rooms,2,2,3,3),
+export const WEAPON_SCENE_ASSETS=Object.freeze({
+  "nail-gun":fixed("https://loremflickr.com/600/450/nail-gun,tool?lock=401"),
+  cleaver:fixed("https://loremflickr.com/600/450/cleaver,knife?lock=402"),
+  garrote:fixed("https://loremflickr.com/600/450/cable,wire?lock=403"),
+  revolver:fixed("https://loremflickr.com/600/450/revolver,antique?lock=404"),
+  poison:fixed("https://loremflickr.com/600/450/whiskey,glass?lock=405"),
+  "fire-axe":fixed("https://loremflickr.com/600/450/fire,axe?lock=406"),
 });
-export const WEAPON_SCENE_ASSETS = Object.freeze({
-  cleaver:sprite(BLACKGLASS_ATLASES.weapons,0,0,3,2), "nail-gun":sprite(BLACKGLASS_ATLASES.weapons,1,0,3,2), garrote:sprite(BLACKGLASS_ATLASES.weapons,2,0,3,2),
-  revolver:sprite(BLACKGLASS_ATLASES.weapons,0,1,3,2), poison:sprite(BLACKGLASS_ATLASES.weapons,1,1,3,2), "fire-axe":sprite(BLACKGLASS_ATLASES.weapons,2,1,3,2),
-});
-export const RECONSTRUCTION_COMBINATION_COUNT = 6 * 6 * 9;
-
-export function spriteStyle(asset){
-  if(!asset) return {};
-  const x=asset.cols<=1?50:(asset.col/(asset.cols-1))*100;
-  const y=asset.rows<=1?50:(asset.row/(asset.rows-1))*100;
-  return { backgroundImage:`url(${asset.atlas})`, backgroundSize:`${asset.cols*100}% ${asset.rows*100}%`, backgroundPosition:`${x}% ${y}%` };
-}
-
-// One immutable atlas tile per person is the identity lock. Lighting, room, blood, pose framing
-// and weapon treatment can change, but the underlying face/actor never does.
-export function reconstructionAssetSet(suspectId,methodId,locationId){
-  const suspect=CHARACTER_ASSETS[suspectId], victim=CHARACTER_ASSETS["ruby-ash"], weapon=WEAPON_SCENE_ASSETS[methodId], room=ROOM_SCENE_ASSETS[locationId];
-  if(!suspect||!victim||!weapon||!room) throw new Error("Unknown Blackglass reconstruction asset.");
-  return Object.freeze({suspect,victim,weapon,room,methodId,locationId});
-}
+export const RECONSTRUCTION_COMBINATION_COUNT=6*6*9;
+export function spriteStyle(asset){return asset?{backgroundImage:`url(${asset.src})`,backgroundSize:"cover",backgroundPosition:"center"}:{}}
+// Every combination points to the same immutable character source for that person. Room, method,
+// blood/injury treatment and framing change; the actor's face never silently changes.
+export function reconstructionAssetSet(suspectId,methodId,locationId){const suspect=CHARACTER_ASSETS[suspectId],victim=CHARACTER_ASSETS["ruby-ash"],weapon=WEAPON_SCENE_ASSETS[methodId],room=ROOM_SCENE_ASSETS[locationId];if(!suspect||!victim||!weapon||!room)throw new Error("Unknown Blackglass reconstruction asset.");return Object.freeze({suspect,victim,weapon,room,methodId,locationId});}
