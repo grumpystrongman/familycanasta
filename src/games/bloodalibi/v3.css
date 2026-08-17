@@ -1,2 +1,21 @@
 @import "./v3-base.css";
 @import "./v3-scene.css";
+
+/* Cinematic board art pass: one coherent hotel plate sits beneath the interactive movement model. */
+.b3-board{aspect-ratio:1.27;background-image:linear-gradient(180deg,#02040512,#02040542),url("/blackglass/board-master.jpg");background-size:cover;background-position:center;background-repeat:no-repeat;box-shadow:inset 0 0 0 3px #070809,inset 0 0 0 4px #b7914b44,0 22px 60px #000d}
+.b3-board:before{opacity:.12;mix-blend-mode:screen}
+.b3-room{background:#05060712;border-color:#ffe2a21f;box-shadow:inset 0 0 26px #0003;transition:border-color .14s,box-shadow .14s,background .14s}
+.b3-room-photo{opacity:.055;mix-blend-mode:screen;filter:saturate(.8) contrast(1.08) brightness(.8)}
+.b3-room-shade{background:linear-gradient(180deg,#0000 58%,#0005)}
+.b3-room-copy{left:6%;top:6%}
+.b3-room-copy strong{display:none}
+.b3-room-copy small{display:inline-flex;width:max-content;padding:3px 5px;border:1px solid #765a34aa;border-radius:999px;background:#07090adb;color:#e5c477;font-size:6px;box-shadow:0 2px 7px #0008}
+.b3-room-tech{left:6%;bottom:6%;padding:2px 4px;background:#06100fc7;border-radius:3px;max-width:60%}
+.b3-room.reachable{background:#d6a14b0c;border-color:#f3ce82;box-shadow:inset 0 0 0 2px #f7d98b33,0 0 18px #d6a14b80}
+.b3-room.here{background:#f2d98b12;border-color:#fff0b4;box-shadow:inset 0 0 0 3px #fff0b43d,0 0 26px #e8be668c}
+.b3-hall{width:1.7%;background:#161817b8!important;border-color:#d7b76d25!important;box-shadow:0 1px 3px #000c;opacity:.55}
+.b3-hall.door{opacity:.9;border-color:#d94539c9!important;background:#401714c7!important}
+.b3-hall.reachable{width:2.15%;opacity:1;background:radial-gradient(circle at 35% 28%,#fff2b3,#d19d47 58%,#6d3f1e)!important;border-color:#ffe5a1!important;box-shadow:0 0 12px #e8b85f}
+.b3-hall.here{width:2.35%;opacity:1;background:#f3d889!important;box-shadow:0 0 18px #ffd977}
+.b3-passages path{stroke-width:.55;opacity:.72;filter:drop-shadow(0 0 3px #000)}
+.b3-board-shell>footer{background:#080a0be8;color:#a99b82}
