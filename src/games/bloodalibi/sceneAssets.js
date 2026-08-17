@@ -1,8 +1,8 @@
 const ROOT="/blackglass";
-function fixed(src,canonicalId=null,backgroundSize="cover",backgroundPosition="center"){return Object.freeze({src,canonicalId,backgroundSize,backgroundPosition});}
+function fixed(src,canonicalId=null,backgroundSize="cover",backgroundPosition="center",crop=null){return Object.freeze({src,canonicalId,backgroundSize,backgroundPosition,crop});}
 function xPos(index,count){return count<=1?"50%":`${(index/(count-1))*100}%`;}
-function atlas(src,index,count,canonicalId=null){return fixed(src,canonicalId,`${count*100}% 100%`,`${xPos(index,count)} 50%`);}
-function gridAtlas(src,col,row,cols,rows,canonicalId=null){const x=cols<=1?50:(col/(cols-1))*100;const y=rows<=1?50:(row/(rows-1))*100;return fixed(src,canonicalId,`${cols*100}% ${rows*100}%`,`${x}% ${y}%`);}
+function atlas(src,index,count,canonicalId=null){return fixed(src,canonicalId,`${count*100}% 100%`,`${xPos(index,count)} 50%`,Object.freeze({col:index,row:0,cols:count,rows:1}));}
+function gridAtlas(src,col,row,cols,rows,canonicalId=null){const x=cols<=1?50:(col/(cols-1))*100;const y=rows<=1?50:(row/(rows-1))*100;return fixed(src,canonicalId,`${cols*100}% ${rows*100}%`,`${x}% ${y}%`,Object.freeze({col,row,cols,rows}));}
 
 export const BOARD_MASTER_ASSET=`${ROOT}/board-master.jpg`;
 const CAST_ATLAS=`${ROOT}/canonical-cast-atlas.jpg`;
@@ -44,7 +44,7 @@ export const RECONSTRUCTION_COMBINATION_COUNT=6*6*9;
 export function spriteStyle(asset){return asset?{backgroundImage:`url(${asset.src})`,backgroundSize:asset.backgroundSize||"cover",backgroundPosition:asset.backgroundPosition||"center",backgroundRepeat:"no-repeat"}:{}}
 
 // Identity is deterministic: every reconstruction reuses the exact same canonical source cell for
-// a person. Only room plate, method prop, injury overlay, pose/framing and forensic treatment vary.
+// a person. Only room plate, method prop, injury treatment, staging and final cinematic grade vary.
 export function reconstructionAssetSet(suspectId,methodId,locationId){
   const suspect=CHARACTER_ASSETS[suspectId],victimPortrait=CHARACTER_ASSETS["ruby-ash"],victim=RUBY_VICTIM_SCENE,weapon=WEAPON_SCENE_ASSETS[methodId],room=ROOM_SCENE_ASSETS[locationId];
   if(!suspect||!victim||!weapon||!room)throw new Error("Unknown Blackglass reconstruction asset.");
