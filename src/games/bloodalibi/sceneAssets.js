@@ -18,7 +18,7 @@ export const CHARACTER_ASSETS=Object.freeze({
   "elias-flint":atlas(CAST_ATLAS,5,7,"elias-flint-v2"),
   "ruby-ash":atlas(CAST_ATLAS,6,7,"ruby-ash-v2"),
 });
-export const RUBY_VICTIM_SCENE=fixed(`${ROOT}/ruby-victim-base.jpg`,"ruby-ash-victim-v2","cover","center 58%");
+export const RUBY_VICTIM_SCENE=fixed(`${ROOT}/ruby-victim-base.jpg`,"ruby-ash-v2","cover","center 58%");
 
 export const ROOM_SCENE_ASSETS=Object.freeze({
   greenhouse:gridAtlas(ROOM_ATLAS,0,0,3,3),
@@ -46,7 +46,7 @@ export function spriteStyle(asset){return asset?{backgroundImage:`url(${asset.sr
 // Identity is deterministic: every reconstruction reuses the exact same canonical source cell for
 // a person. Only room plate, method prop, injury overlay, pose/framing and forensic treatment vary.
 export function reconstructionAssetSet(suspectId,methodId,locationId){
-  const suspect=CHARACTER_ASSETS[suspectId],victim=CHARACTER_ASSETS["ruby-ash"],victimScene=RUBY_VICTIM_SCENE,weapon=WEAPON_SCENE_ASSETS[methodId],room=ROOM_SCENE_ASSETS[locationId];
+  const suspect=CHARACTER_ASSETS[suspectId],victimPortrait=CHARACTER_ASSETS["ruby-ash"],victim=RUBY_VICTIM_SCENE,weapon=WEAPON_SCENE_ASSETS[methodId],room=ROOM_SCENE_ASSETS[locationId];
   if(!suspect||!victim||!weapon||!room)throw new Error("Unknown Blackglass reconstruction asset.");
-  return Object.freeze({suspect,victim,victimScene,weapon,room,methodId,locationId});
+  return Object.freeze({suspect,victim,victimPortrait,weapon,room,methodId,locationId});
 }
