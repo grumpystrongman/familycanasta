@@ -4,14 +4,44 @@ import {
   LOCATION_MAP,
   METHODS,
   START_SPACES,
-  SUSPECTS,
   boardRoomId,
+  evidenceLabel as boardEvidenceLabel,
   getReachableBoardNodes,
   normalizeBoardPosition,
   roomNodeId,
 } from "./boardModel.js";
 
-export { BLOOD_ALIBI_RULES, BOARD_SIZE, CORRIDOR_SPACES, LOCATIONS, METHODS, SUSPECTS, boardRoomId, evidenceLabel, getReachableBoardNodes, normalizeBoardPosition, roomNodeId } from "./boardModel.js";
+export { BLOOD_ALIBI_RULES, BOARD_SIZE, CORRIDOR_SPACES, LOCATIONS, METHODS, boardRoomId, getReachableBoardNodes, normalizeBoardPosition, roomNodeId } from "./boardModel.js";
+
+// Canonical Blackglass cast. One character is selected as the public victim for a case;
+// the other five remain eligible killers. Across all six victim choices, six weapons and
+// nine rooms this produces the complete 1,620-card reconstruction set.
+export const SUSPECTS = Object.freeze([
+  { id: "dex-vale", name: "Dex Vale", role: "night manager", detail: "Knows every blind camera, master key, and off-book favor in the building." },
+  { id: "imani-cross", name: "Dr. Imani Cross", role: "trauma surgeon", detail: "Calm under pressure, exact with a blade, and carrying a reason to hate the victim." },
+  { id: "theo-rook", name: "Theo Rook", role: "political fixer", detail: "Makes scandals disappear before breakfast and people stop asking questions." },
+  { id: "june-mercer", name: "June Mercer", role: "crime-scene cleaner", detail: "Professional discretion, industrial solvents, and a trunk nobody wants opened." },
+  { id: "elias-flint", name: "Elias Flint", role: "tech founder", detail: "Rich enough to buy silence and reckless enough to think that makes him untouchable." },
+  { id: "ruby-ash", name: "Ruby Ash", role: "investigative journalist", detail: "A relentless reporter who arrived at the hotel carrying one story too many." },
+]);
+
+const SUSPECT_MAP = Object.freeze(Object.fromEntries(SUSPECTS.map((item) => [item.id, item])));
+
+export function evidenceLabel(id) {
+  const [kind, value] = String(id || "").split(":");
+  if (kind === "suspect") return SUSPECT_MAP[value]?.name || value;
+  return boardEvidenceLabel(id);
+}
+
+export function publicVictimId(state) {
+  const candidate = String(state?.victimId || state?.solution?.victimId || "ruby-ash");
+  return SUSPECT_MAP[candidate] ? candidate : "ruby-ash";
+}
+
+export function eligibleKillers(state) {
+  const victimId = publicVictimId(state);
+  return SUSPECTS.filter((suspect) => suspect.id !== victimId);
+}
 
 function shuffled(items) {
   const next = [...items];
@@ -36,9 +66,9 @@ function advanceTurn(state, members, currentIndex, message) {
   if (nextIndex < 0) return { ...state, phase:"game-over", winnerUid:null, message:"The case collapsed with nobody left to accuse." };
   return { ...state, currentPlayerIndex:nextIndex, turnPhase:"roll", moveRemaining:0, lastRoll:null, turnNumber:Number(state.turnNumber||1)+1, message:`${message} ${members[nextIndex].nickname}'s turn.` };
 }
-function dealEvidence(members, solution) {
+function dealEvidence(members, solution, victimId) {
   const cards = [
-    ...SUSPECTS.filter((item) => item.id !== solution.suspectId).map((item) => cardId("suspect",item.id)),
+    ...SUSPECTS.filter((item) => item.id !== solution.suspectId && item.id !== victimId).map((item) => cardId("suspect",item.id)),
     ...METHODS.filter((item) => item.id !== solution.methodId).map((item) => cardId("method",item.id)),
     ...LOCATIONS.filter((item) => item.id !== solution.locationId).map((item) => cardId("location",item.id)),
   ];
@@ -51,19 +81,27 @@ function validateChoice(action,key,collection,label) {
   if (!collection.some((item) => item.id === value)) throw new Error(`Choose a valid ${label}.`);
   return value;
 }
+function validateKillerChoice(state, action) {
+  const suspectId = validateChoice(action,"suspectId",SUSPECTS,"suspect");
+  if (suspectId === publicVictimId(state)) throw new Error("The victim cannot also be the killer.");
+  return suspectId;
+}
 
 export function createBloodAlibiGame(members) {
   if (members.length < BLOOD_ALIBI_RULES.playersMin || members.length > BLOOD_ALIBI_RULES.playersMax) throw new Error("Blood & Alibi supports two to six investigators.");
-  const solution = { suspectId:pick(SUSPECTS).id, methodId:pick(METHODS).id, locationId:pick(LOCATIONS).id };
+  const victim = pick(SUSPECTS);
+  const killers = SUSPECTS.filter((suspect) => suspect.id !== victim.id);
+  const solution = { suspectId:pick(killers).id, victimId:victim.id, methodId:pick(METHODS).id, locationId:pick(LOCATIONS).id };
   return {
     phase:"playing", roundNumber:1, turnNumber:1, turnPhase:"roll", currentPlayerIndex:0,
+    victimId:victim.id,
     positions:Object.fromEntries(members.map((member,index) => [member.uid,START_SPACES[index % START_SPACES.length]])),
-    hands:dealEvidence(members,solution), solution, eliminated:{}, reveals:[],
-    suspectPositions:Object.fromEntries(SUSPECTS.map((suspect,index) => [suspect.id,LOCATIONS[index % LOCATIONS.length].id])),
+    hands:dealEvidence(members,solution,victim.id), solution, eliminated:{}, reveals:[],
+    suspectPositions:Object.fromEntries(killers.map((suspect,index) => [suspect.id,LOCATIONS[index % LOCATIONS.length].id])),
     methodPositions:Object.fromEntries(METHODS.map((method,index) => [method.id,LOCATIONS[(index+3) % LOCATIONS.length].id])),
     moveRemaining:0, lastRoll:null,
-    caseLog:[{type:"opening",text:"A body was found before dawn. One suspect, one method, one room form the hidden truth."}],
-    winnerUid:null, message:`${members[0].nickname} has the first move. Roll the die and enter the hotel.`,
+    caseLog:[{type:"opening",text:`${victim.name} is the victim. One of the other five guests, one weapon, and one room form the hidden truth.`}],
+    winnerUid:null, message:`${victim.name} is the victim. ${members[0].nickname} has the first move. Roll the die and enter the hotel.`,
   };
 }
 
@@ -124,7 +162,7 @@ export function reduceBloodAlibi(state, actorUid, action, members) {
   const investigationRoomId = boardRoomId(positions[actorUid]);
   if (action?.type === "suggest") {
     if (!investigationRoomId) throw new Error("Enter a room before testing a theory.");
-    const suspectId = validateChoice(action,"suspectId",SUSPECTS,"suspect");
+    const suspectId = validateKillerChoice(state, action);
     const methodId = validateChoice(action,"methodId",METHODS,"method");
     const candidates = [cardId("suspect",suspectId),cardId("method",methodId),cardId("location",investigationRoomId)];
     const suspectPositions = { ...(state.suspectPositions||{}), [suspectId]:investigationRoomId };
@@ -137,7 +175,7 @@ export function reduceBloodAlibi(state, actorUid, action, members) {
     }
     if (refuter) {
       reveals.push({toUid:actorUid,fromUid:refuter.uid,cardId:shownCard,turn:state.turnNumber});
-      caseLog.push({type:"suggestion",uid:actorUid,text:`${current.nickname} placed ${SUSPECTS.find((x)=>x.id===suspectId)?.name} in ${LOCATION_MAP[investigationRoomId].name} with ${METHODS.find((x)=>x.id===methodId)?.name}; ${refuter.nickname} refuted it.`});
+      caseLog.push({type:"suggestion",uid:actorUid,text:`${current.nickname} placed ${SUSPECT_MAP[suspectId]?.name} in ${LOCATION_MAP[investigationRoomId].name} with ${METHODS.find((x)=>x.id===methodId)?.name}; ${refuter.nickname} refuted it.`});
       return advanceTurn({ ...state,positions,suspectPositions,methodPositions,reveals:reveals.slice(-80),caseLog:caseLog.slice(-50)},members,currentIndex,`${refuter.nickname} produced an alibi card.`);
     }
     caseLog.push({type:"suggestion",uid:actorUid,text:`${current.nickname}'s theory in ${LOCATION_MAP[investigationRoomId].name} could not be refuted.`});
@@ -145,10 +183,10 @@ export function reduceBloodAlibi(state, actorUid, action, members) {
   }
 
   if (action?.type === "accuse") {
-    const suspectId=validateChoice(action,"suspectId",SUSPECTS,"suspect"), methodId=validateChoice(action,"methodId",METHODS,"method"), locationId=validateChoice(action,"locationId",LOCATIONS,"location");
+    const suspectId=validateKillerChoice(state,action), methodId=validateChoice(action,"methodId",METHODS,"method"), locationId=validateChoice(action,"locationId",LOCATIONS,"location");
     const solution=state.solution||{};
     if (suspectId===solution.suspectId && methodId===solution.methodId && locationId===solution.locationId) {
-      caseLog.push({type:"accusation",uid:actorUid,text:`${current.nickname} named the killer, method, and scene correctly.`});
+      caseLog.push({type:"accusation",uid:actorUid,text:`${current.nickname} named the killer, weapon, and scene correctly.`});
       return { ...state,positions,phase:"game-over",winnerUid:actorUid,caseLog:caseLog.slice(-50),message:`${current.nickname} solved the murder.` };
     }
     const eliminated={...(state.eliminated||{}),[actorUid]:true};
@@ -182,7 +220,7 @@ export function chooseBloodAlibiRobotMove(state,members) {
   }
   if (state.turnPhase==="investigate") {
     if (!roomId) return {uid:current.uid,action:{type:"end"},key:`${state.turnNumber}:${current.uid}:end`};
-    const suspect=SUSPECTS[(Number(state.turnNumber||1)+1)%SUSPECTS.length], method=METHODS[(Number(state.turnNumber||1)+2)%METHODS.length];
+    const killers=eligibleKillers(state), suspect=killers[(Number(state.turnNumber||1)+1)%killers.length], method=METHODS[(Number(state.turnNumber||1)+2)%METHODS.length];
     return {uid:current.uid,action:{type:"suggest",suspectId:suspect.id,methodId:method.id},key:`${state.turnNumber}:${current.uid}:suggest:${suspect.id}:${method.id}:${roomId}`};
   }
   return null;
