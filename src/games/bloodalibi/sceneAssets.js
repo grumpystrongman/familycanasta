@@ -1,3 +1,5 @@
+import { SCENARIOS_PER_ROOM, TOTAL_SCENARIO_CARDS } from "./scenarioCatalog.js";
+
 const ROOT="/blackglass";
 function fixed(src,canonicalId=null,backgroundSize="cover",backgroundPosition="center",crop=null){return Object.freeze({src,canonicalId,backgroundSize,backgroundPosition,crop});}
 function xPos(index,count){return count<=1?"50%":`${(index/(count-1))*100}%`;}
@@ -9,6 +11,8 @@ const CAST_ATLAS=`${ROOT}/canonical-cast-atlas.jpg`;
 const ROOM_ATLAS=`${ROOT}/room-atlas.jpg`;
 const WEAPON_ATLAS=`${ROOT}/weapon-atlas.jpg`;
 
+// The seven-cell atlas still contains the retired Mara Voss reference in cell zero so existing
+// art does not need to be repacked. The live six-person cast starts at cell one.
 export const CHARACTER_ASSETS=Object.freeze({
   "mara-voss":atlas(CAST_ATLAS,0,7,"mara-voss-v2"),
   "dex-vale":atlas(CAST_ATLAS,1,7,"dex-vale-v2"),
@@ -40,13 +44,17 @@ export const WEAPON_SCENE_ASSETS=Object.freeze({
   "fire-axe":gridAtlas(WEAPON_ATLAS,2,1,3,2),
 });
 
-export const RECONSTRUCTION_COMBINATION_COUNT=6*6*9;
+export const RECONSTRUCTION_COMBINATION_COUNT=TOTAL_SCENARIO_CARDS;
+export const RECONSTRUCTIONS_PER_ROOM=SCENARIOS_PER_ROOM;
 export function spriteStyle(asset){return asset?{backgroundImage:`url(${asset.src})`,backgroundSize:asset.backgroundSize||"cover",backgroundPosition:asset.backgroundPosition||"center",backgroundRepeat:"no-repeat"}:{}}
 
-// Identity is deterministic: every reconstruction reuses the exact same canonical source cell for
-// a person. Only room plate, method prop, injury treatment, staging and final cinematic grade vary.
-export function reconstructionAssetSet(suspectId,methodId,locationId){
-  const suspect=CHARACTER_ASSETS[suspectId],victimPortrait=CHARACTER_ASSETS["ruby-ash"],victim=RUBY_VICTIM_SCENE,weapon=WEAPON_SCENE_ASSETS[methodId],room=ROOM_SCENE_ASSETS[locationId];
-  if(!suspect||!victim||!weapon||!room)throw new Error("Unknown Blackglass reconstruction asset.");
-  return Object.freeze({suspect,victim,victimPortrait,weapon,room,methodId,locationId});
+// Identity is deterministic: every reconstruction reuses the same canonical atlas cell for each
+// person. Killer and victim are distinct; room and weapon plates vary independently.
+export function reconstructionAssetSet(suspectId,victimId,methodId,locationId){
+  // Compatibility with the original fixed-Ruby three-argument signature.
+  if(locationId===undefined){locationId=methodId;methodId=victimId;victimId="ruby-ash";}
+  if(suspectId===victimId)throw new Error("Blackglass killer and victim must be different characters.");
+  const suspect=CHARACTER_ASSETS[suspectId],victimPortrait=CHARACTER_ASSETS[victimId],victim=victimId==="ruby-ash"?RUBY_VICTIM_SCENE:victimPortrait,weapon=WEAPON_SCENE_ASSETS[methodId],room=ROOM_SCENE_ASSETS[locationId];
+  if(!suspect||!victim||!victimPortrait||!weapon||!room)throw new Error("Unknown Blackglass reconstruction asset.");
+  return Object.freeze({suspect,victim,victimPortrait,weapon,room,suspectId,victimId,methodId,locationId});
 }
