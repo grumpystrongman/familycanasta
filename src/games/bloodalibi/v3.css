@@ -19,3 +19,4 @@
 .b3-hall.here{width:2.35%;opacity:1;background:#f3d889!important;box-shadow:0 0 18px #ffd977}
 .b3-passages path{stroke-width:.55;opacity:.72;filter:drop-shadow(0 0 3px #000)}
 .b3-board-shell>footer{background:#080a0be8;color:#a99b82}
+.b3-notebook section>button.victim{opacity:1;text-decoration:none;border-color:#9b7439;background:linear-gradient(90deg,#2a2114,#121413);color:#f1d69c;cursor:default}.b3-notebook section>button.victim>b{color:#d6ad67}
