@@ -1,0 +1,6 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {CHARACTER_ASSETS,RECONSTRUCTION_COMBINATION_COUNT,reconstructionAssetSet} from "./sceneAssets.js";
+const suspects=["mara-voss","dex-vale","imani-cross","theo-rook","june-mercer","elias-flint"],methods=["nail-gun","cleaver","garrote","revolver","poison","fire-axe"],rooms=["greenhouse","penthouse","security","laundry","atrium","kitchen","garage","nightclub","boiler"];
+test("all 324 reconstruction combinations resolve",()=>{let count=0;for(const s of suspects)for(const m of methods)for(const r of rooms){const a=reconstructionAssetSet(s,m,r);assert.ok(a.suspect.src);assert.ok(a.victim.src);assert.ok(a.weapon.src);assert.ok(a.room.src);count++}assert.equal(count,RECONSTRUCTION_COMBINATION_COUNT);assert.equal(count,324)});
+test("every character keeps one canonical identity across every scene",()=>{for(const s of suspects){const expected=CHARACTER_ASSETS[s];for(const m of methods)for(const r of rooms){const a=reconstructionAssetSet(s,m,r);assert.strictEqual(a.suspect,expected);assert.strictEqual(a.victim,CHARACTER_ASSETS["ruby-ash"]);assert.equal(a.suspect.canonicalId,`${s}-v1`);assert.equal(a.victim.canonicalId,"ruby-ash-v1")}}});
