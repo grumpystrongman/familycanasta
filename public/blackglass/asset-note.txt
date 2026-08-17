@@ -1,0 +1,1 @@
+Blackglass cinematic assets are binary files committed through Git blob objects. Do not replace them through text-file helpers; that corrupts JPEG data.
