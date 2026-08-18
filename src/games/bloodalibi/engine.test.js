@@ -4,12 +4,14 @@ import { boardRoomId, createBloodAlibiGame, getReachableBoardNodes, reduceBloodA
 
 const members = [{ uid:"a", nickname:"A", seat:0 }, { uid:"b", nickname:"B", seat:1 }];
 
-test("Blackglass creates one hidden solution, evidence, and corridor starts", () => {
+test("Blackglass creates one four-part hidden solution, evidence, and corridor starts", () => {
   const state = createBloodAlibiGame(members);
   assert.ok(state.solution.suspectId);
+  assert.ok(state.solution.victimId);
+  assert.notEqual(state.solution.suspectId, state.solution.victimId);
   assert.ok(state.solution.methodId);
   assert.ok(state.solution.locationId);
-  assert.equal(state.hands.a.length + state.hands.b.length, 18);
+  assert.equal(state.hands.a.length + state.hands.b.length, 23);
   assert.equal(state.turnPhase, "roll");
   assert.match(state.positions.a, /^hall:/);
 });
@@ -48,21 +50,30 @@ test("corner rooms have one-turn secret passages", () => {
   assert.equal(next.turnPhase, "investigate");
 });
 
-test("a theory requires a room and pulls the named suspect and method into the scene", () => {
+test("a theory requires a room and pulls killer, victim, and method into the scene", () => {
   let state = createBloodAlibiGame(members);
-  assert.throws(() => reduceBloodAlibi({ ...state, turnPhase:"investigate" }, "a", { type:"suggest", suspectId:"mara-voss", methodId:"nail-gun" }, members), /enter a room/i);
+  const theory = { type:"suggest", suspectId:"dex-vale", victimId:"ruby-ash", methodId:"nail-gun" };
+  assert.throws(() => reduceBloodAlibi({ ...state, turnPhase:"investigate" }, "a", theory, members), /enter a room/i);
   state = { ...state, positions:{ ...state.positions, a:roomNodeId("atrium") }, turnPhase:"investigate" };
-  const next = reduceBloodAlibi(state, "a", { type:"suggest", suspectId:"mara-voss", methodId:"nail-gun" }, members);
-  assert.equal(next.suspectPositions["mara-voss"], "atrium");
+  const next = reduceBloodAlibi(state, "a", theory, members);
+  assert.equal(next.suspectPositions["dex-vale"], "atrium");
+  assert.equal(next.suspectPositions["ruby-ash"], "atrium");
   assert.equal(next.methodPositions["nail-gun"], "atrium");
+  assert.deepEqual(next.lastTheory, { suspectId:"dex-vale", victimId:"ruby-ash", methodId:"nail-gun", locationId:"atrium" });
   assert.equal(next.currentPlayerIndex, 1);
   assert.equal(next.turnPhase, "roll");
 });
 
-test("a correct final accusation closes the case", () => {
+test("a theory never permits the same person as killer and victim", () => {
   let state = createBloodAlibiGame(members);
   state = { ...state, positions:{ ...state.positions, a:roomNodeId("atrium") }, turnPhase:"investigate" };
-  const next = reduceBloodAlibi(state, "a", { type:"accuse", suspectId:state.solution.suspectId, methodId:state.solution.methodId, locationId:state.solution.locationId }, members);
+  assert.throws(() => reduceBloodAlibi(state, "a", { type:"suggest", suspectId:"ruby-ash", victimId:"ruby-ash", methodId:"revolver" }, members), /must be different/i);
+});
+
+test("a correct four-part final accusation closes the case", () => {
+  let state = createBloodAlibiGame(members);
+  state = { ...state, positions:{ ...state.positions, a:roomNodeId("atrium") }, turnPhase:"investigate" };
+  const next = reduceBloodAlibi(state, "a", { type:"accuse", suspectId:state.solution.suspectId, victimId:state.solution.victimId, methodId:state.solution.methodId, locationId:state.solution.locationId }, members);
   assert.equal(next.phase, "game-over");
   assert.equal(next.winnerUid, "a");
 });
