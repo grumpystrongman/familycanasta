@@ -1,0 +1,7 @@
+{
+  "room": "penthouse",
+  "limit": 1,
+  "concurrency": 1,
+  "force": false,
+  "reason": "Pilot the production card factory on one card before the full 180-card room batch."
+}
