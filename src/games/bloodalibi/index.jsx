@@ -18,7 +18,9 @@ import {
   reduceBloodAlibi,
   roomNodeId,
 } from "./engine";
+import { scenarioCardUrl } from "./scenarioCards";
 import "./styles.css";
+import "./scenarioCards.css";
 
 const LOCATION_MAP = Object.freeze(Object.fromEntries(LOCATIONS.map((location) => [location.id, location])));
 const DIE_PIPS = Object.freeze({
@@ -29,6 +31,7 @@ const DIE_PIPS = Object.freeze({
   5: [1, 3, 5, 7, 9],
   6: [1, 3, 4, 6, 7, 9],
 });
+const EVIDENCE_KIND_LABEL = Object.freeze({ suspect: "KILLER", victim: "VICTIM", method: "WEAPON", location: "ROOM" });
 
 function SelectField({ label, value, onChange, options, disabled }) {
   return <label className="blackglass-select"><span>{label}</span><select value={value} disabled={disabled} onChange={(event) => onChange(event.target.value)}>{options.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>;
@@ -36,7 +39,24 @@ function SelectField({ label, value, onChange, options, disabled }) {
 
 function EvidenceCard({ cardId }) {
   const [kind] = String(cardId).split(":");
-  return <article className={`blackglass-evidence-card ${kind}`}><small>{kind.toUpperCase()}</small><strong>{evidenceLabel(cardId)}</strong><span>Ruled out by evidence in your file.</span></article>;
+  return <article className={`blackglass-evidence-card ${kind}`}><small>{EVIDENCE_KIND_LABEL[kind] || kind.toUpperCase()}</small><strong>{evidenceLabel(cardId)}</strong><span>Ruled out by evidence in your file.</span></article>;
+}
+
+function ScenarioCardPreview({ scenario, title = "Reconstructing the scene", compact = false }) {
+  const src = scenarioCardUrl(scenario);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => setFailed(false), [src]);
+  if (!scenario) return null;
+  const killer = SUSPECTS.find((item) => item.id === scenario.suspectId)?.name || scenario.suspectId;
+  const victim = SUSPECTS.find((item) => item.id === scenario.victimId)?.name || scenario.victimId;
+  const method = METHODS.find((item) => item.id === scenario.methodId)?.name || scenario.methodId;
+  const location = LOCATIONS.find((item) => item.id === scenario.locationId)?.name || scenario.locationId;
+  return <section className={`blackglass-scene-preview ${compact ? "compact" : ""}`}>
+    <div className="blackglass-scene-preview-heading"><small>{title}</small><strong>{killer} · {victim} · {method} · {location}</strong></div>
+    {src && !failed
+      ? <img src={src} alt={`Scenario card: ${killer}, victim ${victim}, ${method}, ${location}`} loading="lazy" onError={() => setFailed(true)} />
+      : <div className="blackglass-scene-placeholder"><b>Scenario card pending</b><span>The card factory has a deterministic slot for this exact four-part scene. It appears here automatically after its QA-approved asset is generated.</span></div>}
+  </section>;
 }
 
 function DieFace({ value, rolling }) {
@@ -151,9 +171,14 @@ function BloodAlibiTable({ controller }) {
   const myRoomId = boardRoomId(myNodeId);
   const myLocation = LOCATION_MAP[myRoomId];
   const [suspectId, setSuspectId] = useState(SUSPECTS[0].id);
+  const [victimId, setVictimId] = useState(SUSPECTS[1].id);
   const [methodId, setMethodId] = useState(METHODS[0].id);
   const [accuseLocationId, setAccuseLocationId] = useState(LOCATIONS[0].id);
   const [rolling, setRolling] = useState(false);
+  const victimOptions = useMemo(() => SUSPECTS.filter((item) => item.id !== suspectId), [suspectId]);
+  useEffect(() => {
+    if (victimId === suspectId || !victimOptions.some((item) => item.id === victimId)) setVictimId(victimOptions[0]?.id || "");
+  }, [suspectId, victimId, victimOptions]);
   const winner = members.find((member) => member.uid === state.winnerUid);
   const myHand = Array.isArray(state.hands?.[user?.uid]) ? state.hands[user.uid] : [];
   const myReveals = Array.isArray(state.reveals) ? state.reveals.filter((reveal) => reveal.toUid === user?.uid) : [];
@@ -205,7 +230,7 @@ function BloodAlibiTable({ controller }) {
       ? myRoomId ? "Roll, use a secret passage, or stay and investigate this room." : "Roll the die to move through the hotel."
       : state.turnPhase === "move"
         ? `${state.moveRemaining || 0} movement remaining. Entering a room ends movement.`
-        : `Build a theory from ${myLocation?.name || "the room"}, make a final accusation, or end your turn.`;
+        : `Build a four-part theory from ${myLocation?.name || "the room"}, make a final accusation, or end your turn.`;
 
   return <main className="modular-game-shell blackglass-shell"><section className="modular-game-panel blackglass-table">
     <div className="modular-game-toolbar blackglass-toolbar"><div><p className="game-kicker">Modern murder mystery · physical deduction board</p><h1>Blackglass: Blood &amp; Alibi</h1></div><button type="button" className="secondary" onClick={navigateToHub}>← All games</button></div>
@@ -238,10 +263,11 @@ function BloodAlibiTable({ controller }) {
 
         <details className="blackglass-notebook" open>
           <summary>Detective notebook</summary>
-          <p>Tap any line to cycle <strong>?</strong> unknown → <strong>!</strong> watch → <strong>×</strong> cleared. Evidence in your hand or privately revealed is cleared automatically.</p>
+          <p>Tap any line to cycle <strong>?</strong> unknown → <strong>!</strong> watch → <strong>×</strong> cleared. Killer and victim are tracked independently.</p>
           {[
-            ["suspect", "Suspects", SUSPECTS],
-            ["method", "Methods", METHODS],
+            ["suspect", "Killers", SUSPECTS],
+            ["victim", "Victims", SUSPECTS],
+            ["method", "Weapons", METHODS],
             ["location", "Rooms", LOCATIONS],
           ].map(([kind, label, items]) => <section key={kind}><h3>{label}</h3><div>{items.map((item) => {
             const card = `${kind}:${item.id}`;
@@ -253,25 +279,28 @@ function BloodAlibiTable({ controller }) {
       </aside>
     </div>
 
-    <section className="blackglass-theory-panel"><div><p className="game-kicker">Theory desk</p><h2>{canInvestigate ? `What happened in ${myLocation?.name}?` : myRoomId ? `You are in ${myLocation?.name}` : "Get inside a room to test a theory"}</h2><p>Roll and move through the physical hotel board. A normal theory uses the room your pawn occupies and pulls the named suspect and method pieces into that scene. A final accusation can name any room, but one wrong accusation removes you from the investigation.</p></div><div className="blackglass-controls">
-      <SelectField label="Suspect" value={suspectId} onChange={setSuspectId} options={SUSPECTS} disabled={!canInvestigate || busy} />
-      <SelectField label="Method" value={methodId} onChange={setMethodId} options={METHODS} disabled={!canInvestigate || busy} />
-      <div className="blackglass-action-row"><button type="button" className="action-button" disabled={!canInvestigate || busy} onClick={() => act({ type: "suggest", suspectId, methodId })}>Test theory in {myLocation?.name || "this room"}</button><button type="button" className="secondary" disabled={!canInvestigate || busy} onClick={() => act({ type: "end" })}>End turn quietly</button></div>
-      <details className="blackglass-accuse"><summary>Make a final accusation</summary><div><SelectField label="Final location" value={accuseLocationId} onChange={setAccuseLocationId} options={LOCATIONS} disabled={!canInvestigate || busy} /><button type="button" className="blackglass-accuse-button" disabled={!canInvestigate || busy} onClick={() => act({ type: "accuse", suspectId, methodId, locationId: accuseLocationId })}>Lock accusation — no take-backs</button></div></details>
+    {state.lastTheory ? <ScenarioCardPreview scenario={state.lastTheory} title="Latest reconstruction" compact /> : null}
+
+    <section className="blackglass-theory-panel"><div><p className="game-kicker">Theory desk</p><h2>{canInvestigate ? `What happened in ${myLocation?.name}?` : myRoomId ? `You are in ${myLocation?.name}` : "Get inside a room to test a theory"}</h2><p>Every reconstruction has four facts: killer, victim, weapon, and room. A normal theory uses the room your pawn occupies and pulls both named people plus the weapon into that scene. A final accusation can name any room, but one wrong accusation removes you from the investigation.</p></div><div className="blackglass-controls">
+      <SelectField label="Killer" value={suspectId} onChange={setSuspectId} options={SUSPECTS} disabled={!canInvestigate || busy} />
+      <SelectField label="Victim" value={victimId} onChange={setVictimId} options={victimOptions} disabled={!canInvestigate || busy} />
+      <SelectField label="Weapon" value={methodId} onChange={setMethodId} options={METHODS} disabled={!canInvestigate || busy} />
+      <div className="blackglass-action-row"><button type="button" className="action-button" disabled={!canInvestigate || busy} onClick={() => act({ type: "suggest", suspectId, victimId, methodId })}>Reconstruct theory in {myLocation?.name || "this room"}</button><button type="button" className="secondary" disabled={!canInvestigate || busy} onClick={() => act({ type: "end" })}>End turn quietly</button></div>
+      <details className="blackglass-accuse"><summary>Make a final accusation</summary><div><SelectField label="Final location" value={accuseLocationId} onChange={setAccuseLocationId} options={LOCATIONS} disabled={!canInvestigate || busy} /><button type="button" className="blackglass-accuse-button" disabled={!canInvestigate || busy} onClick={() => act({ type: "accuse", suspectId, victimId, methodId, locationId: accuseLocationId })}>Lock four-part accusation — no take-backs</button></div></details>
     </div></section>
 
-    <section className="blackglass-suspect-strip"><div className="blackglass-section-heading"><div><small>PERSONS OF INTEREST</small><h2>Six ugly motives</h2></div></div><div>{SUSPECTS.map((suspect) => <article key={suspect.id}><strong>{suspect.name}</strong><small>{suspect.role}</small><span>{suspect.detail}</span><em>Last placed: {LOCATION_MAP[state.suspectPositions?.[suspect.id]]?.name || "unknown"}</em></article>)}</div></section>
+    <section className="blackglass-suspect-strip"><div className="blackglass-section-heading"><div><small>PERSONS OF INTEREST</small><h2>Six people, two possible roles</h2></div></div><div>{SUSPECTS.map((suspect) => <article key={suspect.id}><strong>{suspect.name}</strong><small>{suspect.role}</small><span>{suspect.detail}</span><em>Last placed: {LOCATION_MAP[state.suspectPositions?.[suspect.id]]?.name || "unknown"}</em></article>)}</div></section>
     <section className="blackglass-log"><div className="blackglass-section-heading"><div><small>SHARED CASE LOG</small><h2>What everyone saw</h2></div></div>{(state.caseLog || []).slice(-10).reverse().map((entry, index) => <p key={`${entry.type}-${index}`}>{entry.text}</p>)}</section>
 
-    {state.phase === "game-over" ? <div className="blackglass-game-over"><div><p className="game-kicker">CASE CLOSED</p><h2>{winner ? `${winner.nickname} solved Blackglass` : "The case went cold"}</h2><p>The truth: <strong>{SUSPECTS.find((item) => item.id === solution.suspectId)?.name}</strong> · <strong>{METHODS.find((item) => item.id === solution.methodId)?.name}</strong> · <strong>{LOCATIONS.find((item) => item.id === solution.locationId)?.name}</strong>.</p></div><button type="button" className="action-button" onClick={navigateToHub}>Return to all games</button></div> : null}
+    {state.phase === "game-over" ? <div className="blackglass-game-over blackglass-game-over-with-card"><div><p className="game-kicker">CASE CLOSED</p><h2>{winner ? `${winner.nickname} solved Blackglass` : "The case went cold"}</h2><p>The truth: <strong>{SUSPECTS.find((item) => item.id === solution.suspectId)?.name}</strong> · victim <strong>{SUSPECTS.find((item) => item.id === solution.victimId)?.name || "unknown"}</strong> · <strong>{METHODS.find((item) => item.id === solution.methodId)?.name}</strong> · <strong>{LOCATIONS.find((item) => item.id === solution.locationId)?.name}</strong>.</p><button type="button" className="action-button" onClick={navigateToHub}>Return to all games</button></div><ScenarioCardPreview scenario={solution} title="Final case card" compact /></div> : null}
   </section></main>;
 }
 
 export default function BloodAlibiGame() {
   const controller = useModularTable({ gameId: "bloodalibi", maxPlayers: BLOOD_ALIBI_RULES.playersMax, minimumPlayers: BLOOD_ALIBI_RULES.playersMin, createGameState: createBloodAlibiGame, reduceGameState: reduceBloodAlibi, chooseRobotMove: chooseBloodAlibiRobotMove, robotDelay: 700 });
-  if (!controller.roomCode) return <GameHome controller={controller} title="Blackglass: Blood & Alibi" kicker="Roll · move · question · eliminate · accuse" summary="An original modern murder-mystery board game set inside the Blackglass Hotel: roll the die, move a physical investigator pawn through corridors and rooms, use secret passages, test theories, reveal private evidence, eliminate false accusations, and solve the hidden three-part murder." maxPlayers={6} quickPlayChoices={[{ icon: "🩸", label: "Open a case vs robot", description: "Learn the full board-game loop immediately with one automated investigator.", rules: {} }]} />;
+  if (!controller.roomCode) return <GameHome controller={controller} title="Blackglass: Blood & Alibi" kicker="Roll · move · reconstruct · eliminate · accuse" summary="An original modern murder-mystery board game set inside the Blackglass Hotel: roll the die, move through the hotel, reconstruct a four-part scene (killer, victim, weapon, room), reveal private evidence, eliminate false accusations, and solve the hidden case." maxPlayers={6} quickPlayChoices={[{ icon: "🕵️", label: "Open a case vs robot", description: "Learn the full board-game loop immediately with one automated investigator.", rules: {} }]} />;
   if (!controller.room) return <main className="modular-game-shell"><section className="modular-game-panel"><h1>Opening the Blackglass case file…</h1></section></main>;
-  if (controller.room.status === "lobby") return <GameLobby controller={controller} title="Blackglass: Blood & Alibi" minimumPlayers={2} maxPlayers={6} startLabel="Seal the hotel" lobbyHint="Two to six investigators. Roll for movement, navigate the hotel floor plan, enter rooms, test theories, use secret passages, refute with evidence, and risk a final accusation." />;
+  if (controller.room.status === "lobby") return <GameLobby controller={controller} title="Blackglass: Blood & Alibi" minimumPlayers={2} maxPlayers={6} startLabel="Seal the hotel" lobbyHint="Two to six investigators. Roll for movement, navigate the hotel floor plan, enter rooms, reconstruct four-part theories, use secret passages, refute with evidence, and risk a final accusation." />;
   return <BloodAlibiTable controller={controller} />;
 }
 

@@ -1,0 +1,5 @@
+node_modules/
+dist/
+artifacts/blackglass/
+public/games/bloodalibi/scenes/
+.DS_Store

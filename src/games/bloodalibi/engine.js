@@ -2,19 +2,20 @@ export const BLOOD_ALIBI_RULES = Object.freeze({ playersMin: 2, playersMax: 6 })
 export const BOARD_SIZE = 17;
 
 export const SUSPECTS = Object.freeze([
-  { id: "mara-voss", name: "Mara Voss", role: "true-crime host", detail: "Built a career turning other people's worst nights into content." },
   { id: "dex-vale", name: "Dex Vale", role: "night manager", detail: "Knows every blind camera, master key, and off-book favor in the building." },
-  { id: "imani-cross", name: "Dr. Imani Cross", role: "trauma surgeon", detail: "Calm under pressure, exact with a blade, and carrying a reason to hate the victim." },
+  { id: "imani-cross", name: "Dr. Imani Cross", role: "trauma surgeon", detail: "Calm under pressure, exact under pressure, and carrying a reason to hate the victim." },
   { id: "theo-rook", name: "Theo Rook", role: "political fixer", detail: "Makes scandals disappear before breakfast and people stop asking questions." },
   { id: "june-mercer", name: "June Mercer", role: "crime-scene cleaner", detail: "Professional discretion, industrial solvents, and a trunk nobody wants opened." },
   { id: "elias-flint", name: "Elias Flint", role: "tech founder", detail: "Rich enough to buy silence and reckless enough to think that makes him untouchable." },
+  { id: "ruby-ash", name: "Ruby Ash", role: "true-crime host", detail: "Built a career turning other people's worst nights into content, then became part of the story." },
 ]);
+export const VICTIMS = SUSPECTS;
 
 export const METHODS = Object.freeze([
   { id: "nail-gun", name: "Industrial Nail Gun", detail: "Fresh battery, wiped grip, one missing fastener strip." },
   { id: "cleaver", name: "Butcher's Cleaver", detail: "Taken from the service kitchen after midnight." },
   { id: "garrote", name: "Braided Garrote", detail: "Cut from high-tension stage cable." },
-  { id: "revolver", name: "Antique Revolver", detail: "A display piece that turned out to be painfully functional." },
+  { id: "revolver", name: "Antique Revolver", detail: "A display piece that turned out to be functional." },
   { id: "poison", name: "Poisoned Nightcap", detail: "A bitter botanical hidden under expensive bourbon." },
   { id: "fire-axe", name: "Fire Axe", detail: "Missing from an emergency cabinet on the service level." },
 ]);
@@ -26,7 +27,7 @@ export const LOCATIONS = Object.freeze([
   { id: "laundry", name: "Laundry Tunnel", detail: "Industrial washers hammer beside bins of ruined linen.", theme: "laundry", bounds: { x: 0, y: 6, w: 5, h: 5 }, doors: [{ x: 1, y: 5 }, { x: 5, y: 8 }, { x: 3, y: 11 }] },
   { id: "atrium", name: "Glass Atrium", detail: "Rain streaks the three-story windows beneath a chandelier of fractured glass.", theme: "atrium", bounds: { x: 6, y: 6, w: 5, h: 5 }, doors: [{ x: 8, y: 5 }, { x: 11, y: 8 }, { x: 8, y: 11 }, { x: 5, y: 8 }] },
   { id: "kitchen", name: "Service Kitchen", detail: "Cold steel counters, missing tools, and a sink that was scrubbed too hard.", theme: "kitchen", bounds: { x: 12, y: 6, w: 5, h: 5 }, doors: [{ x: 15, y: 5 }, { x: 11, y: 8 }, { x: 13, y: 11 }] },
-  { id: "garage", name: "Parking Garage", detail: "Concrete, oil sheen, and a sedan with blood-dark upholstery.", theme: "garage", bounds: { x: 0, y: 12, w: 5, h: 5 }, doors: [{ x: 1, y: 11 }, { x: 5, y: 13 }], passageTo: "security" },
+  { id: "garage", name: "Parking Garage", detail: "Concrete, oil sheen, and a sedan nobody remembers arriving.", theme: "garage", bounds: { x: 0, y: 12, w: 5, h: 5 }, doors: [{ x: 1, y: 11 }, { x: 5, y: 13 }], passageTo: "security" },
   { id: "nightclub", name: "Basement Nightclub", detail: "Bass still rattles empty bottles beneath a shut-down dance floor.", theme: "nightclub", bounds: { x: 6, y: 12, w: 5, h: 5 }, doors: [{ x: 5, y: 15 }, { x: 8, y: 11 }, { x: 11, y: 13 }] },
   { id: "boiler", name: "Boiler Room", detail: "Heat, pipe noise, and a floor drain that smells aggressively of bleach.", theme: "boiler", bounds: { x: 12, y: 12, w: 5, h: 5 }, doors: [{ x: 15, y: 11 }, { x: 11, y: 15 }], passageTo: "greenhouse" },
 ]);
@@ -75,7 +76,7 @@ function pick(items) { return items[Math.floor(Math.random() * items.length)]; }
 function cardId(kind, id) { return `${kind}:${id}`; }
 export function evidenceLabel(id) {
   const [kind, value] = String(id || "").split(":");
-  if (kind === "suspect") return SUSPECTS.find((item) => item.id === value)?.name || value;
+  if (kind === "suspect" || kind === "victim") return SUSPECTS.find((item) => item.id === value)?.name || value;
   if (kind === "method") return METHODS.find((item) => item.id === value)?.name || value;
   if (kind === "location") return LOCATIONS.find((item) => item.id === value)?.name || value;
   return id;
@@ -176,6 +177,7 @@ function advanceTurn(state, members, currentIndex, message) {
 function dealEvidence(members, solution) {
   const cards = [
     ...SUSPECTS.filter((item) => item.id !== solution.suspectId).map((item) => cardId("suspect", item.id)),
+    ...VICTIMS.filter((item) => item.id !== solution.victimId).map((item) => cardId("victim", item.id)),
     ...METHODS.filter((item) => item.id !== solution.methodId).map((item) => cardId("method", item.id)),
     ...LOCATIONS.filter((item) => item.id !== solution.locationId).map((item) => cardId("location", item.id)),
   ];
@@ -184,9 +186,15 @@ function dealEvidence(members, solution) {
   return hands;
 }
 
+function pickSolution() {
+  const killer = pick(SUSPECTS);
+  const victim = pick(VICTIMS.filter((item) => item.id !== killer.id));
+  return { suspectId: killer.id, victimId: victim.id, methodId: pick(METHODS).id, locationId: pick(LOCATIONS).id };
+}
+
 export function createBloodAlibiGame(members) {
   if (members.length < 2 || members.length > 6) throw new Error("Blood & Alibi supports two to six investigators.");
-  const solution = { suspectId: pick(SUSPECTS).id, methodId: pick(METHODS).id, locationId: pick(LOCATIONS).id };
+  const solution = pickSolution();
   const hands = dealEvidence(members, solution);
   const positions = Object.fromEntries(members.map((member, index) => [member.uid, START_SPACES[index % START_SPACES.length]]));
   const suspectPositions = Object.fromEntries(SUSPECTS.map((suspect, index) => [suspect.id, LOCATIONS[index % LOCATIONS.length].id]));
@@ -204,9 +212,10 @@ export function createBloodAlibiGame(members) {
     reveals: [],
     suspectPositions,
     methodPositions,
+    lastTheory: null,
     moveRemaining: 0,
     lastRoll: null,
-    caseLog: [{ type: "opening", text: "A body was found before dawn. One suspect, one method, one room form the hidden truth." }],
+    caseLog: [{ type: "opening", text: "A body was found before dawn. One killer, one victim, one method, and one room form the hidden truth." }],
     winnerUid: null,
     message: `${members[0].nickname} has the first move. Roll the die and enter the hotel.`,
   };
@@ -216,6 +225,13 @@ function validateChoice(action, key, collection, label) {
   const value = String(action?.[key] || "");
   if (!collection.some((item) => item.id === value)) throw new Error(`Choose a valid ${label}.`);
   return value;
+}
+
+function validatePeople(action) {
+  const suspectId = validateChoice(action, "suspectId", SUSPECTS, "killer");
+  const victimId = validateChoice(action, "victimId", VICTIMS, "victim");
+  if (suspectId === victimId) throw new Error("The killer and victim must be different people.");
+  return { suspectId, victimId };
 }
 
 export function reduceBloodAlibi(state, actorUid, action, members) {
@@ -279,11 +295,12 @@ export function reduceBloodAlibi(state, actorUid, action, members) {
 
   if (action?.type === "suggest") {
     if (!investigationRoomId) throw new Error("Enter a room before testing a theory.");
-    const suspectId = validateChoice(action, "suspectId", SUSPECTS, "suspect");
+    const { suspectId, victimId } = validatePeople(action);
     const methodId = validateChoice(action, "methodId", METHODS, "method");
-    const candidates = [cardId("suspect", suspectId), cardId("method", methodId), cardId("location", investigationRoomId)];
-    const suspectPositions = { ...(state.suspectPositions || {}), [suspectId]: investigationRoomId };
+    const candidates = [cardId("suspect", suspectId), cardId("victim", victimId), cardId("method", methodId), cardId("location", investigationRoomId)];
+    const suspectPositions = { ...(state.suspectPositions || {}), [suspectId]: investigationRoomId, [victimId]: investigationRoomId };
     const methodPositions = { ...(state.methodPositions || {}), [methodId]: investigationRoomId };
+    const lastTheory = { suspectId, victimId, methodId, locationId: investigationRoomId };
     let refuter = null;
     let shownCard = null;
     for (let offset = 1; offset < members.length; offset += 1) {
@@ -291,27 +308,32 @@ export function reduceBloodAlibi(state, actorUid, action, members) {
       const matches = (state.hands?.[candidate.uid] || []).filter((card) => candidates.includes(card)).sort();
       if (matches.length) { refuter = candidate; shownCard = matches[0]; break; }
     }
+    const killerName = SUSPECTS.find((item) => item.id === suspectId)?.name;
+    const victimName = VICTIMS.find((item) => item.id === victimId)?.name;
+    const methodName = METHODS.find((item) => item.id === methodId)?.name;
+    const roomName = LOCATION_MAP[investigationRoomId].name;
     if (refuter) {
       reveals.push({ toUid: actorUid, fromUid: refuter.uid, cardId: shownCard, turn: state.turnNumber });
-      caseLog.push({ type: "suggestion", uid: actorUid, text: `${current.nickname} placed ${SUSPECTS.find((item) => item.id === suspectId)?.name} in ${LOCATION_MAP[investigationRoomId].name} with ${METHODS.find((item) => item.id === methodId)?.name}; ${refuter.nickname} refuted it.` });
-      return advanceTurn({ ...state, positions, suspectPositions, methodPositions, reveals: reveals.slice(-80), caseLog: caseLog.slice(-50) }, members, currentIndex, `${refuter.nickname} produced an alibi card.`);
+      caseLog.push({ type: "suggestion", uid: actorUid, text: `${current.nickname} reconstructed ${killerName} with ${methodName}, victim ${victimName}, in ${roomName}; ${refuter.nickname} refuted it.` });
+      return advanceTurn({ ...state, positions, suspectPositions, methodPositions, lastTheory, reveals: reveals.slice(-80), caseLog: caseLog.slice(-50) }, members, currentIndex, `${refuter.nickname} produced an alibi card.`);
     }
-    caseLog.push({ type: "suggestion", uid: actorUid, text: `${current.nickname}'s theory in ${LOCATION_MAP[investigationRoomId].name} could not be refuted.` });
-    return advanceTurn({ ...state, positions, suspectPositions, methodPositions, reveals: reveals.slice(-80), caseLog: caseLog.slice(-50) }, members, currentIndex, "Nobody at the table could refute the theory.");
+    caseLog.push({ type: "suggestion", uid: actorUid, text: `${current.nickname}'s reconstruction of ${killerName}, ${victimName}, ${methodName}, and ${roomName} could not be refuted.` });
+    return advanceTurn({ ...state, positions, suspectPositions, methodPositions, lastTheory, reveals: reveals.slice(-80), caseLog: caseLog.slice(-50) }, members, currentIndex, "Nobody at the table could refute the theory.");
   }
 
   if (action?.type === "accuse") {
-    const suspectId = validateChoice(action, "suspectId", SUSPECTS, "suspect");
+    const { suspectId, victimId } = validatePeople(action);
     const methodId = validateChoice(action, "methodId", METHODS, "method");
     const locationId = validateChoice(action, "locationId", LOCATIONS, "location");
     const solution = state.solution || {};
-    const correct = suspectId === solution.suspectId && methodId === solution.methodId && locationId === solution.locationId;
+    const victimCorrect = solution.victimId ? victimId === solution.victimId : true;
+    const correct = suspectId === solution.suspectId && victimCorrect && methodId === solution.methodId && locationId === solution.locationId;
     if (correct) {
-      caseLog.push({ type: "accusation", uid: actorUid, text: `${current.nickname} named the killer, method, and scene correctly.` });
-      return { ...state, positions, phase: "game-over", winnerUid: actorUid, caseLog: caseLog.slice(-50), message: `${current.nickname} solved the murder.` };
+      caseLog.push({ type: "accusation", uid: actorUid, text: `${current.nickname} named the killer, victim, method, and scene correctly.` });
+      return { ...state, positions, phase: "game-over", winnerUid: actorUid, lastTheory: { suspectId, victimId, methodId, locationId }, caseLog: caseLog.slice(-50), message: `${current.nickname} solved the murder.` };
     }
     const eliminated = { ...(state.eliminated || {}), [actorUid]: true };
-    caseLog.push({ type: "accusation", uid: actorUid, text: `${current.nickname} made a final accusation and got it wrong.` });
+    caseLog.push({ type: "accusation", uid: actorUid, text: `${current.nickname} made a final four-part accusation and got it wrong.` });
     const remaining = activePlayerIndexes({ ...state, eliminated }, members);
     if (remaining.length === 1) {
       const survivor = remaining[0].member;
@@ -351,8 +373,10 @@ export function chooseBloodAlibiRobotMove(state, members) {
   if (state.turnPhase === "investigate") {
     if (!roomId) return { uid: current.uid, action: { type: "end" }, key: `${state.turnNumber}:${current.uid}:end` };
     const suspect = SUSPECTS[(Number(state.turnNumber || 1) + 1) % SUSPECTS.length];
+    const possibleVictims = VICTIMS.filter((item) => item.id !== suspect.id);
+    const victim = possibleVictims[(Number(state.turnNumber || 1) + 2) % possibleVictims.length];
     const method = METHODS[(Number(state.turnNumber || 1) + 2) % METHODS.length];
-    return { uid: current.uid, action: { type: "suggest", suspectId: suspect.id, methodId: method.id }, key: `${state.turnNumber}:${current.uid}:suggest:${suspect.id}:${method.id}:${roomId}` };
+    return { uid: current.uid, action: { type: "suggest", suspectId: suspect.id, victimId: victim.id, methodId: method.id }, key: `${state.turnNumber}:${current.uid}:suggest:${suspect.id}:${victim.id}:${method.id}:${roomId}` };
   }
   return null;
 }

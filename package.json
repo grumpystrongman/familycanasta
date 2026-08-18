@@ -10,6 +10,14 @@
     "preview": "vite preview",
     "pixelquest:dm": "node services/pixelquest-dm/server.mjs",
     "pixelquest:dm:test": "node --test services/pixelquest-dm/server.test.mjs src/games/pixelquest/dm.test.js",
+    "blackglass:manifest": "node scripts/blackglass/generate-manifest.mjs",
+    "blackglass:prepare-references": "node scripts/blackglass/prepare-references.mjs",
+    "blackglass:reference-art": "node scripts/blackglass/generate-reference-assets.mjs",
+    "blackglass:scenes": "node scripts/blackglass/generate-scenes.mjs",
+    "blackglass:validate": "node scripts/blackglass/validate-scenes.mjs",
+    "blackglass:compose": "node scripts/blackglass/compose-cards.mjs",
+    "blackglass:verify": "node scripts/blackglass/verify-cards.mjs",
+    "blackglass:build-cards": "node scripts/blackglass/build-all.mjs",
     "firebase:login": "firebase login",
     "firebase:deploy": "firebase deploy"
   },
@@ -18,8 +26,10 @@
     "firebase": "^11.10.0",
     "framer-motion": "^12.23.0",
     "lucide-react": "latest",
+    "openai": "latest",
     "react": "latest",
     "react-dom": "latest",
+    "sharp": "latest",
     "vite": "latest"
   },
   "devDependencies": {
