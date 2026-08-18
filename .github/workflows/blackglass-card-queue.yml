@@ -1,0 +1,121 @@
+name: Blackglass card queue
+
+on:
+  push:
+    branches:
+      - agent/blackglass-card-generation
+    paths:
+      - .blackglass-generation-request.json
+
+permissions:
+  contents: write
+
+concurrency:
+  group: blackglass-card-generation
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      BLACKGLASS_IMAGE_MODEL: gpt-image-1-mini
+      BLACKGLASS_QA_MODEL: gpt-5-nano
+      BLACKGLASS_ESCALATION_IMAGE_MODEL: gpt-image-1
+      BLACKGLASS_IMAGE_QUALITY: medium
+      BLACKGLASS_ESCALATION_QUALITY: high
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/blackglass-card-generation
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package.json
+
+      - name: Require OpenAI API secret
+        run: |
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo "Repository secret OPENAI_API_KEY is required before the Blackglass queue can generate paid image assets." >&2
+            exit 2
+          fi
+
+      - name: Read generation request
+        id: request
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE' >> "$GITHUB_OUTPUT"
+          import fs from 'node:fs';
+          const allowedRooms = new Set(['greenhouse','penthouse','security','laundry','atrium','kitchen','garage','nightclub','boiler']);
+          const request = JSON.parse(fs.readFileSync('.blackglass-generation-request.json','utf8'));
+          if (!allowedRooms.has(request.room)) throw new Error(`Invalid room: ${request.room}`);
+          const limit = Math.max(1, Math.min(180, Number(request.limit ?? 180)));
+          const concurrency = Math.max(1, Math.min(3, Number(request.concurrency ?? 2)));
+          const force = request.force === true ? 'true' : 'false';
+          console.log(`room=${request.room}`);
+          console.log(`limit=${limit}`);
+          console.log(`concurrency=${concurrency}`);
+          console.log(`force=${force}`);
+          NODE
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Verify card factory
+        run: npm run blackglass:cards:test
+
+      - name: Generate requested room batch
+        shell: bash
+        run: |
+          FORCE=""
+          if [ "${{ steps.request.outputs.force }}" = "true" ]; then FORCE="--force"; fi
+          npm run blackglass:cards -- \
+            --room "${{ steps.request.outputs.room }}" \
+            --limit "${{ steps.request.outputs.limit }}" \
+            --concurrency "${{ steps.request.outputs.concurrency }}" \
+            $FORCE
+
+      - name: Verify generated output
+        shell: bash
+        env:
+          ROOM: ${{ steps.request.outputs.room }}
+          LIMIT: ${{ steps.request.outputs.limit }}
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const room = process.env.ROOM;
+          const requested = Number(process.env.LIMIT);
+          const manifest = JSON.parse(fs.readFileSync('public/blackglass/cards/manifest.json','utf8'));
+          const count = Object.values(manifest.cards || {}).filter(card => card.locationId === room).length;
+          console.log(`${room}: ${count}/180 cards registered; request limit=${requested}`);
+          if (count < requested) process.exit(1);
+          NODE
+
+      - name: Commit approved cards
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "public/blackglass/cards/${{ steps.request.outputs.room }}" public/blackglass/cards/manifest.json
+          if git diff --cached --quiet; then
+            echo "No new approved cards to commit."
+            exit 0
+          fi
+          git commit -m "Generate Blackglass ${{ steps.request.outputs.room }} scenario cards"
+          git push origin HEAD:agent/blackglass-card-generation
+
+      - name: Upload requested room artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: blackglass-${{ steps.request.outputs.room || 'request' }}-cards
+          path: |
+            public/blackglass/cards/${{ steps.request.outputs.room }}
+            public/blackglass/cards/manifest.json
+            scripts/blackglass/.work/failures
+          if-no-files-found: warn
+          retention-days: 14
