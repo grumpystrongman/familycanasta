@@ -1,0 +1,66 @@
+name: Blackglass scenario cards
+
+on:
+  workflow_dispatch:
+    inputs:
+      room:
+        description: "Room id (penthouse, greenhouse, security, laundry, atrium, kitchen, garage, nightclub, boiler). Leave blank for all rooms."
+        required: false
+        default: "penthouse"
+      limit:
+        description: "Number of cards to generate. Use 0 for the full selected room(s)."
+        required: false
+        default: "10"
+      persist:
+        description: "Commit generated cards back to the current branch"
+        type: boolean
+        required: true
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  cards:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      BLACKGLASS_ROOM: ${{ inputs.room }}
+      BLACKGLASS_LIMIT: ${{ inputs.limit }}
+      BLACKGLASS_CONCURRENCY: "2"
+      BLACKGLASS_QA_MIN_SCORE: "92"
+      BLACKGLASS_REFERENCE_MODEL: "gpt-image-1-mini"
+      BLACKGLASS_CHARACTER_MODEL: "gpt-image-1"
+      BLACKGLASS_SCENE_MODEL: "gpt-image-1"
+      BLACKGLASS_QA_MODEL: "gpt-5-nano"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm install
+      - name: Build Blackglass cards
+        run: npm run blackglass:build-cards
+      - name: Upload generated cards and QA
+        uses: actions/upload-artifact@v4
+        with:
+          name: blackglass-${{ inputs.room || 'all' }}-${{ github.run_number }}
+          path: |
+            public/games/bloodalibi/cards/
+            public/games/bloodalibi/scenes/
+            public/games/bloodalibi/references/characters/
+            public/games/bloodalibi/references/rooms/
+            public/games/bloodalibi/references/weapons/
+            artifacts/blackglass/qa/
+            artifacts/blackglass/progress.json
+          retention-days: 14
+      - name: Persist approved assets
+        if: ${{ inputs.persist }}
+        run: |
+          git config user.name "blackglass-card-bot"
+          git config user.email "blackglass-card-bot@users.noreply.github.com"
+          git add -f public/games/bloodalibi/cards public/games/bloodalibi/references/characters public/games/bloodalibi/references/rooms public/games/bloodalibi/references/weapons
+          git diff --cached --quiet && exit 0
+          git commit -m "Add approved Blackglass scenario cards"
+          git push
