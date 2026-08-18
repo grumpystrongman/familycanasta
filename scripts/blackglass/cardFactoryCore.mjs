@@ -91,9 +91,9 @@ export function evaluateQa(result) {
 export function buildQaPrompt({ killerName, victimName, roomName, weaponName }) {
   return [
     "You are the automated art QA gate for a family-friendly mystery board game.",
-    "Image 1 is the generated scene. Image 2 is the canonical killer reference. Image 3 is the canonical victim reference.",
+    "Image 1 is the generated scene. Image 2 is the canonical killer reference. Image 3 is the canonical victim reference. Image 4 is the canonical room reference. Image 5 is the canonical weapon reference.",
     `Expected killer: ${killerName}. Expected victim: ${victimName}. Expected room: ${roomName}. Expected evidence prop: ${weaponName}.`,
-    "Judge the generated scene strictly. Identity means the same adult person: facial structure, age, complexion, hair and recognizable wardrobe. The victim may be motionless/unconscious but must not show graphic injury.",
+    "Judge the generated scene strictly against all four canonical references. Identity means the same adult person: facial structure, age, complexion, hair and recognizable wardrobe. roomMatch means the environment is recognizably the same canonical room. weaponMatch means the visible evidence prop matches the canonical weapon. The victim may be motionless/unconscious but must not show graphic injury.",
     "Return exactly one JSON object, no Markdown, with this schema:",
     '{"killerIdentity":0.0,"victimIdentity":0.0,"roomMatch":0.0,"weaponMatch":0.0,"visualQuality":0.0,"familySafe":true,"noGraphicViolence":true,"noText":true,"notes":"short reason"}',
     "Scores are 0 to 1. familySafe must be false for sexual content, exposed injury, disturbing body detail, or anything inappropriate for a mainstream family mystery game. noGraphicViolence is false for blood, wounds, impact, attack-in-progress, gore or visible bodily damage. noText is false if the generated scene contains accidental words, labels or watermarks.",
