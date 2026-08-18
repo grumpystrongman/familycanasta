@@ -1,0 +1,122 @@
+name: Blackglass card batch
+
+on:
+  workflow_dispatch:
+    inputs:
+      room:
+        description: Generate one 180-card room batch
+        required: true
+        type: choice
+        options:
+          - greenhouse
+          - penthouse
+          - security
+          - laundry
+          - atrium
+          - kitchen
+          - garage
+          - nightclub
+          - boiler
+      concurrency:
+        description: Concurrent image jobs
+        required: true
+        default: "2"
+        type: choice
+        options:
+          - "1"
+          - "2"
+          - "3"
+      force:
+        description: Regenerate cards that already exist
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+concurrency:
+  group: blackglass-card-batch-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  generate-room:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      BLACKGLASS_IMAGE_MODEL: gpt-image-1-mini
+      BLACKGLASS_QA_MODEL: gpt-5-nano
+      BLACKGLASS_ESCALATION_IMAGE_MODEL: gpt-image-1
+      BLACKGLASS_IMAGE_QUALITY: medium
+      BLACKGLASS_ESCALATION_QUALITY: high
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package.json
+
+      - name: Require OpenAI API secret
+        run: |
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo "Repository secret OPENAI_API_KEY is required." >&2
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Verify card factory
+        run: npm run blackglass:cards:test
+
+      - name: Generate room batch
+        shell: bash
+        run: |
+          FORCE=""
+          if [ "${{ inputs.force }}" = "true" ]; then FORCE="--force"; fi
+          npm run blackglass:cards -- --room "${{ inputs.room }}" --concurrency "${{ inputs.concurrency }}" $FORCE
+
+      - name: Verify full room count in manifest
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const room = process.env.ROOM;
+          const manifest = JSON.parse(fs.readFileSync('public/blackglass/cards/manifest.json','utf8'));
+          const count = Object.values(manifest.cards || {}).filter(card => card.locationId === room).length;
+          console.log(`${room}: ${count}/180 cards`);
+          if (count !== 180) process.exit(1);
+          NODE
+        env:
+          ROOM: ${{ inputs.room }}
+
+      - name: Commit approved cards to this branch
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "public/blackglass/cards/${{ inputs.room }}" public/blackglass/cards/manifest.json
+          if git diff --cached --quiet; then
+            echo "No new Blackglass cards to commit."
+            exit 0
+          fi
+          git commit -m "Generate Blackglass ${{ inputs.room }} scenario cards"
+          git push origin "HEAD:${{ github.ref_name }}"
+
+      - name: Upload generated room artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: blackglass-${{ inputs.room }}-cards
+          path: |
+            public/blackglass/cards/${{ inputs.room }}
+            public/blackglass/cards/manifest.json
+            scripts/blackglass/.work/failures
+          if-no-files-found: warn
+          retention-days: 14

@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "pipeline": "blackglass-static-card-v1",
+  "expectedCards": 1620,
+  "generatedAt": null,
+  "cardCount": 0,
+  "cards": {},
+  "stats": {
+    "completed": 0,
+    "failed": 0,
+    "mini": 0,
+    "escalated": 0
+  }
+}
