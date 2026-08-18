@@ -27,21 +27,20 @@ export default function BlackglassReconstruction({scenario,refuter,shown,onClose
  },[staticSrc]);
 
  useEffect(()=>{
-  if(useStaticCard||!scenario||!canvasRef.current)return;
+  if(!scenario||!canvasRef.current)return;
   let active=true;
-  setStatus("rendering");
   setRenderError("");
   renderCrimeScene(canvasRef.current,scenario,{
    room:room?.name||scenario.locationId,
    suspect:suspect?.name||scenario.suspectId,
    victim:victim?.name||scenario.victimId||"Ruby Ash",
    method:method?.name||scenario.methodId,
-  }).then(()=>{if(active)setStatus("ready")}).catch(error=>{
+  }).then(()=>{if(active&&!useStaticCard)setStatus("ready")}).catch(error=>{
    console.error("Blackglass cinematic renderer failed",error);
-   if(active){setStatus("error");setRenderError(error?.message||"Unable to render reconstruction.")}
+   if(active&&!useStaticCard){setStatus("error");setRenderError(error?.message||"Unable to render reconstruction.")}
   });
   return()=>{active=false};
- },[useStaticCard,scenario?.suspectId,scenario?.victimId,scenario?.methodId,scenario?.locationId,scenario?.turn,room?.name,suspect?.name,victim?.name,method?.name]);
+ },[scenario?.suspectId,scenario?.victimId,scenario?.methodId,scenario?.locationId,scenario?.turn,room?.name,suspect?.name,victim?.name,method?.name,useStaticCard]);
 
  if(!scenario||!room||!suspect||!victim||!method||!a)return null;
  return <div className="b3-recon-backdrop" role="dialog" aria-modal="true" aria-label="Theory reconstruction">
@@ -64,6 +63,13 @@ export default function BlackglassReconstruction({scenario,refuter,shown,onClose
     <p>{room.name} · victim: {victim.name} · one of {RECONSTRUCTION_COMBINATION_COUNT.toLocaleString()} identity-locked scenario cards</p>
    </header>
    <div className={`b3-cinematic-frame ${useStaticCard?"has-static-card":"has-runtime-scene"}`}>
+    <canvas ref={canvasRef} className="b3-crime-scene-canvas" data-testid="blackglass-crime-scene" aria-label={`${suspect.name} with ${method.name} in ${room.name}, victim ${victim.name}`}/>
+    <div className="b3-scene-caption">
+     <span><i className="b3-caption-thumb person" style={spriteStyle(a.suspect)}/><b>Killer</b>{suspect.name}</span>
+     <span><i className="b3-caption-thumb person" style={spriteStyle(a.victimPortrait)}/><b>Victim</b>{victim.name}</span>
+     <span><i className="b3-caption-thumb room" style={spriteStyle(a.room)}/><b>Location</b>{room.name}</span>
+     <span><i className="b3-caption-thumb weapon" style={spriteStyle(a.weapon)}/><b>Weapon</b>{method.name}</span>
+    </div>
     {useStaticCard?<img
      src={staticSrc}
      className="b3-static-scenario-card"
@@ -71,17 +77,9 @@ export default function BlackglassReconstruction({scenario,refuter,shown,onClose
      alt={`${suspect.name}, ${victim.name}, ${room.name}, ${method.name}`}
      onLoad={()=>setStatus("ready")}
      onError={()=>{setUseStaticCard(false);setStatus("rendering");setRenderError("")}}
-    />:<>
-     <canvas ref={canvasRef} className="b3-crime-scene-canvas" data-testid="blackglass-crime-scene" aria-label={`${suspect.name} with ${method.name} in ${room.name}, victim ${victim.name}`}/>
-     {status==="rendering"?<div className="b3-scene-loading"><span/><strong>Reconstructing the scene…</strong></div>:null}
-     {status==="error"?<div className="b3-scene-error"><strong>Scene renderer failed</strong><span>{renderError}</span></div>:null}
-     <div className="b3-scene-caption">
-      <span><i className="b3-caption-thumb person" style={spriteStyle(a.suspect)}/><b>Killer</b>{suspect.name}</span>
-      <span><i className="b3-caption-thumb person" style={spriteStyle(a.victimPortrait)}/><b>Victim</b>{victim.name}</span>
-      <span><i className="b3-caption-thumb room" style={spriteStyle(a.room)}/><b>Location</b>{room.name}</span>
-      <span><i className="b3-caption-thumb weapon" style={spriteStyle(a.weapon)}/><b>Weapon</b>{method.name}</span>
-     </div>
-    </>}
+    />:null}
+    {status==="rendering"&&!useStaticCard?<div className="b3-scene-loading"><span/><strong>Reconstructing the scene…</strong></div>:null}
+    {status==="error"&&!useStaticCard?<div className="b3-scene-error"><strong>Scene renderer failed</strong><span>{renderError}</span></div>:null}
    </div>
    <footer className={refuter?"refuted":"unresolved"}>
     <div>
