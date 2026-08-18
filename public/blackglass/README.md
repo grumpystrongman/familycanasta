@@ -18,7 +18,7 @@ See `public/blackglass/cards/README.md` for commands and output conventions.
 
 ## Canonical source assets
 
-- `canonical-cast-atlas.jpg`: seven source cells. Cell zero retains the retired Mara Voss art for compatibility; the live six-person cast is Dex Vale, Dr. Imani Cross, Theo Rook, June Mercer, Elias Flint and Ruby Ash.
+- `canonical-cast-atlas.jpg`: seven source cells. Cell zero is an unused compatibility placeholder; the live six-person cast is Dex Vale, Dr. Imani Cross, Theo Rook, June Mercer, Elias Flint and Ruby Ash in cells one through six.
 - `room-atlas.jpg`: nine room plates.
 - `weapon-atlas.jpg`: six weapon/prop plates.
 - `ruby-victim-base.jpg`: legacy Ruby victim source retained for compatibility.
