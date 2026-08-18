@@ -43,7 +43,6 @@ function frameSvg(scenario) {
       .brand{font-family:Georgia,'Times New Roman',serif;font-size:48px;font-weight:700;letter-spacing:8px;fill:${GOLD};text-anchor:middle}
       .tag{font-family:Arial,sans-serif;font-size:14px;letter-spacing:4px;fill:#b99146;text-anchor:middle}
     </style>
-    <rect width="1122" height="1402" fill="#030506"/>
     <rect x="15" y="15" width="1092" height="1372" rx="25" fill="none" stroke="${GOLD}" stroke-width="3"/>
     <rect x="27" y="27" width="1068" height="1348" rx="20" fill="none" stroke="${GOLD_DARK}" stroke-width="1"/>
     <rect x="43" y="940" width="1036" height="330" rx="18" fill="${PANEL_BG}" fill-opacity="0.97" stroke="${GOLD_DARK}" stroke-width="2"/>
