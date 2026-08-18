@@ -10,6 +10,9 @@
     "preview": "vite preview",
     "pixelquest:dm": "node services/pixelquest-dm/server.mjs",
     "pixelquest:dm:test": "node --test services/pixelquest-dm/server.test.mjs src/games/pixelquest/dm.test.js",
+    "blackglass:cards": "node scripts/blackglass/build-cards.mjs",
+    "blackglass:cards:dry": "node scripts/blackglass/build-cards.mjs --dry-run",
+    "blackglass:cards:test": "node --test scripts/blackglass/cardFactoryCore.test.mjs",
     "firebase:login": "firebase login",
     "firebase:deploy": "firebase deploy"
   },
@@ -23,6 +26,8 @@
     "vite": "latest"
   },
   "devDependencies": {
-    "firebase-tools": "^14.9.0"
+    "firebase-tools": "^14.9.0",
+    "openai": "latest",
+    "sharp": "latest"
   }
 }
