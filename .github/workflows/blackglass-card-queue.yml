@@ -6,6 +6,12 @@ on:
       - agent/blackglass-card-generation
     paths:
       - .blackglass-generation-request.json
+  pull_request:
+    branches:
+      - agent/blackglass-board-ui-redesign
+    types: [opened, synchronize, reopened]
+    paths:
+      - .blackglass-generation-request.json
 
 permissions:
   contents: write
@@ -16,6 +22,7 @@ concurrency:
 
 jobs:
   generate:
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 360
     env:
