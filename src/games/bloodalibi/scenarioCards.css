@@ -1,0 +1,72 @@
+.blackglass-scene-preview {
+  margin: 18px 0;
+  border: 1px solid rgba(200, 159, 82, .52);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(16, 14, 11, .98), rgba(5, 8, 10, .98));
+  box-shadow: 0 22px 58px rgba(0, 0, 0, .34), inset 0 0 0 1px rgba(255, 220, 150, .04);
+  overflow: hidden;
+}
+
+.blackglass-scene-preview-heading {
+  padding: 14px 16px 12px;
+  display: grid;
+  gap: 4px;
+  border-bottom: 1px solid rgba(200, 159, 82, .22);
+}
+
+.blackglass-scene-preview-heading small {
+  color: #c89f52;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+
+.blackglass-scene-preview-heading strong {
+  color: #f0dfbd;
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 500;
+}
+
+.blackglass-scene-preview img {
+  width: 100%;
+  max-height: min(70vh, 980px);
+  object-fit: contain;
+  display: block;
+  background: #020405;
+}
+
+.blackglass-scene-preview.compact {
+  max-width: 720px;
+  margin-inline: auto;
+}
+
+.blackglass-scene-placeholder {
+  min-height: 220px;
+  padding: 32px;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  gap: 8px;
+  color: #b9ad97;
+  background: radial-gradient(circle at 50% 15%, rgba(163, 112, 43, .14), transparent 54%), #05080a;
+}
+
+.blackglass-scene-placeholder b {
+  color: #d7b46a;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.2rem;
+}
+
+.blackglass-game-over-with-card {
+  align-items: start;
+  gap: 22px;
+}
+
+.blackglass-game-over-with-card > .blackglass-scene-preview {
+  width: min(430px, 100%);
+  margin: 0;
+}
+
+@media (max-width: 900px) {
+  .blackglass-game-over-with-card { grid-template-columns: 1fr; }
+  .blackglass-game-over-with-card > .blackglass-scene-preview { width: 100%; }
+}
