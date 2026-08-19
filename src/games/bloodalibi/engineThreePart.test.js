@@ -27,6 +27,53 @@ test("proposing a scenario stores the exact three items for the UI", () => {
   assert.deepEqual(next.lastTheory, { suspectId: "june-mercer", methodId: "revolver", locationId: "penthouse" });
 });
 
+test("a human refuter chooses which matching alibi card to reveal", () => {
+  const state = createBloodAlibiGame(members);
+  const investigating = {
+    ...state,
+    currentPlayerIndex: 0,
+    turnPhase: "investigate",
+    positions: { ...state.positions, a: "room:penthouse" },
+    hands: {
+      a: [],
+      b: ["suspect:june-mercer", "method:revolver", "location:kitchen"],
+    },
+    reveals: [],
+  };
+
+  const waiting = reduceBloodAlibi(investigating, "a", { type: "suggest", suspectId: "june-mercer", methodId: "revolver" }, members);
+  assert.equal(waiting.turnPhase, "refute");
+  assert.equal(waiting.pendingRefutation.refuterUid, "b");
+  assert.deepEqual(waiting.reveals, []);
+
+  const next = reduceBloodAlibi(waiting, "b", { type: "showAlibi", cardId: "method:revolver" }, members);
+  assert.equal(next.pendingRefutation, null);
+  assert.equal(next.reveals.at(-1).toUid, "a");
+  assert.equal(next.reveals.at(-1).fromUid, "b");
+  assert.equal(next.reveals.at(-1).cardId, "method:revolver");
+  assert.equal(next.turnPhase, "roll");
+  assert.equal(next.currentPlayerIndex, 1);
+});
+
+test("a refuter cannot reveal a card that does not match the theory", () => {
+  const state = createBloodAlibiGame(members);
+  const waiting = {
+    ...state,
+    currentPlayerIndex: 0,
+    turnPhase: "refute",
+    pendingRefutation: {
+      suggestorUid: "a",
+      refuterUid: "b",
+      theory: { suspectId: "june-mercer", methodId: "revolver", locationId: "penthouse" },
+    },
+    hands: { a: [], b: ["location:kitchen", "method:revolver"] },
+  };
+  assert.throws(
+    () => reduceBloodAlibi(waiting, "b", { type: "showAlibi", cardId: "location:kitchen" }, members),
+    /matching alibi/i,
+  );
+});
+
 test("a correct three-part accusation closes the case", () => {
   const state = createBloodAlibiGame(members);
   const solution = { suspectId: "dex-vale", methodId: "cleaver", locationId: "kitchen" };

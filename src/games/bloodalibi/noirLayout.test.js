@@ -5,6 +5,7 @@ import test from "node:test";
 const indexSource = fs.readFileSync(new URL("./index.jsx", import.meta.url), "utf8");
 const noirSource = fs.readFileSync(new URL("./NoirGame.jsx", import.meta.url), "utf8");
 const cssSource = fs.readFileSync(new URL("./noir.css", import.meta.url), "utf8");
+const deductionCssSource = fs.readFileSync(new URL("./deduction.css", import.meta.url), "utf8");
 const artSource = fs.readFileSync(new URL("./noirArt.css", import.meta.url), "utf8");
 const finishSource = fs.readFileSync(new URL("./noirFinish.css", import.meta.url), "utf8");
 
@@ -23,6 +24,17 @@ test("noir theory reconstruction visibly uses suspect, weapon, and room assets",
   assert.match(noirSource, /assets\.room/);
   assert.match(noirSource, /PROPOSE THEORY/);
   assert.match(noirSource, /LOCK ACCUSATION/);
+});
+
+test("Blackglass exposes a private alibi choice and deduction desk", () => {
+  assert.match(noirSource, /showAlibi/);
+  assert.match(noirSource, /Choose your alibi card/);
+  assert.match(noirSource, /YOUR PRIVATE HAND/);
+  assert.match(noirSource, /Find the missing piece/);
+  assert.match(noirSource, /buildDeductionGroups/);
+  assert.match(deductionCssSource, /\.bn-alibi-overlay/);
+  assert.match(deductionCssSource, /\.bn-deduction-grid/);
+  assert.match(deductionCssSource, /\.bn-findings article\.resolved/);
 });
 
 test("noir layout owns the viewport with a larger readable board-first frame", () => {

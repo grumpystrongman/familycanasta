@@ -1,4 +1,5 @@
 import * as base from "./engine.js";
+import { matchingAlibiCards } from "./deduction.js";
 
 export const BLOOD_ALIBI_RULES = base.BLOOD_ALIBI_RULES;
 export const BOARD_SIZE = base.BOARD_SIZE;
@@ -73,6 +74,18 @@ function advanceTurn(state, members, currentIndex, message) {
   };
 }
 
+function theoryCards(theory) {
+  return [
+    cardId("suspect", theory.suspectId),
+    cardId("method", theory.methodId),
+    cardId("location", theory.locationId),
+  ];
+}
+
+function matchesFor(state, uid, theory) {
+  return matchingAlibiCards(state.hands?.[uid] || [], theory);
+}
+
 export function evidenceLabel(id) {
   const [kind, value] = String(id || "").split(":");
   if (kind === "suspect") return SUSPECTS.find((item) => item.id === value)?.name || value;
@@ -95,11 +108,47 @@ export function createBloodAlibiGame(members) {
     hands: dealEvidence(members, solution),
     suspectPositions,
     lastTheory: null,
+    pendingRefutation: null,
     caseLog: [{ type: "opening", text: "A body was found before dawn. One suspect, one weapon, and one room form the hidden truth." }],
   };
 }
 
 export function reduceBloodAlibi(state, actorUid, action, members) {
+  if (action?.type === "showAlibi") {
+    const pending = state.pendingRefutation;
+    if (!pending) throw new Error("There is no alibi card waiting to be shown.");
+    if (pending.refuterUid !== actorUid) throw new Error("Another investigator must choose the alibi card.");
+
+    const refuter = members.find((member) => member.uid === actorUid);
+    const suggester = members.find((member) => member.uid === pending.suggestorUid);
+    const currentIndex = members.findIndex((member) => member.uid === pending.suggestorUid);
+    const matches = matchesFor(state, actorUid, pending.theory);
+    const shownCard = String(action.cardId || "");
+    if (!matches.includes(shownCard)) throw new Error("Choose one of your matching alibi cards.");
+
+    const reveals = Array.isArray(state.reveals) ? [...state.reveals] : [];
+    const caseLog = Array.isArray(state.caseLog) ? [...state.caseLog] : [];
+    reveals.push({ toUid: pending.suggestorUid, fromUid: actorUid, cardId: shownCard, turn: state.turnNumber });
+    caseLog.push({
+      type: "refutation",
+      uid: actorUid,
+      theory: pending.theory,
+      text: `${refuter?.nickname || "An investigator"} showed ${suggester?.nickname || "the investigator"} one private alibi card.`,
+    });
+
+    return advanceTurn(
+      { ...state, pendingRefutation: null, reveals: reveals.slice(-80), caseLog: caseLog.slice(-50) },
+      members,
+      currentIndex,
+      `${refuter?.nickname || "An investigator"} produced an alibi card.`,
+    );
+  }
+
+  if (state.pendingRefutation) {
+    const refuter = members.find((member) => member.uid === state.pendingRefutation.refuterUid);
+    throw new Error(`Waiting for ${refuter?.nickname || "another investigator"} to choose an alibi card.`);
+  }
+
   if (action?.type !== "suggest" && action?.type !== "accuse") {
     return base.reduceBloodAlibi(state, actorUid, action, members);
   }
@@ -123,24 +172,50 @@ export function reduceBloodAlibi(state, actorUid, action, members) {
 
   if (action.type === "suggest") {
     const locationId = investigationRoomId;
-    const candidates = [cardId("suspect", suspectId), cardId("method", methodId), cardId("location", locationId)];
+    const candidates = theoryCards({ suspectId, methodId, locationId });
     const suspectPositions = { ...(state.suspectPositions || {}), [suspectId]: locationId };
     const methodPositions = { ...(state.methodPositions || {}), [methodId]: locationId };
     const lastTheory = { suspectId, methodId, locationId };
     let refuter = null;
-    let shownCard = null;
+    let matches = [];
 
     for (let offset = 1; offset < members.length; offset += 1) {
       const candidate = members[(currentIndex + offset) % members.length];
-      const matches = (state.hands?.[candidate.uid] || []).filter((card) => candidates.includes(card)).sort();
-      if (matches.length) {
+      const candidateMatches = (state.hands?.[candidate.uid] || []).filter((card) => candidates.includes(card)).sort();
+      if (candidateMatches.length) {
         refuter = candidate;
-        shownCard = matches[0];
+        matches = candidateMatches;
         break;
       }
     }
 
     if (refuter) {
+      if (!refuter.isRobot) {
+        caseLog.push({
+          type: "suggestion",
+          uid: actorUid,
+          theory: lastTheory,
+          text: `${current.nickname} proposed ${SUSPECTS.find((item) => item.id === suspectId)?.name} with ${METHODS.find((item) => item.id === methodId)?.name} in ${LOCATION_MAP[locationId]?.name}; ${refuter.nickname} can refute it and must choose which alibi to show.`,
+        });
+        return {
+          ...state,
+          positions,
+          suspectPositions,
+          methodPositions,
+          lastTheory,
+          turnPhase: "refute",
+          pendingRefutation: {
+            suggestorUid: actorUid,
+            refuterUid: refuter.uid,
+            theory: lastTheory,
+            turn: state.turnNumber,
+          },
+          caseLog: caseLog.slice(-50),
+          message: `${refuter.nickname} can refute the theory. Waiting for a private alibi card.`,
+        };
+      }
+
+      const shownCard = matches[0];
       reveals.push({ toUid: actorUid, fromUid: refuter.uid, cardId: shownCard, turn: state.turnNumber });
       caseLog.push({ type: "suggestion", uid: actorUid, theory: lastTheory, text: `${current.nickname} proposed ${SUSPECTS.find((item) => item.id === suspectId)?.name} with ${METHODS.find((item) => item.id === methodId)?.name} in ${LOCATION_MAP[locationId]?.name}; ${refuter.nickname} refuted it.` });
       return advanceTurn({ ...state, positions, suspectPositions, methodPositions, lastTheory, reveals: reveals.slice(-80), caseLog: caseLog.slice(-50) }, members, currentIndex, `${refuter.nickname} produced an alibi card.`);
@@ -171,6 +246,19 @@ export function reduceBloodAlibi(state, actorUid, action, members) {
 
 export function chooseBloodAlibiRobotMove(state, members) {
   if (state?.phase !== "playing") return null;
+
+  if (state.pendingRefutation) {
+    const refuter = members.find((member) => member.uid === state.pendingRefutation.refuterUid);
+    if (!refuter?.isRobot) return null;
+    const matches = matchesFor(state, refuter.uid, state.pendingRefutation.theory);
+    if (!matches.length) return null;
+    return {
+      uid: refuter.uid,
+      action: { type: "showAlibi", cardId: matches[0] },
+      key: `${state.turnNumber}:${refuter.uid}:alibi:${matches[0]}`,
+    };
+  }
+
   const current = members[Number(state.currentPlayerIndex || 0)];
   if (!current?.isRobot || state.eliminated?.[current.uid]) return null;
 
