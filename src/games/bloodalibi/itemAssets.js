@@ -1,10 +1,10 @@
 export const BLACKGLASS_ITEM_ROOT = "/games/bloodalibi/items";
 export const BLACKGLASS_ATLAS_ROOT = "/blackglass";
 
-// Non-Mara items use a transparent pixel tagged with an item fragment. noirArt.css turns those
-// tags into precise crop windows over the canonical cast/weapon/room atlases. This keeps every
-// existing image call site intact while displaying the approved Blackglass artwork everywhere.
-const PIXEL = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
+// Non-Mara items use a genuinely transparent pixel tagged with an item fragment. noirArt.css
+// turns those tags into precise crop windows over the canonical cast/weapon/room atlases. The
+// prior white GIF carrier obscured those CSS backgrounds in Chrome; this PNG keeps them visible.
+const PIXEL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgYGBgAAAABQABpfZFQAAAAABJRU5ErkJggg==";
 const cropRef = (id) => `${PIXEL}#blackglass-${id}`;
 
 export const BLACKGLASS_ITEM_ASSETS = Object.freeze({
