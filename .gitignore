@@ -2,4 +2,5 @@ node_modules/
 dist/
 artifacts/blackglass/
 public/games/bloodalibi/scenes/
+public/games/bloodalibi/items/direct/
 .DS_Store
