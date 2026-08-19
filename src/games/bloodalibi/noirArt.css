@@ -1,7 +1,7 @@
 /* Blackglass direct evidence art.
-   The UI now renders real per-item WebP files generated before dev/build/test. Keep the artwork
-   unfiltered and let each component choose only its crop mode. No atlas fragments, :has() carrier
-   hacks, pseudo-element image replacement, blur, tint, saturation or brightness grading. */
+   Every playable room, suspect and weapon now has an independently addressable SVG crop wrapper
+   around the approved Blackglass artwork. Keep the artwork unfiltered: no atlas URL fragments,
+   pseudo-element carriers, blur, tint, saturation or brightness grading. */
 
 img[src*="/games/bloodalibi/items/direct/"] {
   display: block !important;
@@ -37,21 +37,21 @@ img[src*="/direct/weapons/"] {
   padding: 2px;
 }
 
-/* Room cards and the board use the same independently generated room image. */
+/* Room cards and the board use the same dedicated room crop wrappers. */
 img[src*="/direct/rooms/"] {
   object-fit: cover !important;
   object-position: center !important;
 }
 
-.bn-room.theme-greenhouse { background-image: url("/games/bloodalibi/items/direct/rooms/greenhouse.webp") !important; }
-.bn-room.theme-penthouse { background-image: url("/games/bloodalibi/items/direct/rooms/penthouse.webp") !important; }
-.bn-room.theme-security { background-image: url("/games/bloodalibi/items/direct/rooms/security.webp") !important; }
-.bn-room.theme-laundry { background-image: url("/games/bloodalibi/items/direct/rooms/laundry.webp") !important; }
-.bn-room.theme-atrium { background-image: url("/games/bloodalibi/items/direct/rooms/atrium.webp") !important; }
-.bn-room.theme-kitchen { background-image: url("/games/bloodalibi/items/direct/rooms/kitchen.webp") !important; }
-.bn-room.theme-garage { background-image: url("/games/bloodalibi/items/direct/rooms/garage.webp") !important; }
-.bn-room.theme-nightclub { background-image: url("/games/bloodalibi/items/direct/rooms/nightclub.webp") !important; }
-.bn-room.theme-boiler { background-image: url("/games/bloodalibi/items/direct/rooms/boiler.webp") !important; }
+.bn-room.theme-greenhouse { background-image: url("/games/bloodalibi/items/direct/rooms/greenhouse.svg") !important; }
+.bn-room.theme-penthouse { background-image: url("/games/bloodalibi/items/direct/rooms/penthouse.svg") !important; }
+.bn-room.theme-security { background-image: url("/games/bloodalibi/items/direct/rooms/security.svg") !important; }
+.bn-room.theme-laundry { background-image: url("/games/bloodalibi/items/direct/rooms/laundry.svg") !important; }
+.bn-room.theme-atrium { background-image: url("/games/bloodalibi/items/direct/rooms/atrium.svg") !important; }
+.bn-room.theme-kitchen { background-image: url("/games/bloodalibi/items/direct/rooms/kitchen.svg") !important; }
+.bn-room.theme-garage { background-image: url("/games/bloodalibi/items/direct/rooms/garage.svg") !important; }
+.bn-room.theme-nightclub { background-image: url("/games/bloodalibi/items/direct/rooms/nightclub.svg") !important; }
+.bn-room.theme-boiler { background-image: url("/games/bloodalibi/items/direct/rooms/boiler.svg") !important; }
 
 .bn-room {
   background-size: cover !important;
