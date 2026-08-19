@@ -1,59 +1,71 @@
-/* Blackglass evidence art.
-   Every visible crop comes from the approved game assets already shipped with Blood & Alibi.
-   Never blur, soften, or add a post-processing filter to this artwork. */
+/* Blackglass direct evidence art.
+   The UI now renders real per-item WebP files generated before dev/build/test. Keep the artwork
+   unfiltered and let each component choose only its crop mode. No atlas fragments, :has() carrier
+   hacks, pseudo-element image replacement, blur, tint, saturation or brightness grading. */
 
-:where(.bn-notebook section button,.bn-theory-strip figure,.bn-players article):has(img[src*="#blackglass-"])>img[src*="#blackglass-"]{display:none!important}
-
-/* Cast portraits — approved Blackglass cast atlas, shown without the old soft-focus treatment. */
-:where(.bn-notebook section button,.bn-theory-strip figure,.bn-players article):has(img[src$="#blackglass-elias-flint"]){--bg-art:url("/blackglass/cast-atlas-polished.webp");--bg-pos:0% 50%}
-:where(.bn-notebook section button,.bn-theory-strip figure,.bn-players article):has(img[src$="#blackglass-dex-vale"]){--bg-art:url("/blackglass/cast-atlas-polished.webp");--bg-pos:20% 50%}
-:where(.bn-notebook section button,.bn-theory-strip figure,.bn-players article):has(img[src$="#blackglass-imani-cross"]){--bg-art:url("/blackglass/cast-atlas-polished.webp");--bg-pos:40% 50%}
-:where(.bn-notebook section button,.bn-theory-strip figure,.bn-players article):has(img[src$="#blackglass-theo-rook"]){--bg-art:url("/blackglass/cast-atlas-polished.webp");--bg-pos:60% 50%}
-:where(.bn-notebook section button,.bn-theory-strip figure,.bn-players article):has(img[src$="#blackglass-june-mercer"]){--bg-art:url("/blackglass/cast-atlas-polished.webp");--bg-pos:80% 50%}
-:where(.bn-notebook section button,.bn-theory-strip figure,.bn-players article):has(img[src$="#blackglass-mara-voss"]){--bg-art:url("/blackglass/cast-atlas-polished.webp");--bg-pos:100% 50%}
-
-/* Weapons — approved Blackglass weapon atlas. */
-:where(.bn-notebook section button,.bn-theory-strip figure):has(img[src$="#blackglass-nail-gun"]){--bg-art:url("/blackglass/weapon-atlas-polished.webp");--bg-size:300% 200%;--bg-pos:0 0}
-:where(.bn-notebook section button,.bn-theory-strip figure):has(img[src$="#blackglass-cleaver"]){--bg-art:url("/blackglass/weapon-atlas-polished.webp");--bg-size:300% 200%;--bg-pos:50% 0}
-:where(.bn-notebook section button,.bn-theory-strip figure):has(img[src$="#blackglass-garrote"]){--bg-art:url("/blackglass/weapon-atlas-polished.webp");--bg-size:300% 200%;--bg-pos:100% 0}
-:where(.bn-notebook section button,.bn-theory-strip figure):has(img[src$="#blackglass-revolver"]){--bg-art:url("/blackglass/weapon-atlas-polished.webp");--bg-size:300% 200%;--bg-pos:0 100%}
-:where(.bn-notebook section button,.bn-theory-strip figure):has(img[src$="#blackglass-poison"]){--bg-art:url("/blackglass/weapon-atlas-polished.webp");--bg-size:300% 200%;--bg-pos:50% 100%}
-:where(.bn-notebook section button,.bn-theory-strip figure):has(img[src$="#blackglass-fire-axe"]){--bg-art:url("/blackglass/weapon-atlas-polished.webp");--bg-size:300% 200%;--bg-pos:100% 100%}
-
-/* Rooms use the dedicated room wrapper assets instead of stretching one tiny sprite cell over a
-   large irregular footprint. Each SVG performs the correct crop of the canonical room artwork. */
-:where(.bn-notebook section button,.bn-theory-strip figure):has(img[src$="#blackglass-greenhouse"]){--bg-art:url("/games/bloodalibi/items/rooms/greenhouse.svg");--bg-size:cover;--bg-pos:center}
-:where(.bn-notebook section button,.bn-theory-strip figure):has(img[src$="#blackglass-penthouse"]){--bg-art:url("/games/bloodalibi/items/rooms/penthouse.svg");--bg-size:cover;--bg-pos:center}
-:where(.bn-notebook section button,.bn-theory-strip figure):has(img[src$="#blackglass-security"]){--bg-art:url("/games/bloodalibi/items/rooms/security.svg");--bg-size:cover;--bg-pos:center}
-:where(.bn-notebook section button,.bn-theory-strip figure):has(img[src$="#blackglass-laundry"]){--bg-art:url("/games/bloodalibi/items/rooms/laundry.svg");--bg-size:cover;--bg-pos:center}
-:where(.bn-notebook section button,.bn-theory-strip figure):has(img[src$="#blackglass-atrium"]){--bg-art:url("/games/bloodalibi/items/rooms/atrium.svg");--bg-size:cover;--bg-pos:center}
-:where(.bn-notebook section button,.bn-theory-strip figure):has(img[src$="#blackglass-kitchen"]){--bg-art:url("/games/bloodalibi/items/rooms/kitchen.svg");--bg-size:cover;--bg-pos:center}
-:where(.bn-notebook section button,.bn-theory-strip figure):has(img[src$="#blackglass-garage"]){--bg-art:url("/games/bloodalibi/items/rooms/garage.svg");--bg-size:cover;--bg-pos:center}
-:where(.bn-notebook section button,.bn-theory-strip figure):has(img[src$="#blackglass-nightclub"]){--bg-art:url("/games/bloodalibi/items/rooms/nightclub.svg");--bg-size:cover;--bg-pos:center}
-:where(.bn-notebook section button,.bn-theory-strip figure):has(img[src$="#blackglass-boiler"]){--bg-art:url("/games/bloodalibi/items/rooms/boiler.svg");--bg-size:cover;--bg-pos:center}
-
-.bn-notebook section button:has(img[src*="#blackglass-"])::before{
-  content:"";width:32px;height:32px;display:block;border:1px solid #725a38;border-radius:4px;
-  background-image:var(--bg-art);background-size:var(--bg-size,600% auto);background-position:var(--bg-pos);background-repeat:no-repeat;background-color:#07090a;
-  filter:none!important;image-rendering:auto;box-shadow:inset 0 0 0 1px rgba(255,255,255,.025),0 1px 5px #000a
-}
-.bn-theory-strip figure:has(img[src*="#blackglass-"])::before{
-  content:"";display:block;width:100%;height:96px;background-image:var(--bg-art);background-size:var(--bg-size,600% auto);background-position:var(--bg-pos);background-repeat:no-repeat;background-color:#07090a;
-  filter:none!important;image-rendering:auto
-}
-.bn-players article:has(img[src*="#blackglass-"])::before{
-  content:"";display:block;width:48px;height:100%;min-height:86px;border-right:1px solid #4c3921;
-  background-image:var(--bg-art);background-size:600% 100%;background-position:var(--bg-pos);background-repeat:no-repeat;background-color:#07090a;
-  filter:none!important;image-rendering:auto
+.bn-notebook section button img,
+.bn-theory-strip img,
+.bn-players article img,
+.bn-evidence-card img,
+.bn-alibi-option img {
+  display: block !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  filter: none !important;
+  mix-blend-mode: normal !important;
+  image-rendering: auto;
+  background-color: #07090a;
 }
 
-/* Board rooms: room-specific sources guarantee the right scene is shown in every footprint. */
-.bn-room.theme-greenhouse{background-image:url("/games/bloodalibi/items/rooms/greenhouse.svg")!important;background-size:cover!important;background-position:center!important}
-.bn-room.theme-penthouse{background-image:url("/games/bloodalibi/items/rooms/penthouse.svg")!important;background-size:cover!important;background-position:center!important}
-.bn-room.theme-security{background-image:url("/games/bloodalibi/items/rooms/security.svg")!important;background-size:cover!important;background-position:center!important}
-.bn-room.theme-laundry{background-image:url("/games/bloodalibi/items/rooms/laundry.svg")!important;background-size:cover!important;background-position:center!important}
-.bn-room.theme-atrium{background-image:url("/games/bloodalibi/items/rooms/atrium.svg")!important;background-size:cover!important;background-position:center!important}
-.bn-room.theme-kitchen{background-image:url("/games/bloodalibi/items/rooms/kitchen.svg")!important;background-size:cover!important;background-position:center!important}
-.bn-room.theme-garage{background-image:url("/games/bloodalibi/items/rooms/garage.svg")!important;background-size:cover!important;background-position:center!important}
-.bn-room.theme-nightclub{background-image:url("/games/bloodalibi/items/rooms/nightclub.svg")!important;background-size:cover!important;background-position:center!important}
-.bn-room.theme-boiler{background-image:url("/games/bloodalibi/items/rooms/boiler.svg")!important;background-size:cover!important;background-position:center!important}
+/* Portraits should read as portraits, not tiny strips of a sprite sheet. */
+.bn-notebook section button img[src*="/direct/suspects/"],
+.bn-theory-strip img[src*="/direct/suspects/"],
+.bn-players article img[src*="/direct/suspects/"],
+.bn-evidence-card img[src*="/direct/suspects/"],
+.bn-alibi-option img[src*="/direct/suspects/"] {
+  object-fit: cover !important;
+  object-position: center 24% !important;
+}
+
+/* Weapons need breathing room so the complete silhouette remains visible. */
+.bn-notebook section button img[src*="/direct/weapons/"],
+.bn-theory-strip img[src*="/direct/weapons/"],
+.bn-evidence-card img[src*="/direct/weapons/"],
+.bn-alibi-option img[src*="/direct/weapons/"] {
+  object-fit: contain !important;
+  object-position: center !important;
+  padding: 2px;
+}
+
+/* Room cards and the board use the same independently generated room image. */
+.bn-notebook section button img[src*="/direct/rooms/"],
+.bn-theory-strip img[src*="/direct/rooms/"],
+.bn-evidence-card img[src*="/direct/rooms/"],
+.bn-alibi-option img[src*="/direct/rooms/"] {
+  object-fit: cover !important;
+  object-position: center !important;
+}
+
+.bn-room.theme-greenhouse { background-image: url("/games/bloodalibi/items/direct/rooms/greenhouse.webp") !important; }
+.bn-room.theme-penthouse { background-image: url("/games/bloodalibi/items/direct/rooms/penthouse.webp") !important; }
+.bn-room.theme-security { background-image: url("/games/bloodalibi/items/direct/rooms/security.webp") !important; }
+.bn-room.theme-laundry { background-image: url("/games/bloodalibi/items/direct/rooms/laundry.webp") !important; }
+.bn-room.theme-atrium { background-image: url("/games/bloodalibi/items/direct/rooms/atrium.webp") !important; }
+.bn-room.theme-kitchen { background-image: url("/games/bloodalibi/items/direct/rooms/kitchen.webp") !important; }
+.bn-room.theme-garage { background-image: url("/games/bloodalibi/items/direct/rooms/garage.webp") !important; }
+.bn-room.theme-nightclub { background-image: url("/games/bloodalibi/items/direct/rooms/nightclub.webp") !important; }
+.bn-room.theme-boiler { background-image: url("/games/bloodalibi/items/direct/rooms/boiler.webp") !important; }
+
+.bn-room {
+  background-size: cover !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+  filter: none !important;
+}
+
+/* The labels need contrast, but the room itself should stay visible. */
+.bn-room-vignette {
+  background:
+    linear-gradient(180deg, rgba(0,0,0,.03), rgba(0,0,0,.12) 58%, rgba(0,0,0,.28)),
+    radial-gradient(circle at 50% 42%, transparent 0 62%, rgba(0,0,0,.18)) !important;
+}
