@@ -1,19 +1,19 @@
-/* Blackglass direct evidence art.
-   Every playable room, suspect and weapon now has an independently addressable SVG crop wrapper
-   around the approved Blackglass artwork. Keep the artwork unfiltered: no atlas URL fragments,
-   pseudo-element carriers, blur, tint, saturation or brightness grading. */
+/* Blackglass art rendering.
+   Evidence <img> elements use a transparent carrier with a stable semantic fragment; approved
+   source art is cropped directly as the element background. This avoids putting a whole raster
+   atlas inside an <img>, avoids :has()/pseudo-element hacks, and keeps all art unfiltered. */
 
-img[src*="/games/bloodalibi/items/direct/"] {
+img[src*="/games/bloodalibi/items/direct/blank.svg#"] {
   display: block !important;
   opacity: 1 !important;
   visibility: visible !important;
   filter: none !important;
   mix-blend-mode: normal !important;
   image-rendering: auto;
-  background-color: #07090a;
+  background-color: #07090a !important;
+  background-repeat: no-repeat !important;
 }
 
-/* Give evidence thumbnails enough physical pixels to read at a glance. */
 .bn-notebook section button {
   height: 46px !important;
   grid-template-columns: 40px minmax(0,1fr) 24px !important;
@@ -21,50 +21,70 @@ img[src*="/games/bloodalibi/items/direct/"] {
 .bn-notebook section button img {
   width: 38px !important;
   height: 38px !important;
-  padding: 0;
+  padding: 0 !important;
 }
 
-/* Portraits should read as portraits, not tiny strips of a sprite sheet. */
-img[src*="/direct/suspects/"] {
-  object-fit: cover !important;
-  object-position: center 24% !important;
+/* Cast: six approved portraits across one strip. */
+img[src*="blank.svg#suspects-"] {
+  background-image: url("/blackglass/cast-atlas-polished.webp") !important;
+  background-size: 600% 100% !important;
 }
+img[src$="#suspects-elias-flint"] { background-position: 0% 50% !important; }
+img[src$="#suspects-dex-vale"] { background-position: 20% 50% !important; }
+img[src$="#suspects-imani-cross"] { background-position: 40% 50% !important; }
+img[src$="#suspects-theo-rook"] { background-position: 60% 50% !important; }
+img[src$="#suspects-june-mercer"] { background-position: 80% 50% !important; }
+img[src$="#suspects-mara-voss"] { background-position: 100% 50% !important; }
 
-/* Weapons need breathing room so the complete silhouette remains visible. */
-img[src*="/direct/weapons/"] {
-  object-fit: contain !important;
-  object-position: center !important;
-  padding: 2px;
+/* Weapons: three columns by two rows. */
+img[src*="blank.svg#weapons-"] {
+  background-image: url("/blackglass/weapon-atlas-polished.webp") !important;
+  background-size: 300% 200% !important;
+  background-color: #080a0b !important;
 }
+img[src$="#weapons-nail-gun"] { background-position: 0% 0% !important; }
+img[src$="#weapons-cleaver"] { background-position: 50% 0% !important; }
+img[src$="#weapons-garrote"] { background-position: 100% 0% !important; }
+img[src$="#weapons-revolver"] { background-position: 0% 100% !important; }
+img[src$="#weapons-poison"] { background-position: 50% 100% !important; }
+img[src$="#weapons-fire-axe"] { background-position: 100% 100% !important; }
 
-/* Room cards and the board use the same dedicated room crop wrappers. */
-img[src*="/direct/rooms/"] {
-  object-fit: cover !important;
-  object-position: center !important;
+/* Room evidence cards: three columns by three rows. */
+img[src*="blank.svg#rooms-"] {
+  background-image: url("/blackglass/room-atlas-polished.webp") !important;
+  background-size: 300% 300% !important;
 }
+img[src$="#rooms-greenhouse"] { background-position: 0% 0% !important; }
+img[src$="#rooms-penthouse"] { background-position: 50% 0% !important; }
+img[src$="#rooms-security"] { background-position: 100% 0% !important; }
+img[src$="#rooms-laundry"] { background-position: 0% 50% !important; }
+img[src$="#rooms-atrium"] { background-position: 50% 50% !important; }
+img[src$="#rooms-kitchen"] { background-position: 100% 50% !important; }
+img[src$="#rooms-garage"] { background-position: 0% 100% !important; }
+img[src$="#rooms-nightclub"] { background-position: 50% 100% !important; }
+img[src$="#rooms-boiler"] { background-position: 100% 100% !important; }
 
-.bn-room.theme-greenhouse { background-image: url("/games/bloodalibi/items/direct/rooms/greenhouse.svg") !important; }
-.bn-room.theme-penthouse { background-image: url("/games/bloodalibi/items/direct/rooms/penthouse.svg") !important; }
-.bn-room.theme-security { background-image: url("/games/bloodalibi/items/direct/rooms/security.svg") !important; }
-.bn-room.theme-laundry { background-image: url("/games/bloodalibi/items/direct/rooms/laundry.svg") !important; }
-.bn-room.theme-atrium { background-image: url("/games/bloodalibi/items/direct/rooms/atrium.svg") !important; }
-.bn-room.theme-kitchen { background-image: url("/games/bloodalibi/items/direct/rooms/kitchen.svg") !important; }
-.bn-room.theme-garage { background-image: url("/games/bloodalibi/items/direct/rooms/garage.svg") !important; }
-.bn-room.theme-nightclub { background-image: url("/games/bloodalibi/items/direct/rooms/nightclub.svg") !important; }
-.bn-room.theme-boiler { background-image: url("/games/bloodalibi/items/direct/rooms/boiler.svg") !important; }
-
+/* Board rooms crop that same approved three-by-three atlas directly. */
 .bn-room {
-  background-size: cover !important;
-  background-position: center !important;
+  background-image: url("/blackglass/room-atlas-polished.webp") !important;
+  background-size: 300% 300% !important;
   background-repeat: no-repeat !important;
   filter: none !important;
 }
+.bn-room.theme-greenhouse { background-position: 0% 0% !important; }
+.bn-room.theme-penthouse { background-position: 50% 0% !important; }
+.bn-room.theme-security { background-position: 100% 0% !important; }
+.bn-room.theme-laundry { background-position: 0% 50% !important; }
+.bn-room.theme-atrium { background-position: 50% 50% !important; }
+.bn-room.theme-kitchen { background-position: 100% 50% !important; }
+.bn-room.theme-garage { background-position: 0% 100% !important; }
+.bn-room.theme-nightclub { background-position: 50% 100% !important; }
+.bn-room.theme-boiler { background-position: 100% 100% !important; }
 
-/* The labels need contrast, but the room itself should stay visible. */
 .bn-room-vignette {
   background:
-    linear-gradient(180deg, rgba(0,0,0,.03), rgba(0,0,0,.12) 58%, rgba(0,0,0,.28)),
-    radial-gradient(circle at 50% 42%, transparent 0 62%, rgba(0,0,0,.18)) !important;
+    linear-gradient(180deg, rgba(0,0,0,.02), rgba(0,0,0,.08) 58%, rgba(0,0,0,.20)),
+    radial-gradient(circle at 50% 42%, transparent 0 68%, rgba(0,0,0,.14)) !important;
 }
 
 @media (max-width: 1280px) {
