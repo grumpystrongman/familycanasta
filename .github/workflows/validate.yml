@@ -26,6 +26,14 @@ jobs:
         run: node --test src/game/discardPickupPlanner.test.js
       - name: Robot pickup tests
         run: node --test src/game/botEngine.test.js
+      - name: Blackglass board geometry tests
+        run: node --test src/games/bloodalibi/engine.test.js
+      - name: Blackglass three-part rules tests
+        run: node --test src/games/bloodalibi/engineThreePart.test.js
+      - name: Blackglass art contract tests
+        run: node --test src/games/bloodalibi/itemAssets.test.js
+      - name: Blackglass scenario catalog tests
+        run: node --test src/games/bloodalibi/scenarioCards.test.js
       - name: Full test discovery
         run: npm test
       - name: Production build

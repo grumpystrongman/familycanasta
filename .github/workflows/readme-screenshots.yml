@@ -5,6 +5,7 @@ on:
     paths:
       - README.md
       - scripts/capture-readme-screenshots.mjs
+      - scripts/capture-blackglass-screenshot.mjs
       - src/**
       - '!src/games/slumlord/**'
   workflow_dispatch:
@@ -68,6 +69,9 @@ jobs:
 
       - name: Capture product screenshots
         run: node scripts/capture-readme-screenshots.mjs
+
+      - name: Capture polished Blackglass board
+        run: node scripts/capture-blackglass-screenshot.mjs
 
       # PR verification must be read-only. The screenshots include live/animated
       # game states, so committing them from CI creates a new bot-authored head on
