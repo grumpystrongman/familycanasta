@@ -3,11 +3,7 @@
    unfiltered and let each component choose only its crop mode. No atlas fragments, :has() carrier
    hacks, pseudo-element image replacement, blur, tint, saturation or brightness grading. */
 
-.bn-notebook section button img,
-.bn-theory-strip img,
-.bn-players article img,
-.bn-evidence-card img,
-.bn-alibi-option img {
+img[src*="/games/bloodalibi/items/direct/"] {
   display: block !important;
   opacity: 1 !important;
   visibility: visible !important;
@@ -29,30 +25,20 @@
 }
 
 /* Portraits should read as portraits, not tiny strips of a sprite sheet. */
-.bn-notebook section button img[src*="/direct/suspects/"],
-.bn-theory-strip img[src*="/direct/suspects/"],
-.bn-players article img[src*="/direct/suspects/"],
-.bn-evidence-card img[src*="/direct/suspects/"],
-.bn-alibi-option img[src*="/direct/suspects/"] {
+img[src*="/direct/suspects/"] {
   object-fit: cover !important;
   object-position: center 24% !important;
 }
 
 /* Weapons need breathing room so the complete silhouette remains visible. */
-.bn-notebook section button img[src*="/direct/weapons/"],
-.bn-theory-strip img[src*="/direct/weapons/"],
-.bn-evidence-card img[src*="/direct/weapons/"],
-.bn-alibi-option img[src*="/direct/weapons/"] {
+img[src*="/direct/weapons/"] {
   object-fit: contain !important;
   object-position: center !important;
   padding: 2px;
 }
 
 /* Room cards and the board use the same independently generated room image. */
-.bn-notebook section button img[src*="/direct/rooms/"],
-.bn-theory-strip img[src*="/direct/rooms/"],
-.bn-evidence-card img[src*="/direct/rooms/"],
-.bn-alibi-option img[src*="/direct/rooms/"] {
+img[src*="/direct/rooms/"] {
   object-fit: cover !important;
   object-position: center !important;
 }
