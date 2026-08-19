@@ -1,18 +1,19 @@
 export const BLACKGLASS_ITEM_ROOT = "/games/bloodalibi/items";
 export const BLACKGLASS_ATLAS_ROOT = "/blackglass";
 
-const CAST_ATLAS = `${BLACKGLASS_ATLAS_ROOT}/canonical-cast-atlas.jpg`;
-const WEAPON_ATLAS = `${BLACKGLASS_ATLAS_ROOT}/weapon-atlas.jpg`;
+const CAST_ATLAS = `${BLACKGLASS_ATLAS_ROOT}/cast-atlas-polished.webp`;
+const WEAPON_ATLAS = `${BLACKGLASS_ATLAS_ROOT}/weapon-atlas-polished.webp`;
 const ROOM_ATLAS = `${BLACKGLASS_ATLAS_ROOT}/room-atlas-polished.webp`;
-const MARA_PORTRAIT = `${BLACKGLASS_ITEM_ROOT}/suspects/mara-voss.webp`;
 
+// These cells are cropped directly from the approved Blackglass concept art so the live game
+// reuses the actual cast, weapon iconography and room art instead of placeholder thumbnails.
 const SUSPECT_CELLS = Object.freeze({
+  "elias-flint": 0,
   "dex-vale": 1,
   "imani-cross": 2,
   "theo-rook": 3,
   "june-mercer": 4,
-  "elias-flint": 5,
-  "ruby-ash": 6,
+  "mara-voss": 5,
 });
 const WEAPON_CELLS = Object.freeze({
   "nail-gun": [0, 0], cleaver: [1, 0], garrote: [2, 0],
@@ -27,10 +28,7 @@ const ROOM_CELLS = Object.freeze({
 const tagged = (src, id) => `${src}#blackglass-${id}`;
 
 export const BLACKGLASS_ITEM_ASSETS = Object.freeze({
-  suspects: Object.freeze({
-    "mara-voss": MARA_PORTRAIT,
-    ...Object.fromEntries(Object.keys(SUSPECT_CELLS).map((id) => [id, tagged(CAST_ATLAS, id)])),
-  }),
+  suspects: Object.freeze(Object.fromEntries(Object.keys(SUSPECT_CELLS).map((id) => [id, tagged(CAST_ATLAS, id)]))),
   weapons: Object.freeze(Object.fromEntries(Object.keys(WEAPON_CELLS).map((id) => [id, tagged(WEAPON_ATLAS, id)]))),
   rooms: Object.freeze(Object.fromEntries(Object.keys(ROOM_CELLS).map((id) => [id, tagged(ROOM_ATLAS, id)]))),
 });
@@ -62,9 +60,8 @@ export function itemAssetUrl(kind, id) {
 export function itemAssetStyle(kind, id) {
   const bucket = KIND_ALIASES[String(kind || "").toLowerCase()];
   if (bucket === "suspects") {
-    if (id === "mara-voss") return { backgroundImage: `url("${MARA_PORTRAIT}")`, backgroundSize: "cover", backgroundPosition: "center 24%", backgroundRepeat: "no-repeat", backgroundColor: "#07090a" };
     const cell = SUSPECT_CELLS[id];
-    return cell == null ? {} : gridStyle(CAST_ATLAS, cell, 0, 7, 1);
+    return cell == null ? {} : gridStyle(CAST_ATLAS, cell, 0, 6, 1);
   }
   if (bucket === "weapons") {
     const cell = WEAPON_CELLS[id];
