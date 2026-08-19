@@ -4,11 +4,11 @@ const SUSPECT_IDS = Object.freeze(["mara-voss", "dex-vale", "imani-cross", "theo
 const WEAPON_IDS = Object.freeze(["nail-gun", "cleaver", "garrote", "revolver", "poison", "fire-axe"]);
 const ROOM_IDS = Object.freeze(["greenhouse", "penthouse", "security", "laundry", "atrium", "kitchen", "garage", "nightclub", "boiler"]);
 
-const direct = (bucket, id) => `${BLACKGLASS_ITEM_ROOT}/${bucket}/${id}.webp`;
+const direct = (bucket, id) => `${BLACKGLASS_ITEM_ROOT}/${bucket}/${id}.svg`;
 
-// Live UI art is always a real, independently-addressable image. Do not append URL fragments or
-// rely on CSS pseudo-elements to crop an atlas: browsers ignore image URL fragments for raster
-// cropping and that was the source of the blurred, wrong-color and missing-art regressions.
+// Live UI art is always a real, independently-addressable image. Each SVG is a dedicated crop
+// wrapper around the approved Blackglass source artwork, so the browser never receives a whole
+// raster atlas as an <img> and never needs pseudo-element/URL-fragment crop tricks.
 export const BLACKGLASS_ITEM_ASSETS = Object.freeze({
   suspects: Object.freeze(Object.fromEntries(SUSPECT_IDS.map((id) => [id, direct("suspects", id)]))),
   weapons: Object.freeze(Object.fromEntries(WEAPON_IDS.map((id) => [id, direct("weapons", id)]))),
