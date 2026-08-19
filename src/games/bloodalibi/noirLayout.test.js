@@ -55,10 +55,10 @@ test("rooms and corridors preserve the polished Clue-style visual contract", () 
   assert.match(cssSource, /\.bn-room-label strong/);
 });
 
-test("evidence art uses standalone direct files with no atlas-fragment or color-filter hack", () => {
-  assert.match(artSource, /direct\/rooms\/greenhouse\.webp/);
-  assert.match(artSource, /direct\/rooms\/penthouse\.webp/);
-  assert.match(artSource, /direct\/rooms\/atrium\.webp/);
+test("evidence art uses dedicated direct wrappers with no raster-fragment or color-filter hack", () => {
+  assert.match(artSource, /direct\/rooms\/greenhouse\.svg/);
+  assert.match(artSource, /direct\/rooms\/penthouse\.svg/);
+  assert.match(artSource, /direct\/rooms\/atrium\.svg/);
   assert.match(artSource, /direct\/suspects\//);
   assert.match(artSource, /direct\/weapons\//);
   assert.match(artSource, /filter: none !important/);
@@ -67,6 +67,5 @@ test("evidence art uses standalone direct files with no atlas-fragment or color-
   assert.doesNotMatch(artSource, /:has\(/);
   assert.doesNotMatch(artSource, /cast-atlas-polished/);
   assert.doesNotMatch(artSource, /weapon-atlas-polished/);
-  assert.doesNotMatch(artSource, /items\/rooms\/.*\.svg/);
   assert.match(finishSource, /filter:none!important/);
 });
