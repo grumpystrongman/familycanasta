@@ -11,13 +11,19 @@
 .game-learning-center .learning-launch:hover,.game-learning-center .learning-launch:focus-visible{border-color:#bd8d45!important;color:#fff0ca!important;background:linear-gradient(180deg,#302211,#17100a)!important}
 .game-learning-center .learning-panel{top:56px!important;left:10px!important;max-height:calc(100vh - 66px)!important}
 
-/* Do not fog the room art. The atlas is already graded for the Blackglass palette. */
+/* Do not fog the room art. The source images are already graded for the Blackglass palette. */
 .bn-shell .bn-room-vignette{background:linear-gradient(180deg,rgba(0,0,0,.015),rgba(0,0,0,.055) 62%,rgba(0,0,0,.16)),radial-gradient(circle at 50% 42%,transparent 0 70%,rgba(0,0,0,.12) 100%)!important}
 .bn-shell .bn-room-label{min-width:60%!important;padding:7px 9px 8px!important;background:linear-gradient(180deg,rgba(7,9,10,.90),rgba(3,5,6,.95))!important;box-shadow:0 5px 15px rgba(0,0,0,.72),inset 0 1px rgba(255,255,255,.04)!important}
 .bn-shell .bn-room-label strong{font-size:clamp(11px,1vw,16px)!important;line-height:1.04!important;text-shadow:0 1px 2px #000!important}
+
 .bn-shell .bn-players{grid-template-columns:repeat(auto-fit,minmax(132px,1fr))!important}
-.bn-shell .bn-players article:has(img[src*="#blackglass-"])::before{width:52px!important;min-height:88px!important;filter:none!important}
 .bn-shell .bn-players article{grid-template-columns:52px minmax(0,1fr)!important}
-.bn-shell .bn-notebook section button:has(img[src*="#blackglass-"])::before{filter:none!important}
-.bn-shell .bn-theory-strip figure:has(img[src*="#blackglass-"])::before{filter:none!important}
-@media(max-width:1280px){.game-learning-center .learning-launch{left:143px!important;width:44px!important}.bn-shell .bn-players{grid-template-columns:repeat(auto-fit,minmax(112px,1fr))!important}.bn-shell .bn-players article{grid-template-columns:44px minmax(0,1fr)!important}.bn-shell .bn-players article:has(img[src*="#blackglass-"])::before{width:44px!important}}
+.bn-shell .bn-players article img[src*="/direct/suspects/"]{width:52px!important;min-height:88px!important;filter:none!important;opacity:1!important}
+.bn-shell img[src*="/games/bloodalibi/items/direct/"]{filter:none!important;mix-blend-mode:normal!important;opacity:1!important}
+
+@media(max-width:1280px){
+  .game-learning-center .learning-launch{left:143px!important;width:44px!important}
+  .bn-shell .bn-players{grid-template-columns:repeat(auto-fit,minmax(112px,1fr))!important}
+  .bn-shell .bn-players article{grid-template-columns:44px minmax(0,1fr)!important}
+  .bn-shell .bn-players article img[src*="/direct/suspects/"]{width:44px!important}
+}
