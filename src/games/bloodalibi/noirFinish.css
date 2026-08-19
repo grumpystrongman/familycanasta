@@ -1,0 +1,14 @@
+/* Final presentation pass. Keep this intentionally small and high-specificity so it remains the
+   last word over the base noir layout regardless of Vite CSS chunk ordering. */
+.bn-shell .bn-title strong{font-size:14px!important;letter-spacing:.16em!important;white-space:nowrap!important}
+.bn-shell .bn-title small{margin-top:5px!important;font-size:7px!important;letter-spacing:.22em!important;white-space:nowrap!important}
+.bn-shell .bn-brand{padding-top:22px!important}
+.bn-shell .bn-room-vignette{background:linear-gradient(180deg,rgba(0,0,0,.03),rgba(0,0,0,.10) 56%,rgba(0,0,0,.28)),radial-gradient(circle at 50% 40%,transparent 0 58%,rgba(0,0,0,.22) 100%)!important}
+.bn-shell .bn-room-label{min-width:60%!important;padding:7px 9px 8px!important;background:linear-gradient(180deg,rgba(7,9,10,.94),rgba(3,5,6,.97))!important;box-shadow:0 5px 15px rgba(0,0,0,.78),inset 0 1px rgba(255,255,255,.04)!important}
+.bn-shell .bn-room-label strong{font-size:clamp(11px,1vw,16px)!important;line-height:1.04!important}
+.bn-shell .bn-players{grid-template-columns:repeat(auto-fit,minmax(132px,1fr))!important}
+.bn-shell .bn-players article:has(img[src*="#blackglass-"])::before{width:52px!important;min-height:88px!important}
+.bn-shell .bn-players article{grid-template-columns:52px minmax(0,1fr)!important}
+.bn-shell .bn-notebook section button:has(img[src*="#blackglass-"])::before{filter:saturate(1) contrast(1.06) brightness(1.02)!important}
+.bn-shell .bn-theory-strip figure:has(img[src*="#blackglass-"])::before{filter:saturate(1) contrast(1.05) brightness(.98)!important}
+@media(max-width:1280px){.bn-shell .bn-players{grid-template-columns:repeat(auto-fit,minmax(112px,1fr))!important}.bn-shell .bn-players article{grid-template-columns:44px minmax(0,1fr)!important}.bn-shell .bn-players article:has(img[src*="#blackglass-"])::before{width:44px!important}}
