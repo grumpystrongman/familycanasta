@@ -1,5 +1,3 @@
-import "./noirArt.css";
-
 export const BLACKGLASS_ITEM_ROOT = "/games/bloodalibi/items";
 export const BLACKGLASS_ATLAS_ROOT = "/blackglass";
 
