@@ -1,0 +1,104 @@
+.blackglass-theory-visual {
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid rgba(190, 141, 57, 0.48);
+  background: linear-gradient(180deg, rgba(10, 10, 10, 0.96), rgba(18, 12, 8, 0.92));
+  box-shadow: inset 0 0 0 1px rgba(255, 211, 122, 0.06), 0 18px 45px rgba(0, 0, 0, 0.24);
+}
+
+.blackglass-theory-visual > header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  margin-bottom: 0.8rem;
+}
+
+.blackglass-theory-visual > header small {
+  color: #a98852;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.blackglass-theory-visual > header strong {
+  color: #dfbd78;
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.blackglass-theory-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.blackglass-theory-card {
+  overflow: hidden;
+  border: 1px solid rgba(190, 141, 57, 0.55);
+  background: #080706;
+  min-width: 0;
+}
+
+.blackglass-theory-card img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  background: #090807;
+}
+
+.blackglass-theory-card.blackglass-person-card img {
+  aspect-ratio: 0.88;
+  object-position: center top;
+}
+
+.blackglass-theory-card footer {
+  display: grid;
+  gap: 0.18rem;
+  padding: 0.62rem 0.72rem 0.72rem;
+  border-top: 1px solid rgba(190, 141, 57, 0.35);
+}
+
+.blackglass-theory-card footer small {
+  color: #9d7a42;
+  font-size: 0.66rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.blackglass-theory-card footer strong {
+  overflow: hidden;
+  color: #e2c17d;
+  font-family: Georgia, "Times New Roman", serif;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.blackglass-suspect-strip article img {
+  display: block;
+  width: 100%;
+  max-height: 220px;
+  margin-bottom: 0.65rem;
+  border: 1px solid rgba(190, 141, 57, 0.42);
+  object-fit: cover;
+  object-position: center top;
+}
+
+.blackglass-game-over-with-items {
+  align-items: stretch;
+  flex-direction: column;
+}
+
+.blackglass-game-over-with-items .blackglass-theory-visual {
+  width: 100%;
+}
+
+@media (max-width: 760px) {
+  .blackglass-theory-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .blackglass-theory-card img,
+  .blackglass-theory-card.blackglass-person-card img {
+    aspect-ratio: 16 / 9;
+  }
+}
