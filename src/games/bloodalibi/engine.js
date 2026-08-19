@@ -1,5 +1,5 @@
 export const BLOOD_ALIBI_RULES = Object.freeze({ playersMin: 2, playersMax: 6 });
-export const BOARD_SIZE = 17;
+export const BOARD_SIZE = 25;
 
 export const SUSPECTS = Object.freeze([
   { id: "dex-vale", name: "Dex Vale", role: "night manager", detail: "Knows every blind camera, master key, and off-book favor in the building." },
@@ -20,31 +20,42 @@ export const METHODS = Object.freeze([
   { id: "fire-axe", name: "Fire Axe", detail: "Missing from an emergency cabinet on the service level." },
 ]);
 
+// The play surface deliberately follows the rhythm of a classic mansion mystery board:
+// irregular room footprints create the corridors instead of a symmetric three-by-three road grid.
+// This gives the player broad walking loops, side approaches, choke points, and room-specific doors.
 export const LOCATIONS = Object.freeze([
-  { id: "greenhouse", name: "Rooftop Greenhouse", detail: "Wet soil, shattered planters, and the city glowing far below.", theme: "greenhouse", bounds: { x: 0, y: 0, w: 5, h: 5 }, doors: [{ x: 5, y: 3 }, { x: 3, y: 5 }], passageTo: "boiler" },
-  { id: "penthouse", name: "Penthouse Suite", detail: "The victim's private floor. Broken glass crunches near the minibar.", theme: "penthouse", bounds: { x: 6, y: 0, w: 5, h: 5 }, doors: [{ x: 5, y: 1 }, { x: 11, y: 3 }, { x: 8, y: 5 }] },
-  { id: "security", name: "Security Office", detail: "A wall of cameras, one suspicious eleven-minute gap.", theme: "security", bounds: { x: 12, y: 0, w: 5, h: 5 }, doors: [{ x: 11, y: 1 }, { x: 13, y: 5 }], passageTo: "garage" },
-  { id: "laundry", name: "Laundry Tunnel", detail: "Industrial washers hammer beside bins of ruined linen.", theme: "laundry", bounds: { x: 0, y: 6, w: 5, h: 5 }, doors: [{ x: 1, y: 5 }, { x: 5, y: 8 }, { x: 3, y: 11 }] },
-  { id: "atrium", name: "Glass Atrium", detail: "Rain streaks the three-story windows beneath a chandelier of fractured glass.", theme: "atrium", bounds: { x: 6, y: 6, w: 5, h: 5 }, doors: [{ x: 8, y: 5 }, { x: 11, y: 8 }, { x: 8, y: 11 }, { x: 5, y: 8 }] },
-  { id: "kitchen", name: "Service Kitchen", detail: "Cold steel counters, missing tools, and a sink that was scrubbed too hard.", theme: "kitchen", bounds: { x: 12, y: 6, w: 5, h: 5 }, doors: [{ x: 15, y: 5 }, { x: 11, y: 8 }, { x: 13, y: 11 }] },
-  { id: "garage", name: "Parking Garage", detail: "Concrete, oil sheen, and a sedan nobody remembers arriving.", theme: "garage", bounds: { x: 0, y: 12, w: 5, h: 5 }, doors: [{ x: 1, y: 11 }, { x: 5, y: 13 }], passageTo: "security" },
-  { id: "nightclub", name: "Basement Nightclub", detail: "Bass still rattles empty bottles beneath a shut-down dance floor.", theme: "nightclub", bounds: { x: 6, y: 12, w: 5, h: 5 }, doors: [{ x: 5, y: 15 }, { x: 8, y: 11 }, { x: 11, y: 13 }] },
-  { id: "boiler", name: "Boiler Room", detail: "Heat, pipe noise, and a floor drain that smells aggressively of bleach.", theme: "boiler", bounds: { x: 12, y: 12, w: 5, h: 5 }, doors: [{ x: 15, y: 11 }, { x: 11, y: 15 }], passageTo: "greenhouse" },
+  { id: "greenhouse", name: "Rooftop Greenhouse", detail: "Wet soil, shattered planters, and the city glowing far below.", theme: "greenhouse", bounds: { x: 0, y: 0, w: 7, h: 6 }, doors: [{ x: 7, y: 2 }, { x: 4, y: 6 }], passageTo: "boiler" },
+  { id: "penthouse", name: "Penthouse Suite", detail: "The victim's private floor. Broken glass crunches near the minibar.", theme: "penthouse", bounds: { x: 9, y: 0, w: 7, h: 7 }, doors: [{ x: 8, y: 3 }, { x: 16, y: 5 }, { x: 12, y: 7 }] },
+  { id: "security", name: "Security Office", detail: "A wall of cameras, one suspicious eleven-minute gap.", theme: "security", bounds: { x: 18, y: 0, w: 7, h: 5 }, doors: [{ x: 17, y: 2 }, { x: 21, y: 5 }], passageTo: "garage" },
+  { id: "laundry", name: "Laundry Tunnel", detail: "Industrial washers hammer beside bins of ruined linen.", theme: "laundry", bounds: { x: 0, y: 8, w: 6, h: 6 }, doors: [{ x: 6, y: 10 }, { x: 3, y: 7 }, { x: 4, y: 14 }] },
+  { id: "atrium", name: "Glass Atrium", detail: "Rain streaks the three-story windows beneath a chandelier of fractured glass.", theme: "atrium", bounds: { x: 8, y: 9, w: 9, h: 7 }, doors: [{ x: 7, y: 12 }, { x: 17, y: 11 }, { x: 12, y: 8 }, { x: 13, y: 16 }] },
+  { id: "kitchen", name: "Service Kitchen", detail: "Cold steel counters, missing tools, and a sink that was scrubbed too hard.", theme: "kitchen", bounds: { x: 19, y: 7, w: 6, h: 7 }, doors: [{ x: 18, y: 10 }, { x: 22, y: 6 }, { x: 20, y: 14 }] },
+  { id: "garage", name: "Parking Garage", detail: "Concrete, oil sheen, and a sedan nobody remembers arriving.", theme: "garage", bounds: { x: 0, y: 17, w: 7, h: 8 }, doors: [{ x: 7, y: 19 }, { x: 4, y: 16 }], passageTo: "security" },
+  { id: "nightclub", name: "Basement Nightclub", detail: "Bass still rattles empty bottles beneath a shut-down dance floor.", theme: "nightclub", bounds: { x: 9, y: 18, w: 8, h: 7 }, doors: [{ x: 8, y: 21 }, { x: 13, y: 17 }, { x: 17, y: 20 }] },
+  { id: "boiler", name: "Boiler Room", detail: "Heat, pipe noise, and a floor drain that smells aggressively of bleach.", theme: "boiler", bounds: { x: 19, y: 17, w: 6, h: 8 }, doors: [{ x: 18, y: 20 }, { x: 21, y: 16 }], passageTo: "greenhouse" },
 ]);
 
 const LOCATION_MAP = Object.freeze(Object.fromEntries(LOCATIONS.map((location) => [location.id, location])));
-const START_SPACES = Object.freeze(["hall:5,0", "hall:11,0", "hall:0,5", "hall:16,5", "hall:0,11", "hall:16,11"]);
+const START_SPACES = Object.freeze(["hall:8,0", "hall:16,0", "hall:0,7", "hall:24,6", "hall:0,16", "hall:24,15"]);
 
 export function hallNodeId(x, y) { return `hall:${x},${y}`; }
 export function roomNodeId(locationId) { return `room:${locationId}`; }
 export function boardRoomId(nodeId) { return String(nodeId || "").startsWith("room:") ? String(nodeId).slice(5) : null; }
 export function isHallNode(nodeId) { return String(nodeId || "").startsWith("hall:"); }
+function insideRoom(x, y, room) {
+  const { x: rx, y: ry, w, h } = room.bounds;
+  return x >= rx && x < rx + w && y >= ry && y < ry + h;
+}
 
+// Every tile not occupied by a room is walkable. The room geometry above therefore defines the halls,
+// like a physical Clue board, instead of painting four identical lanes across the hotel.
 export const CORRIDOR_SPACES = Object.freeze((() => {
   const spaces = [];
   for (let y = 0; y < BOARD_SIZE; y += 1) {
     for (let x = 0; x < BOARD_SIZE; x += 1) {
-      if (x === 5 || x === 11 || y === 5 || y === 11) spaces.push(Object.freeze({ id: hallNodeId(x, y), x, y }));
+      if (!LOCATIONS.some((room) => insideRoom(x, y, room))) {
+        spaces.push(Object.freeze({ id: hallNodeId(x, y), x, y }));
+      }
     }
   }
   return spaces;
@@ -56,8 +67,8 @@ const ROOM_DOOR_MAP = Object.freeze((() => {
   LOCATIONS.forEach((location) => {
     location.doors.forEach(({ x, y }) => {
       const id = hallNodeId(x, y);
-      if (!map[id]) map[id] = [];
-      map[id].push(roomNodeId(location.id));
+      if (!HALL_MAP[id]) throw new Error(`Door ${id} for ${location.name} is not on a corridor tile.`);
+      (map[id] ||= []).push(roomNodeId(location.id));
     });
   });
   return map;
@@ -71,9 +82,9 @@ function shuffled(items) {
   }
   return next;
 }
-
 function pick(items) { return items[Math.floor(Math.random() * items.length)]; }
 function cardId(kind, id) { return `${kind}:${id}`; }
+
 export function evidenceLabel(id) {
   const [kind, value] = String(id || "").split(":");
   if (kind === "suspect" || kind === "victim") return SUSPECTS.find((item) => item.id === value)?.name || value;
@@ -93,17 +104,14 @@ export function normalizeBoardPosition(value, seat = 0) {
 
 function nodeNeighbors(nodeId) {
   const roomId = boardRoomId(nodeId);
-  if (roomId) {
-    const room = LOCATION_MAP[roomId];
-    return room ? room.doors.map(({ x, y }) => hallNodeId(x, y)) : [];
-  }
+  if (roomId) return LOCATION_MAP[roomId]?.doors.map(({ x, y }) => hallNodeId(x, y)) || [];
   const hall = HALL_MAP[nodeId];
   if (!hall) return [];
   const neighbors = [];
-  [[1,0],[-1,0],[0,1],[0,-1]].forEach(([dx, dy]) => {
+  for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
     const next = hallNodeId(hall.x + dx, hall.y + dy);
     if (HALL_MAP[next]) neighbors.push(next);
-  });
+  }
   return [...neighbors, ...(ROOM_DOOR_MAP[nodeId] || [])];
 }
 
@@ -130,8 +138,7 @@ function reachableMap(state, actorUid, members, maxDistance) {
     if (node !== start && boardRoomId(node)) continue;
     for (const next of nodeNeighbors(node)) {
       const nextDistance = currentDistance + 1;
-      if (nextDistance > maxDistance || distance.has(next)) continue;
-      if (occupied.has(next)) continue;
+      if (nextDistance > maxDistance || distance.has(next) || occupied.has(next)) continue;
       distance.set(next, nextDistance);
       queue.push(next);
     }
@@ -144,13 +151,14 @@ export function getReachableBoardNodes(state, actorUid, members) {
   if (state?.phase !== "playing" || state?.turnPhase !== "move") return [];
   const remaining = Math.max(0, Number(state.moveRemaining || 0));
   const map = reachableMap(state, actorUid, members, remaining);
-  return [...map.entries()].map(([id, distance]) => ({ id, distance, roomId: boardRoomId(id) })).sort((a, b) => a.distance - b.distance || a.id.localeCompare(b.id));
+  return [...map.entries()]
+    .map(([id, distance]) => ({ id, distance, roomId: boardRoomId(id) }))
+    .sort((a, b) => a.distance - b.distance || a.id.localeCompare(b.id));
 }
 
 function activePlayerIndexes(state, members) {
   return members.map((member, index) => ({ member, index })).filter(({ member }) => !state.eliminated?.[member.uid]);
 }
-
 function nextActiveIndex(state, members, fromIndex) {
   for (let offset = 1; offset <= members.length; offset += 1) {
     const index = (fromIndex + offset) % members.length;
@@ -159,7 +167,6 @@ function nextActiveIndex(state, members, fromIndex) {
   }
   return -1;
 }
-
 function advanceTurn(state, members, currentIndex, message) {
   const nextIndex = nextActiveIndex(state, members, currentIndex);
   if (nextIndex < 0) return { ...state, phase: "game-over", winnerUid: null, message: "The case collapsed with nobody left to accuse." };
@@ -185,7 +192,6 @@ function dealEvidence(members, solution) {
   shuffled(cards).forEach((card, index) => hands[members[index % members.length].uid].push(card));
   return hands;
 }
-
 function pickSolution() {
   const killer = pick(SUSPECTS);
   const victim = pick(VICTIMS.filter((item) => item.id !== killer.id));
@@ -195,23 +201,19 @@ function pickSolution() {
 export function createBloodAlibiGame(members) {
   if (members.length < 2 || members.length > 6) throw new Error("Blood & Alibi supports two to six investigators.");
   const solution = pickSolution();
-  const hands = dealEvidence(members, solution);
-  const positions = Object.fromEntries(members.map((member, index) => [member.uid, START_SPACES[index % START_SPACES.length]]));
-  const suspectPositions = Object.fromEntries(SUSPECTS.map((suspect, index) => [suspect.id, LOCATIONS[index % LOCATIONS.length].id]));
-  const methodPositions = Object.fromEntries(METHODS.map((method, index) => [method.id, LOCATIONS[(index + 3) % LOCATIONS.length].id]));
   return {
     phase: "playing",
     roundNumber: 1,
     turnNumber: 1,
     turnPhase: "roll",
     currentPlayerIndex: 0,
-    positions,
-    hands,
+    positions: Object.fromEntries(members.map((member, index) => [member.uid, START_SPACES[index % START_SPACES.length]])),
+    hands: dealEvidence(members, solution),
     solution,
     eliminated: {},
     reveals: [],
-    suspectPositions,
-    methodPositions,
+    suspectPositions: Object.fromEntries(SUSPECTS.map((suspect, index) => [suspect.id, LOCATIONS[index % LOCATIONS.length].id])),
+    methodPositions: Object.fromEntries(METHODS.map((method, index) => [method.id, LOCATIONS[(index + 3) % LOCATIONS.length].id])),
     lastTheory: null,
     moveRemaining: 0,
     lastRoll: null,
@@ -226,7 +228,6 @@ function validateChoice(action, key, collection, label) {
   if (!collection.some((item) => item.id === value)) throw new Error(`Choose a valid ${label}.`);
   return value;
 }
-
 function validatePeople(action) {
   const suspectId = validateChoice(action, "suspectId", SUSPECTS, "killer");
   const victimId = validateChoice(action, "victimId", VICTIMS, "victim");
@@ -240,6 +241,7 @@ export function reduceBloodAlibi(state, actorUid, action, members) {
   const current = members[currentIndex];
   if (!current || current.uid !== actorUid) throw new Error("Wait for your turn.");
   if (state.eliminated?.[actorUid]) throw new Error("Your accusation was wrong; you can still hold evidence but no longer investigate.");
+
   const positions = { ...(state.positions || {}) };
   positions[actorUid] = normalizeBoardPosition(positions[actorUid], current.seat);
   const caseLog = Array.isArray(state.caseLog) ? [...state.caseLog] : [];
@@ -263,9 +265,9 @@ export function reduceBloodAlibi(state, actorUid, action, members) {
     const roll = 1 + Math.floor(Math.random() * 6);
     caseLog.push({ type: "roll", uid: actorUid, text: `${current.nickname} rolled ${roll}.` });
     const rolledState = { ...state, positions, caseLog: caseLog.slice(-50), turnPhase: "move", lastRoll: roll, moveRemaining: roll, message: `${current.nickname} rolled ${roll}. Move up to ${roll} spaces; entering a room ends movement.` };
-    const reachable = getReachableBoardNodes(rolledState, actorUid, members);
-    if (!reachable.length) return advanceTurn(rolledState, members, currentIndex, `${current.nickname} had no open path.`);
-    return rolledState;
+    return getReachableBoardNodes(rolledState, actorUid, members).length
+      ? rolledState
+      : advanceTurn(rolledState, members, currentIndex, `${current.nickname} had no open path.`);
   }
 
   if (state.turnPhase === "move") {
@@ -275,8 +277,7 @@ export function reduceBloodAlibi(state, actorUid, action, members) {
     }
     if (action?.type !== "move") throw new Error("Choose a highlighted board space or end movement.");
     const targetNodeId = String(action.nodeId || "");
-    const reachable = getReachableBoardNodes({ ...state, positions }, actorUid, members);
-    const target = reachable.find((item) => item.id === targetNodeId);
+    const target = getReachableBoardNodes({ ...state, positions }, actorUid, members).find((item) => item.id === targetNodeId);
     if (!target) throw new Error("That board space is not reachable with the movement you have left.");
     positions[actorUid] = targetNodeId;
     const remaining = Math.max(0, Number(state.moveRemaining || 0) - target.distance);
