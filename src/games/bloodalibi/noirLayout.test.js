@@ -43,16 +43,18 @@ test("rooms and corridors preserve the polished Clue-style visual contract", () 
   assert.match(cssSource, /\.bn-room-label strong/);
 });
 
-test("evidence art uses the corrected crisp cast/room atlases and approved weapon art without soft-focus grading", () => {
-  assert.match(artSource, /cast-atlas-crisp\.webp/);
+test("evidence art uses approved cast/weapon art and room-specific source assets without soft-focus grading", () => {
+  assert.match(artSource, /cast-atlas-polished\.webp/);
   assert.match(artSource, /weapon-atlas-polished\.webp/);
-  assert.match(artSource, /room-atlas-crisp\.webp/);
-  assert.doesNotMatch(artSource, /room-atlas-polished\.webp/);
-  assert.doesNotMatch(artSource, /room-atlas\.jpg/);
+  assert.match(artSource, /items\/rooms\/greenhouse\.svg/);
+  assert.match(artSource, /items\/rooms\/penthouse\.svg/);
+  assert.match(artSource, /items\/rooms\/atrium\.svg/);
+  assert.doesNotMatch(artSource, /room-atlas-crisp\.webp/);
   assert.match(artSource, /#blackglass-dex-vale/);
   assert.match(artSource, /#blackglass-mara-voss/);
   assert.match(artSource, /#blackglass-cleaver/);
   assert.match(artSource, /#blackglass-penthouse/);
   assert.match(artSource, /:has\(img/);
+  assert.match(artSource, /filter:none!important/);
   assert.match(finishSource, /filter:none!important/);
 });
