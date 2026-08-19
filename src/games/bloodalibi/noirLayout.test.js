@@ -43,8 +43,8 @@ test("rooms and corridors preserve the polished Clue-style visual contract", () 
   assert.match(cssSource, /\.bn-room-label strong/);
 });
 
-test("evidence art uses the crisp cast and room atlases without soft-focus grading", () => {
-  assert.match(artSource, /cast-atlas-crisp\.webp/);
+test("evidence art uses the approved cast/weapon art and the crisp room atlas without soft-focus grading", () => {
+  assert.match(artSource, /cast-atlas-polished\.webp/);
   assert.match(artSource, /weapon-atlas-polished\.webp/);
   assert.match(artSource, /room-atlas-crisp\.webp/);
   assert.doesNotMatch(artSource, /room-atlas-polished\.webp/);
