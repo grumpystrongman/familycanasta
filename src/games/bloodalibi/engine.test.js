@@ -42,6 +42,21 @@ test("movement uses board spaces and entering a room starts investigation", () =
   assert.equal(next.turnPhase, "investigate");
 });
 
+test("a doorway is a corridor space and entering the room costs one additional die point", () => {
+  let state = createBloodAlibiGame(members);
+  state = { ...state, positions:{ ...state.positions, a:"hall:8,2" }, turnPhase:"move", lastRoll:1, moveRemaining:1 };
+  const oneMove = getReachableBoardNodes(state, "a", members);
+  assert.ok(oneMove.some((item) => item.id === "hall:7,2" && item.distance === 1));
+  assert.equal(oneMove.some((item) => item.id === roomNodeId("greenhouse")), false);
+
+  state = { ...state, lastRoll:2, moveRemaining:2 };
+  const twoMoves = getReachableBoardNodes(state, "a", members);
+  assert.ok(twoMoves.some((item) => item.id === roomNodeId("greenhouse") && item.distance === 2));
+  const entered = reduceBloodAlibi(state, "a", { type:"move", nodeId:roomNodeId("greenhouse") }, members);
+  assert.equal(boardRoomId(entered.positions.a), "greenhouse");
+  assert.equal(entered.turnPhase, "investigate");
+});
+
 test("another investigator blocks an occupied doorway and the room behind it", () => {
   let state = createBloodAlibiGame(members);
   state = { ...state, positions:{ ...state.positions, b:"hall:7,2" }, turnPhase:"move", lastRoll:4, moveRemaining:4 };
