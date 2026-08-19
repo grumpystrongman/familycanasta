@@ -5,12 +5,12 @@
 
 :where(.bn-notebook section button,.bn-theory-strip figure,.bn-players article):has(img[src*="#blackglass-"])>img[src*="#blackglass-"]{display:none!important}
 
-:where(.bn-notebook section button,.bn-theory-strip figure,.bn-players article):has(img[src$="#blackglass-elias-flint"]){--bg-art:url("/blackglass/cast-atlas-polished.webp");--bg-pos:0% 50%}
-:where(.bn-notebook section button,.bn-theory-strip figure,.bn-players article):has(img[src$="#blackglass-dex-vale"]){--bg-art:url("/blackglass/cast-atlas-polished.webp");--bg-pos:20% 50%}
-:where(.bn-notebook section button,.bn-theory-strip figure,.bn-players article):has(img[src$="#blackglass-imani-cross"]){--bg-art:url("/blackglass/cast-atlas-polished.webp");--bg-pos:40% 50%}
-:where(.bn-notebook section button,.bn-theory-strip figure,.bn-players article):has(img[src$="#blackglass-theo-rook"]){--bg-art:url("/blackglass/cast-atlas-polished.webp");--bg-pos:60% 50%}
-:where(.bn-notebook section button,.bn-theory-strip figure,.bn-players article):has(img[src$="#blackglass-june-mercer"]){--bg-art:url("/blackglass/cast-atlas-polished.webp");--bg-pos:80% 50%}
-:where(.bn-notebook section button,.bn-theory-strip figure,.bn-players article):has(img[src$="#blackglass-mara-voss"]){--bg-art:url("/blackglass/cast-atlas-polished.webp");--bg-pos:100% 50%}
+:where(.bn-notebook section button,.bn-theory-strip figure,.bn-players article):has(img[src$="#blackglass-elias-flint"]){--bg-art:url("/blackglass/cast-atlas-crisp.webp");--bg-pos:0% 50%}
+:where(.bn-notebook section button,.bn-theory-strip figure,.bn-players article):has(img[src$="#blackglass-dex-vale"]){--bg-art:url("/blackglass/cast-atlas-crisp.webp");--bg-pos:20% 50%}
+:where(.bn-notebook section button,.bn-theory-strip figure,.bn-players article):has(img[src$="#blackglass-imani-cross"]){--bg-art:url("/blackglass/cast-atlas-crisp.webp");--bg-pos:40% 50%}
+:where(.bn-notebook section button,.bn-theory-strip figure,.bn-players article):has(img[src$="#blackglass-theo-rook"]){--bg-art:url("/blackglass/cast-atlas-crisp.webp");--bg-pos:60% 50%}
+:where(.bn-notebook section button,.bn-theory-strip figure,.bn-players article):has(img[src$="#blackglass-june-mercer"]){--bg-art:url("/blackglass/cast-atlas-crisp.webp");--bg-pos:80% 50%}
+:where(.bn-notebook section button,.bn-theory-strip figure,.bn-players article):has(img[src$="#blackglass-mara-voss"]){--bg-art:url("/blackglass/cast-atlas-crisp.webp");--bg-pos:100% 50%}
 
 :where(.bn-notebook section button,.bn-theory-strip figure):has(img[src$="#blackglass-nail-gun"]){--bg-art:url("/blackglass/weapon-atlas-polished.webp");--bg-size:300% 200%;--bg-pos:0 0}
 :where(.bn-notebook section button,.bn-theory-strip figure):has(img[src$="#blackglass-cleaver"]){--bg-art:url("/blackglass/weapon-atlas-polished.webp");--bg-size:300% 200%;--bg-pos:50% 0}
