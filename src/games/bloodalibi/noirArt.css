@@ -1,0 +1,31 @@
+/* Canonical Blackglass atlas crop windows. */
+img[src*="#blackglass-"]{background-color:#07090a;background-repeat:no-repeat}
+img[src$="#blackglass-dex-vale"]{background-image:url("/blackglass/canonical-cast-atlas.jpg");background-size:700% 100%;background-position:16.6667% 50%}
+img[src$="#blackglass-imani-cross"]{background-image:url("/blackglass/canonical-cast-atlas.jpg");background-size:700% 100%;background-position:33.3333% 50%}
+img[src$="#blackglass-theo-rook"]{background-image:url("/blackglass/canonical-cast-atlas.jpg");background-size:700% 100%;background-position:50% 50%}
+img[src$="#blackglass-june-mercer"]{background-image:url("/blackglass/canonical-cast-atlas.jpg");background-size:700% 100%;background-position:66.6667% 50%}
+img[src$="#blackglass-elias-flint"]{background-image:url("/blackglass/canonical-cast-atlas.jpg");background-size:700% 100%;background-position:83.3333% 50%}
+img[src$="#blackglass-nail-gun"]{background-image:url("/blackglass/weapon-atlas.jpg");background-size:300% 200%;background-position:0 0}
+img[src$="#blackglass-cleaver"]{background-image:url("/blackglass/weapon-atlas.jpg");background-size:300% 200%;background-position:50% 0}
+img[src$="#blackglass-garrote"]{background-image:url("/blackglass/weapon-atlas.jpg");background-size:300% 200%;background-position:100% 0}
+img[src$="#blackglass-revolver"]{background-image:url("/blackglass/weapon-atlas.jpg");background-size:300% 200%;background-position:0 100%}
+img[src$="#blackglass-poison"]{background-image:url("/blackglass/weapon-atlas.jpg");background-size:300% 200%;background-position:50% 100%}
+img[src$="#blackglass-fire-axe"]{background-image:url("/blackglass/weapon-atlas.jpg");background-size:300% 200%;background-position:100% 100%}
+img[src$="#blackglass-greenhouse"]{background-image:url("/blackglass/room-atlas.jpg");background-size:300% 300%;background-position:0 0}
+img[src$="#blackglass-penthouse"]{background-image:url("/blackglass/room-atlas.jpg");background-size:300% 300%;background-position:50% 0}
+img[src$="#blackglass-security"]{background-image:url("/blackglass/room-atlas.jpg");background-size:300% 300%;background-position:100% 0}
+img[src$="#blackglass-laundry"]{background-image:url("/blackglass/room-atlas.jpg");background-size:300% 300%;background-position:0 50%}
+img[src$="#blackglass-atrium"]{background-image:url("/blackglass/room-atlas.jpg");background-size:300% 300%;background-position:50% 50%}
+img[src$="#blackglass-kitchen"]{background-image:url("/blackglass/room-atlas.jpg");background-size:300% 300%;background-position:100% 50%}
+img[src$="#blackglass-garage"]{background-image:url("/blackglass/room-atlas.jpg");background-size:300% 300%;background-position:0 100%}
+img[src$="#blackglass-nightclub"]{background-image:url("/blackglass/room-atlas.jpg");background-size:300% 300%;background-position:50% 100%}
+img[src$="#blackglass-boiler"]{background-image:url("/blackglass/room-atlas.jpg");background-size:300% 300%;background-position:100% 100%}
+.bn-room.theme-greenhouse{background-image:url("/blackglass/room-atlas.jpg")!important;background-size:300% 300%!important;background-position:0 0!important}
+.bn-room.theme-penthouse{background-image:url("/blackglass/room-atlas.jpg")!important;background-size:300% 300%!important;background-position:50% 0!important}
+.bn-room.theme-security{background-image:url("/blackglass/room-atlas.jpg")!important;background-size:300% 300%!important;background-position:100% 0!important}
+.bn-room.theme-laundry{background-image:url("/blackglass/room-atlas.jpg")!important;background-size:300% 300%!important;background-position:0 50%!important}
+.bn-room.theme-atrium{background-image:url("/blackglass/room-atlas.jpg")!important;background-size:300% 300%!important;background-position:50% 50%!important}
+.bn-room.theme-kitchen{background-image:url("/blackglass/room-atlas.jpg")!important;background-size:300% 300%!important;background-position:100% 50%!important}
+.bn-room.theme-garage{background-image:url("/blackglass/room-atlas.jpg")!important;background-size:300% 300%!important;background-position:0 100%!important}
+.bn-room.theme-nightclub{background-image:url("/blackglass/room-atlas.jpg")!important;background-size:300% 300%!important;background-position:50% 100%!important}
+.bn-room.theme-boiler{background-image:url("/blackglass/room-atlas.jpg")!important;background-size:300% 300%!important;background-position:100% 100%!important}
