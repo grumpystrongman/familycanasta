@@ -1,32 +1,34 @@
 export const BLACKGLASS_ITEM_ROOT = "/games/bloodalibi/items";
 
+// The SVG files are lightweight crop windows into the canonical Blackglass atlases, so the same
+// character, weapon, and room art is reused in the notebook, theory cards, player dock, and board.
 export const BLACKGLASS_ITEM_ASSETS = Object.freeze({
   suspects: Object.freeze({
     "mara-voss": `${BLACKGLASS_ITEM_ROOT}/suspects/mara-voss.webp`,
-    "dex-vale": `${BLACKGLASS_ITEM_ROOT}/suspects/dex-vale.webp`,
-    "imani-cross": `${BLACKGLASS_ITEM_ROOT}/suspects/imani-cross.webp`,
-    "theo-rook": `${BLACKGLASS_ITEM_ROOT}/suspects/theo-rook.webp`,
-    "june-mercer": `${BLACKGLASS_ITEM_ROOT}/suspects/june-mercer.webp`,
-    "elias-flint": `${BLACKGLASS_ITEM_ROOT}/suspects/elias-flint.webp`,
+    "dex-vale": `${BLACKGLASS_ITEM_ROOT}/suspects/dex-vale.svg`,
+    "imani-cross": `${BLACKGLASS_ITEM_ROOT}/suspects/imani-cross.svg`,
+    "theo-rook": `${BLACKGLASS_ITEM_ROOT}/suspects/theo-rook.svg`,
+    "june-mercer": `${BLACKGLASS_ITEM_ROOT}/suspects/june-mercer.svg`,
+    "elias-flint": `${BLACKGLASS_ITEM_ROOT}/suspects/elias-flint.svg`,
   }),
   weapons: Object.freeze({
-    "nail-gun": `${BLACKGLASS_ITEM_ROOT}/weapons/nail-gun.webp`,
-    cleaver: `${BLACKGLASS_ITEM_ROOT}/weapons/cleaver.webp`,
-    garrote: `${BLACKGLASS_ITEM_ROOT}/weapons/garrote.webp`,
-    revolver: `${BLACKGLASS_ITEM_ROOT}/weapons/revolver.webp`,
-    poison: `${BLACKGLASS_ITEM_ROOT}/weapons/poison.webp`,
-    "fire-axe": `${BLACKGLASS_ITEM_ROOT}/weapons/fire-axe.webp`,
+    "nail-gun": `${BLACKGLASS_ITEM_ROOT}/weapons/nail-gun.svg`,
+    cleaver: `${BLACKGLASS_ITEM_ROOT}/weapons/cleaver.svg`,
+    garrote: `${BLACKGLASS_ITEM_ROOT}/weapons/garrote.svg`,
+    revolver: `${BLACKGLASS_ITEM_ROOT}/weapons/revolver.svg`,
+    poison: `${BLACKGLASS_ITEM_ROOT}/weapons/poison.svg`,
+    "fire-axe": `${BLACKGLASS_ITEM_ROOT}/weapons/fire-axe.svg`,
   }),
   rooms: Object.freeze({
-    greenhouse: `${BLACKGLASS_ITEM_ROOT}/rooms/greenhouse.webp`,
-    penthouse: `${BLACKGLASS_ITEM_ROOT}/rooms/penthouse.webp`,
-    security: `${BLACKGLASS_ITEM_ROOT}/rooms/security.webp`,
-    laundry: `${BLACKGLASS_ITEM_ROOT}/rooms/laundry.webp`,
-    atrium: `${BLACKGLASS_ITEM_ROOT}/rooms/atrium.webp`,
-    kitchen: `${BLACKGLASS_ITEM_ROOT}/rooms/kitchen.webp`,
-    garage: `${BLACKGLASS_ITEM_ROOT}/rooms/garage.webp`,
-    nightclub: `${BLACKGLASS_ITEM_ROOT}/rooms/nightclub.webp`,
-    boiler: `${BLACKGLASS_ITEM_ROOT}/rooms/boiler.webp`,
+    greenhouse: `${BLACKGLASS_ITEM_ROOT}/rooms/greenhouse.svg`,
+    penthouse: `${BLACKGLASS_ITEM_ROOT}/rooms/penthouse.svg`,
+    security: `${BLACKGLASS_ITEM_ROOT}/rooms/security.svg`,
+    laundry: `${BLACKGLASS_ITEM_ROOT}/rooms/laundry.svg`,
+    atrium: `${BLACKGLASS_ITEM_ROOT}/rooms/atrium.svg`,
+    kitchen: `${BLACKGLASS_ITEM_ROOT}/rooms/kitchen.svg`,
+    garage: `${BLACKGLASS_ITEM_ROOT}/rooms/garage.svg`,
+    nightclub: `${BLACKGLASS_ITEM_ROOT}/rooms/nightclub.svg`,
+    boiler: `${BLACKGLASS_ITEM_ROOT}/rooms/boiler.svg`,
   }),
 });
 
