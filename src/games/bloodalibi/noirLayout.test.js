@@ -42,12 +42,13 @@ test("rooms and corridors preserve the polished Clue-style visual contract", () 
   assert.match(cssSource, /\.bn-room-label strong/);
 });
 
-test("canonical cast and weapon atlases plus approved polished room art are wired into the live game", () => {
-  assert.match(artSource, /canonical-cast-atlas\.jpg/);
-  assert.match(artSource, /weapon-atlas\.jpg/);
+test("approved cast, weapon and room concept art is wired into every evidence surface", () => {
+  assert.match(artSource, /cast-atlas-polished\.webp/);
+  assert.match(artSource, /weapon-atlas-polished\.webp/);
   assert.match(artSource, /room-atlas-polished\.webp/);
   assert.match(artSource, /#blackglass-dex-vale/);
-  assert.match(artSource, /#blackglass-ruby-ash/);
+  assert.match(artSource, /#blackglass-mara-voss/);
   assert.match(artSource, /#blackglass-cleaver/);
   assert.match(artSource, /#blackglass-penthouse/);
+  assert.match(artSource, /:has\(img/);
 });
