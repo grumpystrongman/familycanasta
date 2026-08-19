@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { boardRoomId, createBloodAlibiGame, getReachableBoardNodes, reduceBloodAlibi, roomNodeId } from "./engine.js";
+import { BOARD_SIZE, CORRIDOR_SPACES, LOCATIONS, boardRoomId, createBloodAlibiGame, getReachableBoardNodes, reduceBloodAlibi, roomNodeId } from "./engine.js";
 
 const members = [{ uid:"a", nickname:"A", seat:0 }, { uid:"b", nickname:"B", seat:1 }];
 
@@ -14,6 +14,14 @@ test("Blackglass creates one four-part hidden solution, evidence, and corridor s
   assert.equal(state.hands.a.length + state.hands.b.length, 23);
   assert.equal(state.turnPhase, "roll");
   assert.match(state.positions.a, /^hall:/);
+});
+
+test("the investigation floor uses irregular room footprints with broad walkable negative space", () => {
+  assert.equal(BOARD_SIZE, 25);
+  assert.equal(CORRIDOR_SPACES.length, 198);
+  assert.ok(new Set(LOCATIONS.map((room) => `${room.bounds.w}x${room.bounds.h}`)).size > 3);
+  assert.ok(CORRIDOR_SPACES.some((space) => space.x === 8 && space.y === 4));
+  assert.ok(CORRIDOR_SPACES.some((space) => space.x === 18 && space.y === 15));
 });
 
 test("rolling opens movement with a d6 result", () => {
@@ -34,11 +42,11 @@ test("movement uses board spaces and entering a room starts investigation", () =
   assert.equal(next.turnPhase, "investigate");
 });
 
-test("another investigator blocks a narrow corridor", () => {
+test("another investigator blocks an occupied doorway and the room behind it", () => {
   let state = createBloodAlibiGame(members);
-  state = { ...state, positions:{ ...state.positions, b:"hall:5,2" }, turnPhase:"move", lastRoll:6, moveRemaining:6 };
+  state = { ...state, positions:{ ...state.positions, b:"hall:7,2" }, turnPhase:"move", lastRoll:4, moveRemaining:4 };
   const reachable = getReachableBoardNodes(state, "a", members);
-  assert.equal(reachable.some((item) => item.id === "hall:5,3"), false);
+  assert.equal(reachable.some((item) => item.id === "hall:7,2"), false);
   assert.equal(reachable.some((item) => item.id === roomNodeId("greenhouse")), false);
 });
 
