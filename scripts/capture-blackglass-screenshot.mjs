@@ -30,6 +30,23 @@ try {
   await page.locator("[data-testid=blackglass-noir-board]").waitFor({ state: "visible" });
   await page.waitForTimeout(900);
 
+  const learn = page.getByRole("button", { name: /learn & rules/i });
+  if (await learn.count()) {
+    const learnMeta = await learn.first().evaluate((element) => {
+      const style = getComputedStyle(element);
+      return {
+        className: element.className,
+        parentClassName: element.parentElement?.className || "",
+        top: style.top,
+        left: style.left,
+        width: style.width,
+        height: style.height,
+        fontSize: style.fontSize,
+      };
+    });
+    console.log(`[blackglass:learning-control] ${JSON.stringify(learnMeta)}`);
+  }
+
   const roll = page.getByRole("button", { name: /roll dice/i });
   if (await roll.isEnabled()) {
     await roll.click();
