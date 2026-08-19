@@ -15,12 +15,8 @@ const SUSPECT_CELLS = Object.freeze({
   "ruby-ash": 6,
 });
 const WEAPON_CELLS = Object.freeze({
-  "nail-gun": [0, 0],
-  cleaver: [1, 0],
-  garrote: [2, 0],
-  revolver: [0, 1],
-  poison: [1, 1],
-  "fire-axe": [2, 1],
+  "nail-gun": [0, 0], cleaver: [1, 0], garrote: [2, 0],
+  revolver: [0, 1], poison: [1, 1], "fire-axe": [2, 1],
 });
 const ROOM_CELLS = Object.freeze({
   greenhouse: [0, 0], penthouse: [1, 0], security: [2, 0],
@@ -28,13 +24,15 @@ const ROOM_CELLS = Object.freeze({
   garage: [0, 2], nightclub: [1, 2], boiler: [2, 2],
 });
 
+const tagged = (src, id) => `${src}#blackglass-${id}`;
+
 export const BLACKGLASS_ITEM_ASSETS = Object.freeze({
   suspects: Object.freeze({
     "mara-voss": MARA_PORTRAIT,
-    ...Object.fromEntries(Object.keys(SUSPECT_CELLS).map((id) => [id, CAST_ATLAS])),
+    ...Object.fromEntries(Object.keys(SUSPECT_CELLS).map((id) => [id, tagged(CAST_ATLAS, id)])),
   }),
-  weapons: Object.freeze(Object.fromEntries(Object.keys(WEAPON_CELLS).map((id) => [id, WEAPON_ATLAS]))),
-  rooms: Object.freeze(Object.fromEntries(Object.keys(ROOM_CELLS).map((id) => [id, ROOM_ATLAS]))),
+  weapons: Object.freeze(Object.fromEntries(Object.keys(WEAPON_CELLS).map((id) => [id, tagged(WEAPON_ATLAS, id)]))),
+  rooms: Object.freeze(Object.fromEntries(Object.keys(ROOM_CELLS).map((id) => [id, tagged(ROOM_ATLAS, id)]))),
 });
 
 const KIND_ALIASES = Object.freeze({
