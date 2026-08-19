@@ -17,6 +17,17 @@
   background-color: #07090a;
 }
 
+/* Give evidence thumbnails enough physical pixels to read at a glance. */
+.bn-notebook section button {
+  height: 46px !important;
+  grid-template-columns: 40px minmax(0,1fr) 24px !important;
+}
+.bn-notebook section button img {
+  width: 38px !important;
+  height: 38px !important;
+  padding: 0;
+}
+
 /* Portraits should read as portraits, not tiny strips of a sprite sheet. */
 .bn-notebook section button img[src*="/direct/suspects/"],
 .bn-theory-strip img[src*="/direct/suspects/"],
@@ -68,4 +79,15 @@
   background:
     linear-gradient(180deg, rgba(0,0,0,.03), rgba(0,0,0,.12) 58%, rgba(0,0,0,.28)),
     radial-gradient(circle at 50% 42%, transparent 0 62%, rgba(0,0,0,.18)) !important;
+}
+
+@media (max-width: 1280px) {
+  .bn-notebook section button {
+    height: 41px !important;
+    grid-template-columns: 35px minmax(0,1fr) 22px !important;
+  }
+  .bn-notebook section button img {
+    width: 33px !important;
+    height: 33px !important;
+  }
 }
