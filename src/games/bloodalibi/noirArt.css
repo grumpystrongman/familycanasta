@@ -1,15 +1,16 @@
-/* Blackglass evidence art. The live JSX still owns semantic <img> elements, but the visible
-   portrait/weapon/room tile is painted by its parent from the approved atlases. This avoids
-   browser-dependent cropping of replaced <img> elements and keeps every use of an item identical. */
+/* Blackglass evidence art.
+   The semantic <img> elements identify the evidence item; the visible crop is painted from the
+   canonical atlases so every occurrence stays visually consistent. Keep raster crops at native
+   aspect ratios wherever possible and never apply blur/soft-focus filters to evidence art. */
 
 :where(.bn-notebook section button,.bn-theory-strip figure,.bn-players article):has(img[src*="#blackglass-"])>img[src*="#blackglass-"]{display:none!important}
 
-:where(.bn-notebook section button,.bn-theory-strip figure,.bn-players article):has(img[src$="#blackglass-elias-flint"]){--bg-art:url("/blackglass/cast-atlas-polished.webp");--bg-size:600% 100%;--bg-pos:0 50%}
-:where(.bn-notebook section button,.bn-theory-strip figure,.bn-players article):has(img[src$="#blackglass-dex-vale"]){--bg-art:url("/blackglass/cast-atlas-polished.webp");--bg-size:600% 100%;--bg-pos:20% 50%}
-:where(.bn-notebook section button,.bn-theory-strip figure,.bn-players article):has(img[src$="#blackglass-imani-cross"]){--bg-art:url("/blackglass/cast-atlas-polished.webp");--bg-size:600% 100%;--bg-pos:40% 50%}
-:where(.bn-notebook section button,.bn-theory-strip figure,.bn-players article):has(img[src$="#blackglass-theo-rook"]){--bg-art:url("/blackglass/cast-atlas-polished.webp");--bg-size:600% 100%;--bg-pos:60% 50%}
-:where(.bn-notebook section button,.bn-theory-strip figure,.bn-players article):has(img[src$="#blackglass-june-mercer"]){--bg-art:url("/blackglass/cast-atlas-polished.webp");--bg-size:600% 100%;--bg-pos:80% 50%}
-:where(.bn-notebook section button,.bn-theory-strip figure,.bn-players article):has(img[src$="#blackglass-mara-voss"]){--bg-art:url("/blackglass/cast-atlas-polished.webp");--bg-size:600% 100%;--bg-pos:100% 50%}
+:where(.bn-notebook section button,.bn-theory-strip figure,.bn-players article):has(img[src$="#blackglass-elias-flint"]){--bg-art:url("/blackglass/cast-atlas-polished.webp");--bg-pos:0% 50%}
+:where(.bn-notebook section button,.bn-theory-strip figure,.bn-players article):has(img[src$="#blackglass-dex-vale"]){--bg-art:url("/blackglass/cast-atlas-polished.webp");--bg-pos:20% 50%}
+:where(.bn-notebook section button,.bn-theory-strip figure,.bn-players article):has(img[src$="#blackglass-imani-cross"]){--bg-art:url("/blackglass/cast-atlas-polished.webp");--bg-pos:40% 50%}
+:where(.bn-notebook section button,.bn-theory-strip figure,.bn-players article):has(img[src$="#blackglass-theo-rook"]){--bg-art:url("/blackglass/cast-atlas-polished.webp");--bg-pos:60% 50%}
+:where(.bn-notebook section button,.bn-theory-strip figure,.bn-players article):has(img[src$="#blackglass-june-mercer"]){--bg-art:url("/blackglass/cast-atlas-polished.webp");--bg-pos:80% 50%}
+:where(.bn-notebook section button,.bn-theory-strip figure,.bn-players article):has(img[src$="#blackglass-mara-voss"]){--bg-art:url("/blackglass/cast-atlas-polished.webp");--bg-pos:100% 50%}
 
 :where(.bn-notebook section button,.bn-theory-strip figure):has(img[src$="#blackglass-nail-gun"]){--bg-art:url("/blackglass/weapon-atlas-polished.webp");--bg-size:300% 200%;--bg-pos:0 0}
 :where(.bn-notebook section button,.bn-theory-strip figure):has(img[src$="#blackglass-cleaver"]){--bg-art:url("/blackglass/weapon-atlas-polished.webp");--bg-size:300% 200%;--bg-pos:50% 0}
@@ -18,38 +19,41 @@
 :where(.bn-notebook section button,.bn-theory-strip figure):has(img[src$="#blackglass-poison"]){--bg-art:url("/blackglass/weapon-atlas-polished.webp");--bg-size:300% 200%;--bg-pos:50% 100%}
 :where(.bn-notebook section button,.bn-theory-strip figure):has(img[src$="#blackglass-fire-axe"]){--bg-art:url("/blackglass/weapon-atlas-polished.webp");--bg-size:300% 200%;--bg-pos:100% 100%}
 
-:where(.bn-notebook section button,.bn-theory-strip figure):has(img[src$="#blackglass-greenhouse"]){--bg-art:url("/blackglass/room-atlas-polished.webp");--bg-size:300% 300%;--bg-pos:0 0}
-:where(.bn-notebook section button,.bn-theory-strip figure):has(img[src$="#blackglass-penthouse"]){--bg-art:url("/blackglass/room-atlas-polished.webp");--bg-size:300% 300%;--bg-pos:50% 0}
-:where(.bn-notebook section button,.bn-theory-strip figure):has(img[src$="#blackglass-security"]){--bg-art:url("/blackglass/room-atlas-polished.webp");--bg-size:300% 300%;--bg-pos:100% 0}
-:where(.bn-notebook section button,.bn-theory-strip figure):has(img[src$="#blackglass-laundry"]){--bg-art:url("/blackglass/room-atlas-polished.webp");--bg-size:300% 300%;--bg-pos:0 50%}
-:where(.bn-notebook section button,.bn-theory-strip figure):has(img[src$="#blackglass-atrium"]){--bg-art:url("/blackglass/room-atlas-polished.webp");--bg-size:300% 300%;--bg-pos:50% 50%}
-:where(.bn-notebook section button,.bn-theory-strip figure):has(img[src$="#blackglass-kitchen"]){--bg-art:url("/blackglass/room-atlas-polished.webp");--bg-size:300% 300%;--bg-pos:100% 50%}
-:where(.bn-notebook section button,.bn-theory-strip figure):has(img[src$="#blackglass-garage"]){--bg-art:url("/blackglass/room-atlas-polished.webp");--bg-size:300% 300%;--bg-pos:0 100%}
-:where(.bn-notebook section button,.bn-theory-strip figure):has(img[src$="#blackglass-nightclub"]){--bg-art:url("/blackglass/room-atlas-polished.webp");--bg-size:300% 300%;--bg-pos:50% 100%}
-:where(.bn-notebook section button,.bn-theory-strip figure):has(img[src$="#blackglass-boiler"]){--bg-art:url("/blackglass/room-atlas-polished.webp");--bg-size:300% 300%;--bg-pos:100% 100%}
+/* room-atlas.jpg is the larger 480x300 canonical room source. The former 360x240 webp atlas
+   only supplied 120x80 pixels per room and became visibly soft when stretched across the board. */
+:where(.bn-notebook section button,.bn-theory-strip figure):has(img[src$="#blackglass-greenhouse"]){--bg-art:url("/blackglass/room-atlas.jpg");--bg-size:300% 300%;--bg-pos:0 0}
+:where(.bn-notebook section button,.bn-theory-strip figure):has(img[src$="#blackglass-penthouse"]){--bg-art:url("/blackglass/room-atlas.jpg");--bg-size:300% 300%;--bg-pos:50% 0}
+:where(.bn-notebook section button,.bn-theory-strip figure):has(img[src$="#blackglass-security"]){--bg-art:url("/blackglass/room-atlas.jpg");--bg-size:300% 300%;--bg-pos:100% 0}
+:where(.bn-notebook section button,.bn-theory-strip figure):has(img[src$="#blackglass-laundry"]){--bg-art:url("/blackglass/room-atlas.jpg");--bg-size:300% 300%;--bg-pos:0 50%}
+:where(.bn-notebook section button,.bn-theory-strip figure):has(img[src$="#blackglass-atrium"]){--bg-art:url("/blackglass/room-atlas.jpg");--bg-size:300% 300%;--bg-pos:50% 50%}
+:where(.bn-notebook section button,.bn-theory-strip figure):has(img[src$="#blackglass-kitchen"]){--bg-art:url("/blackglass/room-atlas.jpg");--bg-size:300% 300%;--bg-pos:100% 50%}
+:where(.bn-notebook section button,.bn-theory-strip figure):has(img[src$="#blackglass-garage"]){--bg-art:url("/blackglass/room-atlas.jpg");--bg-size:300% 300%;--bg-pos:0 100%}
+:where(.bn-notebook section button,.bn-theory-strip figure):has(img[src$="#blackglass-nightclub"]){--bg-art:url("/blackglass/room-atlas.jpg");--bg-size:300% 300%;--bg-pos:50% 100%}
+:where(.bn-notebook section button,.bn-theory-strip figure):has(img[src$="#blackglass-boiler"]){--bg-art:url("/blackglass/room-atlas.jpg");--bg-size:300% 300%;--bg-pos:100% 100%}
 
 .bn-notebook section button:has(img[src*="#blackglass-"])::before{
-  content:"";width:32px;height:32px;display:block;border:1px solid #6a5231;border-radius:4px;
-  background-image:var(--bg-art);background-size:var(--bg-size);background-position:var(--bg-pos);background-repeat:no-repeat;background-color:#07090a;
-  filter:saturate(.92) contrast(1.04) brightness(.92);box-shadow:inset 0 0 8px #0008
+  content:"";width:32px;height:32px;display:block;border:1px solid #725a38;border-radius:4px;
+  background-image:var(--bg-art);background-size:var(--bg-size,600% auto);background-position:var(--bg-pos);background-repeat:no-repeat;background-color:#07090a;
+  filter:none!important;box-shadow:inset 0 0 0 1px rgba(255,255,255,.025),0 1px 5px #000a
 }
 .bn-theory-strip figure:has(img[src*="#blackglass-"])::before{
-  content:"";display:block;width:100%;height:96px;background-image:var(--bg-art);background-size:var(--bg-size);background-position:var(--bg-pos);background-repeat:no-repeat;background-color:#07090a;
-  filter:saturate(.94) contrast(1.04) brightness(.9)
+  content:"";display:block;width:100%;height:96px;background-image:var(--bg-art);background-size:var(--bg-size,600% auto);background-position:var(--bg-pos);background-repeat:no-repeat;background-color:#07090a;
+  filter:none!important
 }
 .bn-players article:has(img[src*="#blackglass-"])::before{
   content:"";display:block;width:48px;height:100%;min-height:86px;border-right:1px solid #4c3921;
-  background-image:var(--bg-art);background-size:var(--bg-size);background-position:var(--bg-pos);background-repeat:no-repeat;background-color:#07090a;
-  filter:saturate(.94) contrast(1.05) brightness(.9)
+  background-image:var(--bg-art);background-size:600% 100%;background-position:var(--bg-pos);background-repeat:no-repeat;background-color:#07090a;
+  filter:none!important
 }
 
-/* The board rooms themselves use the same approved concept art, cropped to the physical footprint. */
-.bn-room.theme-greenhouse{background-image:url("/blackglass/room-atlas-polished.webp")!important;background-size:300% 300%!important;background-position:0 0!important}
-.bn-room.theme-penthouse{background-image:url("/blackglass/room-atlas-polished.webp")!important;background-size:300% 300%!important;background-position:50% 0!important}
-.bn-room.theme-security{background-image:url("/blackglass/room-atlas-polished.webp")!important;background-size:300% 300%!important;background-position:100% 0!important}
-.bn-room.theme-laundry{background-image:url("/blackglass/room-atlas-polished.webp")!important;background-size:300% 300%!important;background-position:0 50%!important}
-.bn-room.theme-atrium{background-image:url("/blackglass/room-atlas-polished.webp")!important;background-size:300% 300%!important;background-position:50% 50%!important}
-.bn-room.theme-kitchen{background-image:url("/blackglass/room-atlas-polished.webp")!important;background-size:300% 300%!important;background-position:100% 50%!important}
-.bn-room.theme-garage{background-image:url("/blackglass/room-atlas-polished.webp")!important;background-size:300% 300%!important;background-position:0 100%!important}
-.bn-room.theme-nightclub{background-image:url("/blackglass/room-atlas-polished.webp")!important;background-size:300% 300%!important;background-position:50% 100%!important}
-.bn-room.theme-boiler{background-image:url("/blackglass/room-atlas-polished.webp")!important;background-size:300% 300%!important;background-position:100% 100%!important}
+/* Board rooms use the larger canonical room source. Keep the crop sharp and let each irregular
+   footprint crop naturally instead of adding a softening image filter. */
+.bn-room.theme-greenhouse{background-image:url("/blackglass/room-atlas.jpg")!important;background-size:300% 300%!important;background-position:0 0!important}
+.bn-room.theme-penthouse{background-image:url("/blackglass/room-atlas.jpg")!important;background-size:300% 300%!important;background-position:50% 0!important}
+.bn-room.theme-security{background-image:url("/blackglass/room-atlas.jpg")!important;background-size:300% 300%!important;background-position:100% 0!important}
+.bn-room.theme-laundry{background-image:url("/blackglass/room-atlas.jpg")!important;background-size:300% 300%!important;background-position:0 50%!important}
+.bn-room.theme-atrium{background-image:url("/blackglass/room-atlas.jpg")!important;background-size:300% 300%!important;background-position:50% 50%!important}
+.bn-room.theme-kitchen{background-image:url("/blackglass/room-atlas.jpg")!important;background-size:300% 300%!important;background-position:100% 50%!important}
+.bn-room.theme-garage{background-image:url("/blackglass/room-atlas.jpg")!important;background-size:300% 300%!important;background-position:0 100%!important}
+.bn-room.theme-nightclub{background-image:url("/blackglass/room-atlas.jpg")!important;background-size:300% 300%!important;background-position:50% 100%!important}
+.bn-room.theme-boiler{background-image:url("/blackglass/room-atlas.jpg")!important;background-size:300% 300%!important;background-position:100% 100%!important}
