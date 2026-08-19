@@ -6,6 +6,7 @@ const indexSource = fs.readFileSync(new URL("./index.jsx", import.meta.url), "ut
 const noirSource = fs.readFileSync(new URL("./NoirGame.jsx", import.meta.url), "utf8");
 const cssSource = fs.readFileSync(new URL("./noir.css", import.meta.url), "utf8");
 const artSource = fs.readFileSync(new URL("./noirArt.css", import.meta.url), "utf8");
+const finishSource = fs.readFileSync(new URL("./noirFinish.css", import.meta.url), "utf8");
 
 test("Blackglass routes to the full-viewport noir board and loads canonical art styling", () => {
   assert.match(indexSource, /noirArt\.css/);
@@ -42,13 +43,15 @@ test("rooms and corridors preserve the polished Clue-style visual contract", () 
   assert.match(cssSource, /\.bn-room-label strong/);
 });
 
-test("approved cast, weapon and room concept art is wired into every evidence surface", () => {
+test("evidence art keeps the approved cast and weapon atlases while rooms use the larger canonical source", () => {
   assert.match(artSource, /cast-atlas-polished\.webp/);
   assert.match(artSource, /weapon-atlas-polished\.webp/);
-  assert.match(artSource, /room-atlas-polished\.webp/);
+  assert.match(artSource, /room-atlas\.jpg/);
+  assert.doesNotMatch(artSource, /room-atlas-polished\.webp/);
   assert.match(artSource, /#blackglass-dex-vale/);
   assert.match(artSource, /#blackglass-mara-voss/);
   assert.match(artSource, /#blackglass-cleaver/);
   assert.match(artSource, /#blackglass-penthouse/);
   assert.match(artSource, /:has\(img/);
+  assert.match(finishSource, /filter:none!important/);
 });
