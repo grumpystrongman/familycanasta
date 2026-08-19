@@ -13,6 +13,8 @@ const ROOM_IDS = [
   "garage", "nightclub", "boiler",
 ];
 const SUSPECT_IDS = ["mara-voss", "dex-vale", "imani-cross", "theo-rook", "june-mercer", "elias-flint"];
+// The shipped polished cast strip is ordered by its visual source, not by the game model.
+const SUSPECT_ATLAS_IDS = ["elias-flint", "dex-vale", "imani-cross", "theo-rook", "june-mercer", "mara-voss"];
 const WEAPON_IDS = ["nail-gun", "cleaver", "garrote", "revolver", "poison", "fire-axe"];
 
 async function ensureDir(dir) {
@@ -83,12 +85,12 @@ async function main() {
     height: 480,
   });
 
-  // The canonical cast strip has seven 100px cells. The first six are the playable suspects
-  // in the same order used by the game model; the final source cell is not a playable suspect.
+  // Use the valid polished WebP strip. The older canonical JPEG is intentionally not used here:
+  // that file has a malformed JPEG header in clean CI checkouts and cannot be decoded by libvips.
   await cropGrid({
-    source: path.join(PUBLIC, "blackglass", "canonical-cast-atlas.jpg"),
-    ids: SUSPECT_IDS,
-    columns: 7,
+    source: path.join(PUBLIC, "blackglass", "cast-atlas-polished.webp"),
+    ids: SUSPECT_ATLAS_IDS,
+    columns: 6,
     rows: 1,
     outputDir: suspectsDir,
     width: 360,
