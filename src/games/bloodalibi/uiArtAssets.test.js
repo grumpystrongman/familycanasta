@@ -11,9 +11,9 @@ const rooms = ["greenhouse", "penthouse", "security", "laundry", "atrium", "kitc
 
 test("Blackglass artwork is generated as resolution-independent SVG rather than tiny raster atlases", () => {
   assert.match(ART_JS, /data:image\/svg\+xml/);
-  assert.match(ART_JS, /viewBox=\\"0 0 420 300\\"/);
-  assert.match(ART_JS, /viewBox=\\"0 0 240 320\\"/);
-  assert.match(ART_JS, /viewBox=\\"0 0 250 250\\"/);
+  assert.match(ART_JS, /viewBox="0 0 420 300"/);
+  assert.match(ART_JS, /viewBox="0 0 240 320"/);
+  assert.match(ART_JS, /viewBox="0 0 250 250"/);
   assert.doesNotMatch(ART_JS, /atlas-polished|atlas-hd|\.webp/);
 });
 
@@ -31,8 +31,8 @@ test("all nine rooms have unique illustrated builders with integrated noir plaqu
 });
 
 test("all suspects and weapons are present as crisp direct vector artwork", () => {
-  for (const id of suspects) assert.match(ART_JS, new RegExp(`\\"${id}\\"`));
-  for (const id of weapons) assert.match(ART_JS, new RegExp(`\\"${id}\\"`));
+  for (const id of suspects) assert.match(ART_JS, new RegExp(`"${id}"`));
+  for (const id of weapons) assert.match(ART_JS, new RegExp(`"${id}"`));
   assert.match(ART_JS, /const SUSPECT_META/);
   assert.match(ART_JS, /function suspectSvg/);
   assert.match(ART_JS, /function weaponSvg/);
