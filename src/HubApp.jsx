@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import GameGuidance from "./platform/GameGuidance";
 import GameLearningCenter from "./platform/GameLearningCenter";
+import BlackglassLearningCenter from "./platform/BlackglassLearningCenter";
 import TabletopLearningCenter from "./platform/TabletopLearningCenter";
 import LayoutModeControl from "./platform/LayoutModeControl";
 import { GAME_CATALOG, GAME_CATEGORIES } from "./gameCatalog.js";
@@ -103,7 +104,7 @@ export default function HubApp() {
   const SelectedGame = loadedGame.Component;
   if (IMMERSIVE_FULLSCREEN_GAMES.has(gameId)) return <SelectedGame />;
 
-  return <><LayoutModeControl gameId={gameId} />{LEGACY_GUIDANCE_GAMES.has(gameId) ? <GameGuidance gameId={gameId} /> : null}{TABLETOP_GUIDANCE_GAMES.has(gameId) ? <TabletopLearningCenter gameId={gameId} /> : <GameLearningCenter gameId={gameId} />}<SelectedGame /></>;
+  return <><LayoutModeControl gameId={gameId} />{LEGACY_GUIDANCE_GAMES.has(gameId) ? <GameGuidance gameId={gameId} /> : null}{gameId === "bloodalibi" ? <BlackglassLearningCenter /> : TABLETOP_GUIDANCE_GAMES.has(gameId) ? <TabletopLearningCenter gameId={gameId} /> : <GameLearningCenter gameId={gameId} />}<SelectedGame /></>;
 }
 
 export { GAME_CATALOG, GAME_CATEGORIES, PARTY_STAGE_GAMES, gameModulePath, navigateToHub };
