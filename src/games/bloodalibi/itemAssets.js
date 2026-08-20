@@ -45,21 +45,21 @@ export function itemAssetStyle(kind, id) {
   const bucket = KIND_ALIASES[String(kind || "").toLowerCase()];
   if (!bucket || !id) return {};
   if (bucket === "suspects" && SUSPECT_POSITION[id]) return {
-    backgroundImage: 'url("/blackglass/cast-atlas-polished.webp")',
+    backgroundImage: 'url("/blackglass/cast-atlas-hd.webp")',
     backgroundSize: "600% 100%",
     backgroundPosition: SUSPECT_POSITION[id],
     backgroundRepeat: "no-repeat",
     backgroundColor: "#07090a",
   };
   if (bucket === "weapons" && WEAPON_POSITION[id]) return {
-    backgroundImage: 'url("/blackglass/weapon-atlas-polished.webp")',
+    backgroundImage: 'url("/blackglass/weapon-atlas-hd.svg")',
     backgroundSize: "300% 200%",
     backgroundPosition: WEAPON_POSITION[id],
     backgroundRepeat: "no-repeat",
     backgroundColor: "#07090a",
   };
   if (bucket === "rooms" && ROOM_POSITION[id]) return {
-    backgroundImage: 'url("/blackglass/room-atlas-polished.webp")',
+    backgroundImage: 'url("/blackglass/room-atlas-hd.webp")',
     backgroundSize: "300% 300%",
     backgroundPosition: ROOM_POSITION[id],
     backgroundRepeat: "no-repeat",
