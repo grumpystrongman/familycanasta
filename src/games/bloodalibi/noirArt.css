@@ -1,59 +1,99 @@
-/* Blackglass evidence art.
-   Every visible crop comes from the approved game assets already shipped with Blood & Alibi.
-   Never blur, soften, or add a post-processing filter to this artwork. */
+/* Blackglass art rendering.
+   Evidence <img> elements use a transparent carrier with a stable semantic fragment; approved
+   source art is cropped directly as the element background. This avoids putting a whole raster
+   atlas inside an <img>, avoids :has()/pseudo-element hacks, and keeps all art unfiltered. */
 
-:where(.bn-notebook section button,.bn-theory-strip figure,.bn-players article):has(img[src*="#blackglass-"])>img[src*="#blackglass-"]{display:none!important}
-
-/* Cast portraits — approved Blackglass cast atlas, shown without the old soft-focus treatment. */
-:where(.bn-notebook section button,.bn-theory-strip figure,.bn-players article):has(img[src$="#blackglass-elias-flint"]){--bg-art:url("/blackglass/cast-atlas-polished.webp");--bg-pos:0% 50%}
-:where(.bn-notebook section button,.bn-theory-strip figure,.bn-players article):has(img[src$="#blackglass-dex-vale"]){--bg-art:url("/blackglass/cast-atlas-polished.webp");--bg-pos:20% 50%}
-:where(.bn-notebook section button,.bn-theory-strip figure,.bn-players article):has(img[src$="#blackglass-imani-cross"]){--bg-art:url("/blackglass/cast-atlas-polished.webp");--bg-pos:40% 50%}
-:where(.bn-notebook section button,.bn-theory-strip figure,.bn-players article):has(img[src$="#blackglass-theo-rook"]){--bg-art:url("/blackglass/cast-atlas-polished.webp");--bg-pos:60% 50%}
-:where(.bn-notebook section button,.bn-theory-strip figure,.bn-players article):has(img[src$="#blackglass-june-mercer"]){--bg-art:url("/blackglass/cast-atlas-polished.webp");--bg-pos:80% 50%}
-:where(.bn-notebook section button,.bn-theory-strip figure,.bn-players article):has(img[src$="#blackglass-mara-voss"]){--bg-art:url("/blackglass/cast-atlas-polished.webp");--bg-pos:100% 50%}
-
-/* Weapons — approved Blackglass weapon atlas. */
-:where(.bn-notebook section button,.bn-theory-strip figure):has(img[src$="#blackglass-nail-gun"]){--bg-art:url("/blackglass/weapon-atlas-polished.webp");--bg-size:300% 200%;--bg-pos:0 0}
-:where(.bn-notebook section button,.bn-theory-strip figure):has(img[src$="#blackglass-cleaver"]){--bg-art:url("/blackglass/weapon-atlas-polished.webp");--bg-size:300% 200%;--bg-pos:50% 0}
-:where(.bn-notebook section button,.bn-theory-strip figure):has(img[src$="#blackglass-garrote"]){--bg-art:url("/blackglass/weapon-atlas-polished.webp");--bg-size:300% 200%;--bg-pos:100% 0}
-:where(.bn-notebook section button,.bn-theory-strip figure):has(img[src$="#blackglass-revolver"]){--bg-art:url("/blackglass/weapon-atlas-polished.webp");--bg-size:300% 200%;--bg-pos:0 100%}
-:where(.bn-notebook section button,.bn-theory-strip figure):has(img[src$="#blackglass-poison"]){--bg-art:url("/blackglass/weapon-atlas-polished.webp");--bg-size:300% 200%;--bg-pos:50% 100%}
-:where(.bn-notebook section button,.bn-theory-strip figure):has(img[src$="#blackglass-fire-axe"]){--bg-art:url("/blackglass/weapon-atlas-polished.webp");--bg-size:300% 200%;--bg-pos:100% 100%}
-
-/* Rooms use the dedicated room wrapper assets instead of stretching one tiny sprite cell over a
-   large irregular footprint. Each SVG performs the correct crop of the canonical room artwork. */
-:where(.bn-notebook section button,.bn-theory-strip figure):has(img[src$="#blackglass-greenhouse"]){--bg-art:url("/games/bloodalibi/items/rooms/greenhouse.svg");--bg-size:cover;--bg-pos:center}
-:where(.bn-notebook section button,.bn-theory-strip figure):has(img[src$="#blackglass-penthouse"]){--bg-art:url("/games/bloodalibi/items/rooms/penthouse.svg");--bg-size:cover;--bg-pos:center}
-:where(.bn-notebook section button,.bn-theory-strip figure):has(img[src$="#blackglass-security"]){--bg-art:url("/games/bloodalibi/items/rooms/security.svg");--bg-size:cover;--bg-pos:center}
-:where(.bn-notebook section button,.bn-theory-strip figure):has(img[src$="#blackglass-laundry"]){--bg-art:url("/games/bloodalibi/items/rooms/laundry.svg");--bg-size:cover;--bg-pos:center}
-:where(.bn-notebook section button,.bn-theory-strip figure):has(img[src$="#blackglass-atrium"]){--bg-art:url("/games/bloodalibi/items/rooms/atrium.svg");--bg-size:cover;--bg-pos:center}
-:where(.bn-notebook section button,.bn-theory-strip figure):has(img[src$="#blackglass-kitchen"]){--bg-art:url("/games/bloodalibi/items/rooms/kitchen.svg");--bg-size:cover;--bg-pos:center}
-:where(.bn-notebook section button,.bn-theory-strip figure):has(img[src$="#blackglass-garage"]){--bg-art:url("/games/bloodalibi/items/rooms/garage.svg");--bg-size:cover;--bg-pos:center}
-:where(.bn-notebook section button,.bn-theory-strip figure):has(img[src$="#blackglass-nightclub"]){--bg-art:url("/games/bloodalibi/items/rooms/nightclub.svg");--bg-size:cover;--bg-pos:center}
-:where(.bn-notebook section button,.bn-theory-strip figure):has(img[src$="#blackglass-boiler"]){--bg-art:url("/games/bloodalibi/items/rooms/boiler.svg");--bg-size:cover;--bg-pos:center}
-
-.bn-notebook section button:has(img[src*="#blackglass-"])::before{
-  content:"";width:32px;height:32px;display:block;border:1px solid #725a38;border-radius:4px;
-  background-image:var(--bg-art);background-size:var(--bg-size,600% auto);background-position:var(--bg-pos);background-repeat:no-repeat;background-color:#07090a;
-  filter:none!important;image-rendering:auto;box-shadow:inset 0 0 0 1px rgba(255,255,255,.025),0 1px 5px #000a
-}
-.bn-theory-strip figure:has(img[src*="#blackglass-"])::before{
-  content:"";display:block;width:100%;height:96px;background-image:var(--bg-art);background-size:var(--bg-size,600% auto);background-position:var(--bg-pos);background-repeat:no-repeat;background-color:#07090a;
-  filter:none!important;image-rendering:auto
-}
-.bn-players article:has(img[src*="#blackglass-"])::before{
-  content:"";display:block;width:48px;height:100%;min-height:86px;border-right:1px solid #4c3921;
-  background-image:var(--bg-art);background-size:600% 100%;background-position:var(--bg-pos);background-repeat:no-repeat;background-color:#07090a;
-  filter:none!important;image-rendering:auto
+img[src*="/games/bloodalibi/items/direct/blank.svg#"] {
+  display: block !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  filter: none !important;
+  mix-blend-mode: normal !important;
+  image-rendering: auto;
+  background-color: #07090a !important;
+  background-repeat: no-repeat !important;
 }
 
-/* Board rooms: room-specific sources guarantee the right scene is shown in every footprint. */
-.bn-room.theme-greenhouse{background-image:url("/games/bloodalibi/items/rooms/greenhouse.svg")!important;background-size:cover!important;background-position:center!important}
-.bn-room.theme-penthouse{background-image:url("/games/bloodalibi/items/rooms/penthouse.svg")!important;background-size:cover!important;background-position:center!important}
-.bn-room.theme-security{background-image:url("/games/bloodalibi/items/rooms/security.svg")!important;background-size:cover!important;background-position:center!important}
-.bn-room.theme-laundry{background-image:url("/games/bloodalibi/items/rooms/laundry.svg")!important;background-size:cover!important;background-position:center!important}
-.bn-room.theme-atrium{background-image:url("/games/bloodalibi/items/rooms/atrium.svg")!important;background-size:cover!important;background-position:center!important}
-.bn-room.theme-kitchen{background-image:url("/games/bloodalibi/items/rooms/kitchen.svg")!important;background-size:cover!important;background-position:center!important}
-.bn-room.theme-garage{background-image:url("/games/bloodalibi/items/rooms/garage.svg")!important;background-size:cover!important;background-position:center!important}
-.bn-room.theme-nightclub{background-image:url("/games/bloodalibi/items/rooms/nightclub.svg")!important;background-size:cover!important;background-position:center!important}
-.bn-room.theme-boiler{background-image:url("/games/bloodalibi/items/rooms/boiler.svg")!important;background-size:cover!important;background-position:center!important}
+.bn-notebook section button {
+  height: 46px !important;
+  grid-template-columns: 40px minmax(0,1fr) 24px !important;
+}
+.bn-notebook section button img {
+  width: 38px !important;
+  height: 38px !important;
+  padding: 0 !important;
+}
+
+/* Cast: six approved portraits across one strip. */
+img[src*="blank.svg#suspects-"] {
+  background-image: url("/blackglass/cast-atlas-polished.webp") !important;
+  background-size: 600% 100% !important;
+}
+img[src$="#suspects-elias-flint"] { background-position: 0% 50% !important; }
+img[src$="#suspects-dex-vale"] { background-position: 20% 50% !important; }
+img[src$="#suspects-imani-cross"] { background-position: 40% 50% !important; }
+img[src$="#suspects-theo-rook"] { background-position: 60% 50% !important; }
+img[src$="#suspects-june-mercer"] { background-position: 80% 50% !important; }
+img[src$="#suspects-mara-voss"] { background-position: 100% 50% !important; }
+
+/* Weapons: three columns by two rows. */
+img[src*="blank.svg#weapons-"] {
+  background-image: url("/blackglass/weapon-atlas-polished.webp") !important;
+  background-size: 300% 200% !important;
+  background-color: #080a0b !important;
+}
+img[src$="#weapons-nail-gun"] { background-position: 0% 0% !important; }
+img[src$="#weapons-cleaver"] { background-position: 50% 0% !important; }
+img[src$="#weapons-garrote"] { background-position: 100% 0% !important; }
+img[src$="#weapons-revolver"] { background-position: 0% 100% !important; }
+img[src$="#weapons-poison"] { background-position: 50% 100% !important; }
+img[src$="#weapons-fire-axe"] { background-position: 100% 100% !important; }
+
+/* Room evidence cards: three columns by three rows. */
+img[src*="blank.svg#rooms-"] {
+  background-image: url("/blackglass/room-atlas-polished.webp") !important;
+  background-size: 300% 300% !important;
+}
+img[src$="#rooms-greenhouse"] { background-position: 0% 0% !important; }
+img[src$="#rooms-penthouse"] { background-position: 50% 0% !important; }
+img[src$="#rooms-security"] { background-position: 100% 0% !important; }
+img[src$="#rooms-laundry"] { background-position: 0% 50% !important; }
+img[src$="#rooms-atrium"] { background-position: 50% 50% !important; }
+img[src$="#rooms-kitchen"] { background-position: 100% 50% !important; }
+img[src$="#rooms-garage"] { background-position: 0% 100% !important; }
+img[src$="#rooms-nightclub"] { background-position: 50% 100% !important; }
+img[src$="#rooms-boiler"] { background-position: 100% 100% !important; }
+
+/* Board rooms crop that same approved three-by-three atlas directly. */
+.bn-room {
+  background-image: url("/blackglass/room-atlas-polished.webp") !important;
+  background-size: 300% 300% !important;
+  background-repeat: no-repeat !important;
+  filter: none !important;
+}
+.bn-room.theme-greenhouse { background-position: 0% 0% !important; }
+.bn-room.theme-penthouse { background-position: 50% 0% !important; }
+.bn-room.theme-security { background-position: 100% 0% !important; }
+.bn-room.theme-laundry { background-position: 0% 50% !important; }
+.bn-room.theme-atrium { background-position: 50% 50% !important; }
+.bn-room.theme-kitchen { background-position: 100% 50% !important; }
+.bn-room.theme-garage { background-position: 0% 100% !important; }
+.bn-room.theme-nightclub { background-position: 50% 100% !important; }
+.bn-room.theme-boiler { background-position: 100% 100% !important; }
+
+.bn-room-vignette {
+  background:
+    linear-gradient(180deg, rgba(0,0,0,.02), rgba(0,0,0,.08) 58%, rgba(0,0,0,.20)),
+    radial-gradient(circle at 50% 42%, transparent 0 68%, rgba(0,0,0,.14)) !important;
+}
+
+@media (max-width: 1280px) {
+  .bn-notebook section button {
+    height: 41px !important;
+    grid-template-columns: 35px minmax(0,1fr) 22px !important;
+  }
+  .bn-notebook section button img {
+    width: 33px !important;
+    height: 33px !important;
+  }
+}

@@ -1,37 +1,9 @@
-export const BLACKGLASS_ITEM_ROOT = "/games/bloodalibi/items";
-export const BLACKGLASS_ATLAS_ROOT = "/blackglass";
+export const BLACKGLASS_ITEM_ROOT = "/games/bloodalibi/items/direct";
+export const BLACKGLASS_ART_CARRIER = `${BLACKGLASS_ITEM_ROOT}/blank.svg`;
 
-const CAST_ATLAS = `${BLACKGLASS_ATLAS_ROOT}/cast-atlas-polished.webp`;
-const WEAPON_ATLAS = `${BLACKGLASS_ATLAS_ROOT}/weapon-atlas-polished.webp`;
-const ROOM_ATLAS = `${BLACKGLASS_ATLAS_ROOT}/room-atlas-polished.webp`;
-
-// These cells are cropped directly from the approved Blackglass concept art so the live game
-// reuses the actual cast, weapon iconography and room art instead of placeholder thumbnails.
-const SUSPECT_CELLS = Object.freeze({
-  "elias-flint": 0,
-  "dex-vale": 1,
-  "imani-cross": 2,
-  "theo-rook": 3,
-  "june-mercer": 4,
-  "mara-voss": 5,
-});
-const WEAPON_CELLS = Object.freeze({
-  "nail-gun": [0, 0], cleaver: [1, 0], garrote: [2, 0],
-  revolver: [0, 1], poison: [1, 1], "fire-axe": [2, 1],
-});
-const ROOM_CELLS = Object.freeze({
-  greenhouse: [0, 0], penthouse: [1, 0], security: [2, 0],
-  laundry: [0, 1], atrium: [1, 1], kitchen: [2, 1],
-  garage: [0, 2], nightclub: [1, 2], boiler: [2, 2],
-});
-
-const tagged = (src, id) => `${src}#blackglass-${id}`;
-
-export const BLACKGLASS_ITEM_ASSETS = Object.freeze({
-  suspects: Object.freeze(Object.fromEntries(Object.keys(SUSPECT_CELLS).map((id) => [id, tagged(CAST_ATLAS, id)]))),
-  weapons: Object.freeze(Object.fromEntries(Object.keys(WEAPON_CELLS).map((id) => [id, tagged(WEAPON_ATLAS, id)]))),
-  rooms: Object.freeze(Object.fromEntries(Object.keys(ROOM_CELLS).map((id) => [id, tagged(ROOM_ATLAS, id)]))),
-});
+const SUSPECT_IDS = Object.freeze(["mara-voss", "dex-vale", "imani-cross", "theo-rook", "june-mercer", "elias-flint"]);
+const WEAPON_IDS = Object.freeze(["nail-gun", "cleaver", "garrote", "revolver", "poison", "fire-axe"]);
+const ROOM_IDS = Object.freeze(["greenhouse", "penthouse", "security", "laundry", "atrium", "kitchen", "garage", "nightclub", "boiler"]);
 
 const KIND_ALIASES = Object.freeze({
   suspect: "suspects", killer: "suspects", person: "suspects", suspects: "suspects",
@@ -39,17 +11,29 @@ const KIND_ALIASES = Object.freeze({
   location: "rooms", room: "rooms", rooms: "rooms",
 });
 
-function gridStyle(src, col, row, cols, rows) {
-  const x = cols <= 1 ? 50 : (col / (cols - 1)) * 100;
-  const y = rows <= 1 ? 50 : (row / (rows - 1)) * 100;
-  return {
-    backgroundImage: `url("${src}")`,
-    backgroundSize: `${cols * 100}% ${rows * 100}%`,
-    backgroundPosition: `${x}% ${y}%`,
-    backgroundRepeat: "no-repeat",
-    backgroundColor: "#07090a",
-  };
-}
+const SUSPECT_POSITION = Object.freeze({
+  "elias-flint": "0% 50%",
+  "dex-vale": "20% 50%",
+  "imani-cross": "40% 50%",
+  "theo-rook": "60% 50%",
+  "june-mercer": "80% 50%",
+  "mara-voss": "100% 50%",
+});
+const WEAPON_POSITION = Object.freeze({
+  "nail-gun": "0% 0%", cleaver: "50% 0%", garrote: "100% 0%",
+  revolver: "0% 100%", poison: "50% 100%", "fire-axe": "100% 100%",
+});
+const ROOM_POSITION = Object.freeze({
+  greenhouse: "0% 0%", penthouse: "50% 0%", security: "100% 0%",
+  laundry: "0% 50%", atrium: "50% 50%", kitchen: "100% 50%",
+  garage: "0% 100%", nightclub: "50% 100%", boiler: "100% 100%",
+});
+
+export const BLACKGLASS_ITEM_ASSETS = Object.freeze({
+  suspects: Object.freeze(Object.fromEntries(SUSPECT_IDS.map((id) => [id, `${BLACKGLASS_ART_CARRIER}#suspects-${id}`]))),
+  weapons: Object.freeze(Object.fromEntries(WEAPON_IDS.map((id) => [id, `${BLACKGLASS_ART_CARRIER}#weapons-${id}`]))),
+  rooms: Object.freeze(Object.fromEntries(ROOM_IDS.map((id) => [id, `${BLACKGLASS_ART_CARRIER}#rooms-${id}`]))),
+});
 
 export function itemAssetUrl(kind, id) {
   const bucket = KIND_ALIASES[String(kind || "").toLowerCase()];
@@ -59,18 +43,28 @@ export function itemAssetUrl(kind, id) {
 
 export function itemAssetStyle(kind, id) {
   const bucket = KIND_ALIASES[String(kind || "").toLowerCase()];
-  if (bucket === "suspects") {
-    const cell = SUSPECT_CELLS[id];
-    return cell == null ? {} : gridStyle(CAST_ATLAS, cell, 0, 6, 1);
-  }
-  if (bucket === "weapons") {
-    const cell = WEAPON_CELLS[id];
-    return cell ? gridStyle(WEAPON_ATLAS, cell[0], cell[1], 3, 2) : {};
-  }
-  if (bucket === "rooms") {
-    const cell = ROOM_CELLS[id];
-    return cell ? gridStyle(ROOM_ATLAS, cell[0], cell[1], 3, 3) : {};
-  }
+  if (!bucket || !id) return {};
+  if (bucket === "suspects" && SUSPECT_POSITION[id]) return {
+    backgroundImage: 'url("/blackglass/cast-atlas-polished.webp")',
+    backgroundSize: "600% 100%",
+    backgroundPosition: SUSPECT_POSITION[id],
+    backgroundRepeat: "no-repeat",
+    backgroundColor: "#07090a",
+  };
+  if (bucket === "weapons" && WEAPON_POSITION[id]) return {
+    backgroundImage: 'url("/blackglass/weapon-atlas-polished.webp")',
+    backgroundSize: "300% 200%",
+    backgroundPosition: WEAPON_POSITION[id],
+    backgroundRepeat: "no-repeat",
+    backgroundColor: "#07090a",
+  };
+  if (bucket === "rooms" && ROOM_POSITION[id]) return {
+    backgroundImage: 'url("/blackglass/room-atlas-polished.webp")',
+    backgroundSize: "300% 300%",
+    backgroundPosition: ROOM_POSITION[id],
+    backgroundRepeat: "no-repeat",
+    backgroundColor: "#07090a",
+  };
   return {};
 }
 
