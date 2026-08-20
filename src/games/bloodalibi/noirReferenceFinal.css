@@ -19,7 +19,7 @@
 /* The approved noir investigation-floor artwork is the board. Interactive rooms and corridor nodes sit over it. */
 .bn-shell .bn-board{
   aspect-ratio:1.3264248705!important;
-  background-image:url("/blackglass/reference/noir-board-reference.svg")!important;
+  background-image:url("/blackglass/reference/noir-board-reference.webp")!important;
   background-size:100% 100%!important;
   background-position:center!important;
   background-repeat:no-repeat!important;
