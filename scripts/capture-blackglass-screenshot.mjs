@@ -31,7 +31,7 @@ try {
   await page.locator(".game-start-panel").waitFor({ state: "visible" });
   await page.getByRole("button", { name: /open a case vs robot/i }).click();
   await page.locator("[data-testid=blackglass-noir-board]").waitFor({ state: "visible" });
-  await page.waitForTimeout(800);
+  await page.waitForTimeout(1000);
 
   const roll = page.getByRole("button", { name: /roll dice/i });
   if (await roll.isEnabled()) {
@@ -52,10 +52,16 @@ try {
     const rect = node.getBoundingClientRect();
     return { background: style.backgroundImage, width: rect.width, height: rect.height };
   });
-  if (!board.background.includes("data:image/webp;base64")) throw new Error("Approved cinematic noir board artwork is not the live board background");
-  if (board.background.length < 250000) throw new Error(`Noir board background payload is unexpectedly small: ${board.background.length}`);
+  if (!board.background.includes("/blackglass/reference/noir-board-reference.svg")) throw new Error(`Approved cinematic noir board artwork is not the live board background: ${board.background}`);
   const boardRatio = board.width / board.height;
   if (boardRatio < 1.29 || boardRatio > 1.36) throw new Error(`Board aspect ratio drifted away from the approved artwork: ${boardRatio}`);
+
+  const boardAsset = await page.evaluate(async () => {
+    const response = await fetch("/blackglass/reference/noir-board-reference.svg");
+    const text = await response.text();
+    return { ok: response.ok, length: text.length, hasEmbeddedWebp: text.includes("data:image/webp;base64,") };
+  });
+  if (!boardAsset.ok || boardAsset.length < 250000 || !boardAsset.hasEmbeddedWebp) throw new Error(`Approved board asset failed its integrity check: ${JSON.stringify(boardAsset)}`);
 
   const evidence = await page.locator(".bn-notebook img").evaluateAll((images) => images.map((image) => {
     const style = getComputedStyle(image);
@@ -101,7 +107,7 @@ try {
 
   const hallBase = await page.locator(".bn-hall:not(.reachable):not(.here)").first().evaluate((node) => {
     const style = getComputedStyle(node);
-    return { background: style.backgroundImage, backgroundColor: style.backgroundColor, border: style.borderTopWidth, shadow: style.boxShadow };
+    return { background: style.backgroundImage, border: style.borderTopWidth, shadow: style.boxShadow };
   });
   if (hallBase.background !== "none" || hallBase.border !== "0px" || hallBase.shadow !== "none") {
     throw new Error(`Default corridor hitboxes are obscuring the illustrated stone floor: ${JSON.stringify(hallBase)}`);
