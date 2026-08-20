@@ -1,7 +1,7 @@
 /* Blackglass art rendering.
    Evidence <img> elements use a transparent carrier with a stable semantic fragment; approved
    source art is cropped directly as the element background. This avoids putting a whole raster
-   atlas inside an <img>, avoids :has()/pseudo-element hacks, and keeps all art unfiltered. */
+   atlas inside an <img>, avoids selector-carrier/pseudo-element hacks, and keeps all art unfiltered. */
 
 img[src*="/games/bloodalibi/items/direct/blank.svg#"] {
   display: block !important;
