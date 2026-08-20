@@ -33,7 +33,7 @@ test("noir theory reconstruction visibly uses suspect, weapon, and room assets",
 test("final accusation is a separate turn-wide action instead of being locked to investigation phase", () => {
   assert.match(noirSource, /const canAccuse = myTurn && !eliminated && !busy && !state\.pendingRefutation/);
   assert.match(noirSource, /canAccuse/);
-  assert.match(noirSource, /Final room[\s\S]*disabled=!\{theory\.canAccuse\}/);
+  assert.match(noirSource, /Final room[\s\S]*disabled=\{!theory\.canAccuse\}/);
   assert.match(noirSource, /LOCK ACCUSATION/);
   assert.match(noirSource, /Available any time on your turn/);
 });
