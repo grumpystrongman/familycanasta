@@ -12,6 +12,7 @@ await context.addInitScript(() => {
   localStorage.setItem("familyCardNickname", "Jeff");
   localStorage.setItem("canastaAvatar", "🕵️");
   localStorage.setItem("familyCardAvatar", "🕵️");
+  localStorage.setItem("blackglassAudioEnabled", "false");
 });
 
 const page = await context.newPage();
@@ -32,6 +33,16 @@ try {
   await page.getByRole("button", { name: /open a case vs robot/i }).click();
   await page.locator("[data-testid=blackglass-noir-board]").waitFor({ state: "visible" });
   await page.waitForTimeout(1000);
+
+  const accusationDetails = page.locator(".bn-theory-form details").filter({ hasText: "MAKE ACCUSATION" });
+  await accusationDetails.locator("summary").click();
+  const finalRoom = accusationDetails.getByLabel("Final room");
+  const lockAccusation = accusationDetails.getByRole("button", { name: "LOCK ACCUSATION" });
+  if (await finalRoom.isDisabled()) throw new Error("Final room is locked at the start of the player's turn");
+  if (await lockAccusation.isDisabled()) throw new Error("Final accusation is locked at the start of the player's turn");
+  const audioToggle = page.getByRole("button", { name: /audio (on|off)/i });
+  if (!(await audioToggle.isVisible())) throw new Error("Blackglass audio toggle is missing");
+  await accusationDetails.locator("summary").click();
 
   const roll = page.getByRole("button", { name: /roll dice/i });
   if (await roll.isEnabled()) {

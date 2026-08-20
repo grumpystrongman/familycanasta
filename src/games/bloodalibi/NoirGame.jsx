@@ -20,6 +20,7 @@ import {
 } from "./engineThreePart";
 import { buildDeductionGroups, matchingAlibiCards } from "./deduction";
 import { itemAssetUrl, theoryAssetUrls } from "./itemAssets";
+import { useNoirAudio } from "./noirAudio";
 import "./noir.css";
 import "./deduction.css";
 
@@ -225,13 +226,14 @@ function DeductionDesk({ hand, reveals, known, notebook, setNotebook }) {
 }
 
 function CaseRail({ tab, setTab, known, hand, reveals, reveal, members, state, theory, scenario, notebook, setNotebook }) {
+  const canChooseTheoryPieces = theory.can || theory.canAccuse;
   return <aside className="bn-case">
     <nav><button type="button" className={tab === "case" ? "active" : ""} onClick={() => setTab("case")}>CASE FILE</button><button type="button" className={tab === "log" ? "active" : ""} onClick={() => setTab("log")}>LOG</button><button type="button" className={tab === "deduce" ? "active" : ""} onClick={() => setTab("deduce")}>DEDUCE</button></nav>
     <div className="bn-case-body">
       {tab === "case" ? <div className="bn-case-file">
         <TheoryStrip scenario={scenario} title="RECONSTRUCTING THE SCENE" />
         {reveal ? <article className="bn-refuted"><small>REFUTED ×</small><strong>{evidenceLabel(reveal.cardId)}</strong><span>{members.find((member) => member.uid === reveal.fromUid)?.nickname || "Another investigator"} showed you this private alibi card.</span></article> : null}
-        <div className="bn-theory-form"><small>NEW THEORY</small><Select label="Suspect" value={theory.suspectId} onChange={theory.setSuspectId} options={SUSPECTS} disabled={!theory.can} /><Select label="Weapon" value={theory.methodId} onChange={theory.setMethodId} options={METHODS} disabled={!theory.can} /><label><span>Room</span><strong>{theory.location?.name || "Enter a room"}</strong></label><button type="button" className="bn-primary" disabled={!theory.can} onClick={theory.submit}>PROPOSE THEORY</button><details><summary>MAKE ACCUSATION</summary><Select label="Final room" value={theory.accuseLocationId} onChange={theory.setAccuseLocationId} options={LOCATIONS} disabled={!theory.can} /><button type="button" className="bn-danger" disabled={!theory.can} onClick={() => theory.act({ type: "accuse", suspectId: theory.suspectId, methodId: theory.methodId, locationId: theory.accuseLocationId })}>LOCK ACCUSATION</button></details></div>
+        <div className="bn-theory-form"><small>NEW THEORY</small><Select label="Suspect" value={theory.suspectId} onChange={theory.setSuspectId} options={SUSPECTS} disabled={!canChooseTheoryPieces} /><Select label="Weapon" value={theory.methodId} onChange={theory.setMethodId} options={METHODS} disabled={!canChooseTheoryPieces} /><label><span>Room</span><strong>{theory.location?.name || "Enter a room"}</strong></label><button type="button" className="bn-primary" disabled={!theory.can} onClick={theory.submit}>PROPOSE THEORY</button><details><summary>MAKE ACCUSATION</summary><small className="bn-accuse-note">Available any time on your turn. A wrong final accusation eliminates you.</small><Select label="Final room" value={theory.accuseLocationId} onChange={theory.setAccuseLocationId} options={LOCATIONS} disabled={!theory.canAccuse} /><button type="button" className="bn-danger" disabled={!theory.canAccuse} onClick={() => theory.act({ type: "accuse", suspectId: theory.suspectId, methodId: theory.methodId, locationId: theory.accuseLocationId })}>LOCK ACCUSATION</button></details></div>
       </div> : tab === "log" ? <div className="bn-log">{[...(state.caseLog || [])].reverse().map((entry, index) => <p key={`${entry.type}-${index}`}>{entry.text}</p>)}</div> : <DeductionDesk hand={hand} reveals={reveals} known={known} notebook={notebook} setNotebook={setNotebook} />}
     </div>
   </aside>;
@@ -276,6 +278,7 @@ function PlayerDock({ members, state, user }) {
 function Table({ controller }) {
   const { room, roomCode, user, members, busy, error, act } = controller;
   const state = room.gameState;
+  const audio = useNoirAudio(state);
   const current = members[Number(state.currentPlayerIndex || 0)];
   const me = members.find((member) => member.uid === user?.uid);
   const myTurn = state.phase === "playing" && current?.uid === user?.uid;
@@ -295,6 +298,7 @@ function Table({ controller }) {
   const eliminated = Boolean(state.eliminated?.[user?.uid]);
   const canRoll = myTurn && state.turnPhase === "roll" && !eliminated;
   const canInvestigate = myTurn && state.turnPhase === "investigate" && !eliminated && Boolean(myRoomId) && !busy;
+  const canAccuse = myTurn && !eliminated && !busy && !state.pendingRefutation;
   const notebookKey = `blackglassNotebook:${roomCode || "local"}`;
   const [notebook, setNotebook] = useState(() => { try { return JSON.parse(window.localStorage.getItem(notebookKey) || "{}"); } catch { return {}; } });
   useEffect(() => { try { window.localStorage.setItem(notebookKey, JSON.stringify(notebook)); } catch { /* local-only notebook */ } }, [notebook, notebookKey]);
@@ -311,12 +315,12 @@ function Table({ controller }) {
     setTab("case");
     await act({ type: "suggest", suspectId, methodId });
   }
-  const theory = { can: canInvestigate, location: myLocation, suspectId, setSuspectId, methodId, setMethodId, accuseLocationId, setAccuseLocationId, submit, act };
+  const theory = { can: canInvestigate, canAccuse, location: myLocation, suspectId, setSuspectId, methodId, setMethodId, accuseLocationId, setAccuseLocationId, submit, act };
   const solution = state.solution || {};
   const shownScenario = scenario || state.lastTheory;
 
   return <main className="bn-shell"><section className="bn-table" data-testid="blackglass-game-layout">
-    <header className="bn-topbar"><div className="bn-title"><strong>BLACKGLASS HOTEL</strong><small>BLOOD &amp; ALIBI</small></div><div className="bn-turn"><span>TURN {state.turnNumber || 1}</span><strong>{choosingAlibi ? "SHOW AN ALIBI" : myTurn ? "YOUR TURN" : current?.nickname || "INVESTIGATING"}</strong><em>{state.message}</em></div><nav><button type="button" onClick={() => setTab("deduce")}>DEDUCTION</button><button type="button" onClick={navigateToHub}>ALL GAMES</button></nav></header>
+    <header className="bn-topbar"><div className="bn-title"><strong>BLACKGLASS HOTEL</strong><small>BLOOD &amp; ALIBI</small></div><div className="bn-turn"><span>TURN {state.turnNumber || 1}</span><strong>{choosingAlibi ? "SHOW AN ALIBI" : myTurn ? "YOUR TURN" : current?.nickname || "INVESTIGATING"}</strong><em>{state.message}</em></div><nav><button type="button" className="bn-audio-toggle" aria-pressed={audio.enabled} title="Toggle noir soundtrack and accusation zingers" onClick={audio.toggle}>{audio.enabled ? "AUDIO ON" : "AUDIO OFF"}</button><button type="button" onClick={() => setTab("deduce")}>DEDUCTION</button><button type="button" onClick={navigateToHub}>ALL GAMES</button></nav></header>
     {error ? <p className="bn-error">{error}</p> : null}
     <div className="bn-main"><Notebook known={known} notebook={notebook} setNotebook={setNotebook} /><HotelBoard state={state} members={members} user={user} myTurn={myTurn} busy={busy} act={act} /><CaseRail tab={tab} setTab={setTab} known={known} hand={hand} reveals={reveals} reveal={latestReveal} members={members} state={state} theory={theory} scenario={shownScenario} notebook={notebook} setNotebook={setNotebook} /></div>
     <footer className="bn-bottom"><section className="bn-turn-controls"><Die value={state.lastRoll} rolling={rolling} /><div><button type="button" className="bn-primary" disabled={!canRoll || busy} onClick={roll}>ROLL DICE</button><span>{state.turnPhase === "move" ? `${state.moveRemaining || 0} moves` : state.turnPhase === "investigate" ? "Investigate" : state.turnPhase === "refute" ? "Alibi pending" : "Ready"}</span></div>{canRoll && myLocation?.passageTo ? <button type="button" onClick={() => act({ type: "passage" })}>SECRET PASSAGE</button> : null}{canRoll && myRoomId ? <button type="button" onClick={() => act({ type: "investigateHere" })}>STAY &amp; INVESTIGATE</button> : null}{myTurn && state.turnPhase === "move" ? <button type="button" onClick={() => act({ type: "endMove" })}>END MOVEMENT</button> : null}</section><PlayerDock members={members} state={state} user={user} /><section className="bn-end"><small>CASE STATUS</small><strong>{state.message}</strong><button type="button" disabled={!canInvestigate} onClick={() => act({ type: "end" })}>END TURN</button></section></footer>

@@ -158,90 +158,99 @@ export function reduceBloodAlibi(state, actorUid, action, members) {
   const current = members[currentIndex];
   if (!current || current.uid !== actorUid) throw new Error("Wait for your turn.");
   if (state.eliminated?.[actorUid]) throw new Error("Your accusation was wrong; you can no longer investigate.");
-  if (state.turnPhase !== "investigate") throw new Error("Enter a room before proposing a scenario.");
 
   const positions = { ...(state.positions || {}) };
   positions[actorUid] = normalizeBoardPosition(positions[actorUid], current.seat);
-  const investigationRoomId = boardRoomId(positions[actorUid]);
-  if (!investigationRoomId) throw new Error("Enter a room before proposing a scenario.");
-
   const suspectId = validateChoice(action, "suspectId", SUSPECTS, "suspect");
   const methodId = validateChoice(action, "methodId", METHODS, "weapon");
   const caseLog = Array.isArray(state.caseLog) ? [...state.caseLog] : [];
   const reveals = Array.isArray(state.reveals) ? [...state.reveals] : [];
 
-  if (action.type === "suggest") {
-    const locationId = investigationRoomId;
-    const candidates = theoryCards({ suspectId, methodId, locationId });
-    const suspectPositions = { ...(state.suspectPositions || {}), [suspectId]: locationId };
-    const methodPositions = { ...(state.methodPositions || {}), [methodId]: locationId };
+  if (action.type === "accuse") {
+    const locationId = validateChoice(action, "locationId", LOCATIONS, "room");
+    const solution = state.solution || {};
+    const correct = suspectId === solution.suspectId && methodId === solution.methodId && locationId === solution.locationId;
     const lastTheory = { suspectId, methodId, locationId };
-    let refuter = null;
-    let matches = [];
 
-    for (let offset = 1; offset < members.length; offset += 1) {
-      const candidate = members[(currentIndex + offset) % members.length];
-      const candidateMatches = (state.hands?.[candidate.uid] || []).filter((card) => candidates.includes(card)).sort();
-      if (candidateMatches.length) {
-        refuter = candidate;
-        matches = candidateMatches;
-        break;
-      }
+    caseLog.push({
+      type: "accusation",
+      uid: actorUid,
+      turn: state.turnNumber,
+      correct,
+      theory: lastTheory,
+      text: correct
+        ? `${current.nickname} named the suspect, weapon, and room correctly.`
+        : `${current.nickname} made a final accusation and got it wrong.`,
+    });
+
+    if (correct) {
+      return { ...state, positions, lastTheory, phase: "game-over", winnerUid: actorUid, caseLog: caseLog.slice(-50), message: `${current.nickname} solved the murder.` };
     }
 
-    if (refuter) {
-      if (!refuter.isRobot) {
-        caseLog.push({
-          type: "suggestion",
-          uid: actorUid,
-          theory: lastTheory,
-          text: `${current.nickname} proposed ${SUSPECTS.find((item) => item.id === suspectId)?.name} with ${METHODS.find((item) => item.id === methodId)?.name} in ${LOCATION_MAP[locationId]?.name}; ${refuter.nickname} can refute it and must choose which alibi to show.`,
-        });
-        return {
-          ...state,
-          positions,
-          suspectPositions,
-          methodPositions,
-          lastTheory,
-          turnPhase: "refute",
-          pendingRefutation: {
-            suggestorUid: actorUid,
-            refuterUid: refuter.uid,
-            theory: lastTheory,
-            turn: state.turnNumber,
-          },
-          caseLog: caseLog.slice(-50),
-          message: `${refuter.nickname} can refute the theory. Waiting for a private alibi card.`,
-        };
-      }
-
-      const shownCard = matches[0];
-      reveals.push({ toUid: actorUid, fromUid: refuter.uid, cardId: shownCard, turn: state.turnNumber });
-      caseLog.push({ type: "suggestion", uid: actorUid, theory: lastTheory, text: `${current.nickname} proposed ${SUSPECTS.find((item) => item.id === suspectId)?.name} with ${METHODS.find((item) => item.id === methodId)?.name} in ${LOCATION_MAP[locationId]?.name}; ${refuter.nickname} refuted it.` });
-      return advanceTurn({ ...state, positions, suspectPositions, methodPositions, lastTheory, reveals: reveals.slice(-80), caseLog: caseLog.slice(-50) }, members, currentIndex, `${refuter.nickname} produced an alibi card.`);
+    const eliminated = { ...(state.eliminated || {}), [actorUid]: true };
+    const survivors = members.filter((member) => !eliminated[member.uid]);
+    if (survivors.length === 1) {
+      return { ...state, positions, lastTheory, phase: "game-over", eliminated, winnerUid: survivors[0].uid, caseLog: caseLog.slice(-50), message: `${current.nickname}'s accusation failed. ${survivors[0].nickname} is the last investigator standing.` };
     }
-
-    caseLog.push({ type: "suggestion", uid: actorUid, theory: lastTheory, text: `${current.nickname}'s scenario — ${SUSPECTS.find((item) => item.id === suspectId)?.name}, ${METHODS.find((item) => item.id === methodId)?.name}, ${LOCATION_MAP[locationId]?.name} — could not be refuted.` });
-    return advanceTurn({ ...state, positions, suspectPositions, methodPositions, lastTheory, reveals: reveals.slice(-80), caseLog: caseLog.slice(-50) }, members, currentIndex, "Nobody at the table could refute the scenario.");
+    return advanceTurn({ ...state, positions, lastTheory, eliminated, caseLog: caseLog.slice(-50) }, members, currentIndex, `${current.nickname} is out of the investigation after a false accusation.`);
   }
 
-  const locationId = validateChoice(action, "locationId", LOCATIONS, "room");
-  const solution = state.solution || {};
-  const correct = suspectId === solution.suspectId && methodId === solution.methodId && locationId === solution.locationId;
+  if (state.turnPhase !== "investigate") throw new Error("Enter a room before proposing a scenario.");
+  const investigationRoomId = boardRoomId(positions[actorUid]);
+  if (!investigationRoomId) throw new Error("Enter a room before proposing a scenario.");
+
+  const locationId = investigationRoomId;
+  const candidates = theoryCards({ suspectId, methodId, locationId });
+  const suspectPositions = { ...(state.suspectPositions || {}), [suspectId]: locationId };
+  const methodPositions = { ...(state.methodPositions || {}), [methodId]: locationId };
   const lastTheory = { suspectId, methodId, locationId };
+  let refuter = null;
+  let matches = [];
 
-  if (correct) {
-    caseLog.push({ type: "accusation", uid: actorUid, theory: lastTheory, text: `${current.nickname} named the suspect, weapon, and room correctly.` });
-    return { ...state, positions, lastTheory, phase: "game-over", winnerUid: actorUid, caseLog: caseLog.slice(-50), message: `${current.nickname} solved the murder.` };
+  for (let offset = 1; offset < members.length; offset += 1) {
+    const candidate = members[(currentIndex + offset) % members.length];
+    const candidateMatches = (state.hands?.[candidate.uid] || []).filter((card) => candidates.includes(card)).sort();
+    if (candidateMatches.length) {
+      refuter = candidate;
+      matches = candidateMatches;
+      break;
+    }
   }
 
-  const eliminated = { ...(state.eliminated || {}), [actorUid]: true };
-  caseLog.push({ type: "accusation", uid: actorUid, theory: lastTheory, text: `${current.nickname} made a final accusation and got it wrong.` });
-  const survivors = members.filter((member) => !eliminated[member.uid]);
-  if (survivors.length === 1) {
-    return { ...state, positions, lastTheory, phase: "game-over", eliminated, winnerUid: survivors[0].uid, caseLog: caseLog.slice(-50), message: `${current.nickname}'s accusation failed. ${survivors[0].nickname} is the last investigator standing.` };
+  if (refuter) {
+    if (!refuter.isRobot) {
+      caseLog.push({
+        type: "suggestion",
+        uid: actorUid,
+        theory: lastTheory,
+        text: `${current.nickname} proposed ${SUSPECTS.find((item) => item.id === suspectId)?.name} with ${METHODS.find((item) => item.id === methodId)?.name} in ${LOCATION_MAP[locationId]?.name}; ${refuter.nickname} can refute it and must choose which alibi to show.`,
+      });
+      return {
+        ...state,
+        positions,
+        suspectPositions,
+        methodPositions,
+        lastTheory,
+        turnPhase: "refute",
+        pendingRefutation: {
+          suggestorUid: actorUid,
+          refuterUid: refuter.uid,
+          theory: lastTheory,
+          turn: state.turnNumber,
+        },
+        caseLog: caseLog.slice(-50),
+        message: `${refuter.nickname} can refute the theory. Waiting for a private alibi card.`,
+      };
+    }
+
+    const shownCard = matches[0];
+    reveals.push({ toUid: actorUid, fromUid: refuter.uid, cardId: shownCard, turn: state.turnNumber });
+    caseLog.push({ type: "suggestion", uid: actorUid, theory: lastTheory, text: `${current.nickname} proposed ${SUSPECTS.find((item) => item.id === suspectId)?.name} with ${METHODS.find((item) => item.id === methodId)?.name} in ${LOCATION_MAP[locationId]?.name}; ${refuter.nickname} refuted it.` });
+    return advanceTurn({ ...state, positions, suspectPositions, methodPositions, lastTheory, reveals: reveals.slice(-80), caseLog: caseLog.slice(-50) }, members, currentIndex, `${refuter.nickname} produced an alibi card.`);
   }
-  return advanceTurn({ ...state, positions, lastTheory, eliminated, caseLog: caseLog.slice(-50) }, members, currentIndex, `${current.nickname} is out of the investigation after a false accusation.`);
+
+  caseLog.push({ type: "suggestion", uid: actorUid, theory: lastTheory, text: `${current.nickname}'s scenario — ${SUSPECTS.find((item) => item.id === suspectId)?.name}, ${METHODS.find((item) => item.id === methodId)?.name}, ${LOCATION_MAP[locationId]?.name} — could not be refuted.` });
+  return advanceTurn({ ...state, positions, suspectPositions, methodPositions, lastTheory, reveals: reveals.slice(-80), caseLog: caseLog.slice(-50) }, members, currentIndex, "Nobody at the table could refute the scenario.");
 }
 
 export function chooseBloodAlibiRobotMove(state, members) {
