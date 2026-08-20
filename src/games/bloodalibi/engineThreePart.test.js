@@ -88,4 +88,52 @@ test("a correct three-part accusation closes the case", () => {
   assert.equal(next.phase, "game-over");
   assert.equal(next.winnerUid, "a");
   assert.deepEqual(next.lastTheory, solution);
+  assert.equal(next.caseLog.at(-1).correct, true);
+  assert.equal(next.caseLog.at(-1).turn, state.turnNumber);
+});
+
+test("a final accusation is legal before rolling and does not require entering the accused room", () => {
+  const state = createBloodAlibiGame(members);
+  const solution = { suspectId: "dex-vale", methodId: "cleaver", locationId: "kitchen" };
+  const ready = {
+    ...state,
+    solution,
+    currentPlayerIndex: 0,
+    turnPhase: "roll",
+    positions: { ...state.positions, a: "hall:8,0" },
+  };
+  const next = reduceBloodAlibi(ready, "a", { type: "accuse", ...solution }, members);
+  assert.equal(next.phase, "game-over");
+  assert.equal(next.winnerUid, "a");
+  assert.equal(next.lastTheory.locationId, "kitchen");
+});
+
+test("a final accusation is legal during movement", () => {
+  const state = createBloodAlibiGame(members);
+  const solution = { suspectId: "dex-vale", methodId: "cleaver", locationId: "kitchen" };
+  const moving = {
+    ...state,
+    solution,
+    currentPlayerIndex: 0,
+    turnPhase: "move",
+    moveRemaining: 4,
+    positions: { ...state.positions, a: "hall:8,3" },
+  };
+  const next = reduceBloodAlibi(moving, "a", { type: "accuse", ...solution }, members);
+  assert.equal(next.phase, "game-over");
+  assert.equal(next.winnerUid, "a");
+});
+
+test("suggestions still require the investigator to be in a room", () => {
+  const state = createBloodAlibiGame(members);
+  const ready = {
+    ...state,
+    currentPlayerIndex: 0,
+    turnPhase: "roll",
+    positions: { ...state.positions, a: "hall:8,0" },
+  };
+  assert.throws(
+    () => reduceBloodAlibi(ready, "a", { type: "suggest", suspectId: "june-mercer", methodId: "revolver" }, members),
+    /enter a room/i,
+  );
 });
