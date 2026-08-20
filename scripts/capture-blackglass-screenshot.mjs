@@ -22,6 +22,10 @@ function overlaps(a, b) {
   return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
 }
 
+function isRichSvgDataUrl(src = "") {
+  return src.startsWith("data:image/svg+xml") && src.length > 900 && src.includes("viewBox%3D%22");
+}
+
 try {
   await page.goto(`${baseUrl}/?game=bloodalibi`, { waitUntil: "networkidle" });
   await page.locator(".game-start-panel").waitFor({ state: "visible" });
@@ -49,8 +53,6 @@ try {
     return {
       src: image.getAttribute("src") || "",
       complete: image.complete,
-      naturalWidth: image.naturalWidth,
-      naturalHeight: image.naturalHeight,
       renderedWidth: rect.width,
       renderedHeight: rect.height,
       filter: style.filter,
@@ -61,8 +63,8 @@ try {
   }));
 
   for (const art of evidence) {
-    if (!art.src.startsWith("data:image/svg+xml")) throw new Error(`Evidence is not direct vector noir artwork: ${JSON.stringify(art)}`);
-    if (!art.complete || art.naturalWidth < 200 || art.naturalHeight < 200) throw new Error(`Evidence vector failed its intrinsic quality floor: ${JSON.stringify(art)}`);
+    if (!isRichSvgDataUrl(art.src)) throw new Error(`Evidence is not rich direct vector noir artwork: ${JSON.stringify(art)}`);
+    if (!art.complete) throw new Error(`Evidence vector failed to load: ${JSON.stringify(art)}`);
     if (art.renderedWidth < 28 || art.renderedHeight < 28) throw new Error(`Evidence thumbnail is too small to read: ${JSON.stringify(art)}`);
     if (art.filter !== "none" || art.blend !== "normal" || Number(art.opacity) !== 1) throw new Error(`Evidence image has unwanted grading: ${JSON.stringify(art)}`);
   }
@@ -70,6 +72,7 @@ try {
   const roomSources = await page.locator(".bn-room").evaluateAll((rooms) => rooms.map((room) => {
     const style = getComputedStyle(room);
     const label = room.querySelector(".bn-room-label");
+    const rect = room.getBoundingClientRect();
     return {
       background: style.backgroundImage,
       backgroundSize: style.backgroundSize,
@@ -77,13 +80,17 @@ try {
       filter: style.filter,
       labelDisplay: label ? getComputedStyle(label).display : "missing",
       borderColor: style.borderColor,
+      width: rect.width,
+      height: rect.height,
     };
   }));
   for (const room of roomSources) {
     if (!room.background.includes("data:image/svg+xml")) throw new Error(`Room is not using direct illustrated noir artwork: ${JSON.stringify(room)}`);
+    if (room.background.length < 1500) throw new Error(`Room artwork is unexpectedly sparse: ${JSON.stringify(room)}`);
     if (room.backgroundSize !== "cover") throw new Error(`Room artwork is not filling the room cleanly: ${JSON.stringify(room)}`);
     if (room.filter !== "none") throw new Error(`Room image has unwanted grading: ${JSON.stringify(room)}`);
     if (room.labelDisplay !== "none") throw new Error(`Duplicate room-title overlay is still visible: ${JSON.stringify(room)}`);
+    if (room.width < 120 || room.height < 90) throw new Error(`Room is too small to read as illustrated space: ${JSON.stringify(room)}`);
   }
 
   const playerPortraits = await page.locator(".bn-players img").evaluateAll((images) => images.map((image) => {
@@ -95,7 +102,7 @@ try {
   for (const portrait of playerPortraits) {
     const ratio = portrait.width / portrait.height;
     if (ratio < .48 || ratio > .82) throw new Error(`Player portrait has the wrong portrait-card proportion: ${JSON.stringify(portrait)}`);
-    if (!portrait.src.startsWith("data:image/svg+xml")) throw new Error(`Player portrait is not direct vector art: ${JSON.stringify(portrait)}`);
+    if (!isRichSvgDataUrl(portrait.src)) throw new Error(`Player portrait is not rich direct vector art: ${JSON.stringify(portrait)}`);
     if (portrait.filter !== "none" || portrait.objectFit !== "cover") throw new Error(`Player portrait is visually degraded: ${JSON.stringify(portrait)}`);
   }
 
