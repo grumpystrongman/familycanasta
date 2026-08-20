@@ -94,7 +94,7 @@ export function useNoirAudio(state) {
 
   useEffect(() => {
     const accusation = [...(state?.caseLog || [])].reverse().find((entry) => entry.type === "accusation");
-    if (!accusation) return;
+    if (!accusation || typeof accusation.correct !== "boolean") return;
     const key = `${accusation.turn ?? "?"}:${accusation.uid ?? "?"}:${accusation.correct ? "correct" : "wrong"}`;
     if (lastAccusationRef.current === key) return;
     lastAccusationRef.current = key;
