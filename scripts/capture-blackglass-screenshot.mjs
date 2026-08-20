@@ -31,7 +31,7 @@ try {
   await page.locator(".game-start-panel").waitFor({ state: "visible" });
   await page.getByRole("button", { name: /open a case vs robot/i }).click();
   await page.locator("[data-testid=blackglass-noir-board]").waitFor({ state: "visible" });
-  await page.waitForTimeout(650);
+  await page.waitForTimeout(800);
 
   const roll = page.getByRole("button", { name: /roll dice/i });
   if (await roll.isEnabled()) {
@@ -46,6 +46,16 @@ try {
   if (roomCount !== 9) throw new Error(`Expected 9 rooms, found ${roomCount}`);
   if (corridorCount < 180) throw new Error(`Expected a broad walkable floor, found ${corridorCount} corridor tiles`);
   if (evidenceCount < 20) throw new Error(`Expected notebook artwork, found ${evidenceCount} images`);
+
+  const board = await page.locator(".bn-board").evaluate((node) => {
+    const style = getComputedStyle(node);
+    const rect = node.getBoundingClientRect();
+    return { background: style.backgroundImage, width: rect.width, height: rect.height };
+  });
+  if (!board.background.includes("data:image/webp;base64")) throw new Error("Approved cinematic noir board artwork is not the live board background");
+  if (board.background.length < 250000) throw new Error(`Noir board background payload is unexpectedly small: ${board.background.length}`);
+  const boardRatio = board.width / board.height;
+  if (boardRatio < 1.29 || boardRatio > 1.36) throw new Error(`Board aspect ratio drifted away from the approved artwork: ${boardRatio}`);
 
   const evidence = await page.locator(".bn-notebook img").evaluateAll((images) => images.map((image) => {
     const style = getComputedStyle(image);
@@ -63,8 +73,8 @@ try {
   }));
 
   for (const art of evidence) {
-    if (!isRichSvgDataUrl(art.src)) throw new Error(`Evidence is not rich direct vector noir artwork: ${JSON.stringify(art)}`);
-    if (!art.complete) throw new Error(`Evidence vector failed to load: ${JSON.stringify(art)}`);
+    if (!isRichSvgDataUrl(art.src)) throw new Error(`Evidence is not clean direct noir vector artwork: ${JSON.stringify(art)}`);
+    if (!art.complete) throw new Error(`Evidence artwork failed to load: ${JSON.stringify(art)}`);
     if (art.renderedWidth < 28 || art.renderedHeight < 28) throw new Error(`Evidence thumbnail is too small to read: ${JSON.stringify(art)}`);
     if (art.filter !== "none" || art.blend !== "normal" || Number(art.opacity) !== 1) throw new Error(`Evidence image has unwanted grading: ${JSON.stringify(art)}`);
   }
@@ -72,42 +82,43 @@ try {
   const roomSources = await page.locator(".bn-room").evaluateAll((rooms) => rooms.map((room) => {
     const style = getComputedStyle(room);
     const label = room.querySelector(".bn-room-label");
+    const vignette = room.querySelector(".bn-room-vignette");
     const rect = room.getBoundingClientRect();
     return {
       background: style.backgroundImage,
-      backgroundSize: style.backgroundSize,
-      backgroundPosition: style.backgroundPosition,
-      filter: style.filter,
       labelDisplay: label ? getComputedStyle(label).display : "missing",
-      borderColor: style.borderColor,
+      vignetteDisplay: vignette ? getComputedStyle(vignette).display : "missing",
       width: rect.width,
       height: rect.height,
     };
   }));
   for (const room of roomSources) {
-    if (!room.background.includes("data:image/svg+xml")) throw new Error(`Room is not using direct illustrated noir artwork: ${JSON.stringify(room)}`);
-    if (room.background.length < 1500) throw new Error(`Room artwork is unexpectedly sparse: ${JSON.stringify(room)}`);
-    if (room.backgroundSize !== "cover") throw new Error(`Room artwork is not filling the room cleanly: ${JSON.stringify(room)}`);
-    if (room.filter !== "none") throw new Error(`Room image has unwanted grading: ${JSON.stringify(room)}`);
+    if (room.background !== "none") throw new Error(`Room hitbox is painting over the approved board art: ${JSON.stringify(room)}`);
     if (room.labelDisplay !== "none") throw new Error(`Duplicate room-title overlay is still visible: ${JSON.stringify(room)}`);
-    if (room.width < 120 || room.height < 90) throw new Error(`Room is too small to read as illustrated space: ${JSON.stringify(room)}`);
+    if (room.vignetteDisplay !== "none") throw new Error(`Legacy room vignette is still muddying the approved art: ${JSON.stringify(room)}`);
+    if (room.width < 120 || room.height < 90) throw new Error(`Room hitbox is too small for reliable interaction: ${JSON.stringify(room)}`);
+  }
+
+  const hallBase = await page.locator(".bn-hall:not(.reachable):not(.here)").first().evaluate((node) => {
+    const style = getComputedStyle(node);
+    return { background: style.backgroundImage, backgroundColor: style.backgroundColor, border: style.borderTopWidth, shadow: style.boxShadow };
+  });
+  if (hallBase.background !== "none" || hallBase.border !== "0px" || hallBase.shadow !== "none") {
+    throw new Error(`Default corridor hitboxes are obscuring the illustrated stone floor: ${JSON.stringify(hallBase)}`);
   }
 
   const playerPortraits = await page.locator(".bn-players img").evaluateAll((images) => images.map((image) => {
     const rect = image.getBoundingClientRect();
     const style = getComputedStyle(image);
-    return { width: rect.width, height: rect.height, src: image.getAttribute("src") || "", filter: style.filter, objectFit: style.objectFit };
+    return { width: rect.width, height: rect.height, src: image.getAttribute("src") || "", filter: style.filter, blend: style.mixBlendMode, opacity: style.opacity, objectFit: style.objectFit };
   }));
   if (!playerPortraits.length) throw new Error("Expected player portrait cards in the bottom dock");
   for (const portrait of playerPortraits) {
     const ratio = portrait.width / portrait.height;
     if (ratio < .48 || ratio > .82) throw new Error(`Player portrait has the wrong portrait-card proportion: ${JSON.stringify(portrait)}`);
-    if (!isRichSvgDataUrl(portrait.src)) throw new Error(`Player portrait is not rich direct vector art: ${JSON.stringify(portrait)}`);
-    if (portrait.filter !== "none" || portrait.objectFit !== "cover") throw new Error(`Player portrait is visually degraded: ${JSON.stringify(portrait)}`);
+    if (!isRichSvgDataUrl(portrait.src)) throw new Error(`Player portrait is not clean direct noir vector art: ${JSON.stringify(portrait)}`);
+    if (portrait.filter !== "none" || portrait.blend !== "normal" || Number(portrait.opacity) !== 1 || portrait.objectFit !== "cover") throw new Error(`Player portrait is visually degraded: ${JSON.stringify(portrait)}`);
   }
-
-  const roomLabel = await page.locator(".bn-room-label").first().evaluate((node) => getComputedStyle(node).display);
-  if (roomLabel !== "none") throw new Error("Room title is printed twice instead of living only in the artwork");
 
   const goldButton = await page.locator(".bn-theory-form .bn-primary").evaluate((node) => getComputedStyle(node).backgroundImage);
   if (!goldButton.includes("gradient")) throw new Error("Theory builder lost the cinematic brass action treatment");
