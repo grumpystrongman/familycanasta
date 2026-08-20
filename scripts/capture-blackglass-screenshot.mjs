@@ -22,6 +22,11 @@ function extractUrl(backgroundImage = "") {
   return match?.[1] || "";
 }
 
+function overlaps(a, b) {
+  if (!a || !b) return false;
+  return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
+}
+
 try {
   await page.goto(`${baseUrl}/?game=bloodalibi`, { waitUntil: "networkidle" });
   await page.locator(".game-start-panel").waitFor({ state: "visible" });
@@ -45,11 +50,14 @@ try {
 
   const evidence = await page.locator(".bn-notebook img").evaluateAll((images) => images.map((image) => {
     const style = getComputedStyle(image);
+    const rect = image.getBoundingClientRect();
     return {
       src: image.getAttribute("src") || "",
       complete: image.complete,
       naturalWidth: image.naturalWidth,
       naturalHeight: image.naturalHeight,
+      renderedWidth: rect.width,
+      renderedHeight: rect.height,
       backgroundImage: style.backgroundImage,
       backgroundSize: style.backgroundSize,
       backgroundPosition: style.backgroundPosition,
@@ -69,6 +77,18 @@ try {
     if (!art.backgroundSize || art.backgroundSize === "auto") {
       throw new Error(`Evidence art is missing a crop size: ${JSON.stringify(art)}`);
     }
+    if (art.src.includes("#suspects-") && !art.backgroundImage.includes("cast-atlas-hd.webp")) {
+      throw new Error(`Suspect portrait is not using the HD cast source: ${JSON.stringify(art)}`);
+    }
+    if (art.src.includes("#weapons-") && !art.backgroundImage.includes("weapon-atlas-hd.svg")) {
+      throw new Error(`Weapon evidence is not using the crisp vector source: ${JSON.stringify(art)}`);
+    }
+    if (art.src.includes("#rooms-") && !art.backgroundImage.includes("room-atlas-hd.webp")) {
+      throw new Error(`Room evidence is not using the HD room source: ${JSON.stringify(art)}`);
+    }
+    if (art.src.includes("#suspects-") && Math.abs(art.renderedWidth - art.renderedHeight) > 1) {
+      throw new Error(`Suspect portrait is stretched instead of square: ${JSON.stringify(art)}`);
+    }
     if (art.filter !== "none" || art.blend !== "normal" || Number(art.opacity) !== 1) {
       throw new Error(`Evidence image has unwanted grading: ${JSON.stringify(art)}`);
     }
@@ -81,32 +101,57 @@ try {
     image.onerror = () => resolve({ src, width: 0, height: 0 });
     image.src = src;
   }))), atlasUrls);
+
   for (const atlas of atlasLoads) {
-    if (atlas.width < 300 || atlas.height < 100) {
-      throw new Error(`Blackglass atlas failed to load: ${JSON.stringify(atlas)}`);
+    if (atlas.src.includes("cast-atlas-hd.webp") && (atlas.width < 2000 || atlas.height < 300)) {
+      throw new Error(`HD cast atlas is below the quality floor: ${JSON.stringify(atlas)}`);
+    }
+    if (atlas.src.includes("room-atlas-hd.webp") && (atlas.width < 1500 || atlas.height < 900)) {
+      throw new Error(`HD room atlas is below the quality floor: ${JSON.stringify(atlas)}`);
+    }
+    if (atlas.src.includes("weapon-atlas-hd.svg") && (atlas.width < 1200 || atlas.height < 700)) {
+      throw new Error(`Vector weapon atlas is below the quality floor: ${JSON.stringify(atlas)}`);
     }
   }
 
   const roomSources = await page.locator(".bn-room").evaluateAll((rooms) => rooms.map((room) => {
     const style = getComputedStyle(room);
+    const label = room.querySelector(".bn-room-label");
     return {
       background: style.backgroundImage,
       backgroundSize: style.backgroundSize,
       backgroundPosition: style.backgroundPosition,
       filter: style.filter,
+      labelDisplay: label ? getComputedStyle(label).display : "missing",
     };
   }));
   for (const room of roomSources) {
-    if (!room.background.includes("/blackglass/room-atlas-polished.webp")) {
-      throw new Error(`Room is not using the polished Blackglass room artwork: ${JSON.stringify(room)}`);
+    if (!room.background.includes("/blackglass/room-atlas-hd.webp")) {
+      throw new Error(`Room is not using the HD Blackglass room artwork: ${JSON.stringify(room)}`);
     }
     if (room.backgroundSize !== "300% 300%") {
       throw new Error(`Room artwork is not cropped to a single room: ${JSON.stringify(room)}`);
     }
     if (room.filter !== "none") throw new Error(`Room image has unwanted grading: ${JSON.stringify(room)}`);
+    if (room.labelDisplay !== "none") throw new Error(`Duplicate room-title overlay is still visible: ${JSON.stringify(room)}`);
   }
 
-  await page.locator(".bn-shell").screenshot({ path: `${outputDir}/blackglass-polished-board.png` });
+  const playerPortraits = await page.locator('.bn-players img[src*="#suspects-"]').evaluateAll((images) => images.map((image) => {
+    const rect = image.getBoundingClientRect();
+    const style = getComputedStyle(image);
+    return { width: rect.width, height: rect.height, background: style.backgroundImage, filter: style.filter };
+  }));
+  for (const portrait of playerPortraits) {
+    if (Math.abs(portrait.width - portrait.height) > 1) throw new Error(`Player portrait is visibly stretched: ${JSON.stringify(portrait)}`);
+    if (!portrait.background.includes("cast-atlas-hd.webp")) throw new Error(`Player portrait is not HD: ${JSON.stringify(portrait)}`);
+    if (portrait.filter !== "none") throw new Error(`Player portrait has unwanted grading: ${JSON.stringify(portrait)}`);
+  }
+
+  const rules = await page.locator(".game-learning-center .learning-launch").boundingBox();
+  const brand = await page.locator(".bn-brand").boundingBox();
+  if (overlaps(rules, brand)) throw new Error(`Rules control overlaps the Blackglass notebook crest: ${JSON.stringify({ rules, brand })}`);
+
+  await page.screenshot({ path: `${outputDir}/blackglass-polished-board.png`, fullPage: false });
 } finally {
   await browser.close();
 }
