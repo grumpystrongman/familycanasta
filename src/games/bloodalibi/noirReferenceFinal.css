@@ -1,0 +1,110 @@
+/* Final cinematic-noir guardrail layer. This file loads last and intentionally owns the board render. */
+.bn-shell .bn-players{
+  grid-template-columns:none!important;
+  grid-auto-flow:column!important;
+  grid-auto-columns:minmax(150px,1fr)!important;
+}
+.bn-shell .bn-players article img{
+  width:62px!important;
+  height:96px!important;
+  min-height:96px!important;
+  max-height:96px!important;
+  aspect-ratio:auto!important;
+  object-fit:cover!important;
+  filter:none!important;
+  opacity:1!important;
+  mix-blend-mode:normal!important;
+}
+
+/* The approved noir investigation-floor artwork is split into five binary-safe vertical tiles. */
+.bn-shell .bn-board{
+  aspect-ratio:850/611!important;
+  background-image:
+    url("/blackglass/reference/noir-board-reference-1.webp"),
+    url("/blackglass/reference/noir-board-reference-2.webp"),
+    url("/blackglass/reference/noir-board-reference-3.webp"),
+    url("/blackglass/reference/noir-board-reference-4.webp"),
+    url("/blackglass/reference/noir-board-reference-5.webp")!important;
+  background-size:20% 100%,20% 100%,20% 100%,20% 100%,20% 100%!important;
+  background-position:0% 0,25% 0,50% 0,75% 0,100% 0!important;
+  background-repeat:no-repeat,no-repeat,no-repeat,no-repeat,no-repeat!important;
+  background-color:#050607!important;
+  border:1px solid #9b7439!important;
+  box-shadow:inset 0 0 0 2px #020304,inset 0 0 0 3px rgba(239,204,128,.22),0 20px 48px #000d!important;
+}
+.bn-shell .bn-board:before{
+  background:linear-gradient(180deg,rgba(0,0,0,.01),rgba(0,0,0,.04))!important;
+  opacity:1!important;
+  pointer-events:none!important;
+}
+
+/* Room geometry remains fully interactive, but the approved artwork underneath supplies the architecture and room art. */
+.bn-shell .bn-room{
+  background:none!important;
+  background-image:none!important;
+  border:0!important;
+  box-shadow:none!important;
+  outline:0 solid transparent!important;
+  filter:none!important;
+}
+.bn-shell .bn-room:after{display:none!important}
+.bn-shell .bn-room-vignette{display:none!important}
+.bn-shell .bn-room-label{display:none!important}
+.bn-shell .bn-room.reachable{
+  background:rgba(221,171,79,.08)!important;
+  outline:2px solid rgba(239,204,128,.88)!important;
+  outline-offset:-3px!important;
+  box-shadow:inset 0 0 26px rgba(220,157,54,.16),0 0 16px rgba(221,164,63,.32)!important;
+}
+.bn-shell .bn-room.here{
+  background:rgba(242,199,112,.10)!important;
+  outline:2px solid #f3d58f!important;
+  outline-offset:-3px!important;
+  box-shadow:inset 0 0 30px rgba(238,190,92,.18),0 0 20px rgba(238,190,92,.42)!important;
+}
+.bn-shell .bn-secret{
+  background:#080703e8!important;
+  border:1px solid #a57b39!important;
+  color:#f0ca7b!important;
+  box-shadow:0 2px 8px #000c!important;
+}
+
+/* The reference art already contains stone corridors and red door thresholds. Default nodes stay invisible until movement matters. */
+.bn-shell .bn-hall{
+  border:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  opacity:1!important;
+}
+.bn-shell .bn-hall:before{display:none!important}
+.bn-shell .bn-hall.door{
+  border:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+.bn-shell .bn-hall>span{display:none!important}
+.bn-shell .bn-hall.reachable{
+  border:1px solid rgba(255,232,170,.88)!important;
+  border-radius:50%!important;
+  background:radial-gradient(circle,#f4ddaa 0 20%,#d8a34c 24% 42%,rgba(190,122,35,.72) 43% 58%,rgba(81,49,16,.08) 62% 100%)!important;
+  box-shadow:0 0 8px rgba(245,204,117,.92),0 0 16px rgba(218,148,52,.44)!important;
+  opacity:1!important;
+}
+.bn-shell .bn-hall.reachable>span{
+  display:block!important;
+  color:#1e1308!important;
+  font-size:7px!important;
+  font-weight:900!important;
+  text-shadow:0 1px rgba(255,255,255,.38)!important;
+}
+.bn-shell .bn-hall.here{
+  border:1px solid #fff0b9!important;
+  border-radius:50%!important;
+  background:radial-gradient(circle,#fff1bd 0 24%,#dca649 28% 53%,rgba(158,91,24,.22) 56% 100%)!important;
+  box-shadow:0 0 10px #ffd67d,0 0 22px rgba(231,164,57,.62)!important;
+}
+
+@media(max-width:1360px){
+  .bn-shell .bn-players{grid-auto-columns:minmax(128px,1fr)!important}
+  .bn-shell .bn-players article img{width:50px!important;height:80px!important;min-height:80px!important;max-height:80px!important}
+}

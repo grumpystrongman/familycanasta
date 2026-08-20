@@ -1,45 +1,41 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 
-const HERE = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.resolve(HERE, "../../..");
-const BLACKGLASS = path.join(ROOT, "public", "blackglass");
-const ART_CSS = fs.readFileSync(path.join(HERE, "noirArt.css"), "utf8");
+const ART_CSS = fs.readFileSync(new URL("./noirArt.css", import.meta.url), "utf8");
+const ART_JS = fs.readFileSync(new URL("./noirArtwork.js", import.meta.url), "utf8");
 
 const suspects = ["mara-voss", "dex-vale", "imani-cross", "theo-rook", "june-mercer", "elias-flint"];
 const weapons = ["nail-gun", "cleaver", "garrote", "revolver", "poison", "fire-axe"];
 const rooms = ["greenhouse", "penthouse", "security", "laundry", "atrium", "kitchen", "garage", "nightclub", "boiler"];
 
-test("Blackglass ships materially higher-resolution source art instead of thumbnail atlases", () => {
-  const room = path.join(BLACKGLASS, "room-atlas-hd.webp");
-  const cast = path.join(BLACKGLASS, "cast-atlas-hd.webp");
-  const weaponsSvg = path.join(BLACKGLASS, "weapon-atlas-hd.svg");
-  assert.equal(fs.existsSync(room), true);
-  assert.equal(fs.existsSync(cast), true);
-  assert.equal(fs.existsSync(weaponsSvg), true);
-  assert.ok(fs.statSync(room).size > 150_000, "room source must not regress to the old tiny blurry atlas");
-  assert.ok(fs.statSync(cast).size > 25_000, "cast source must retain enough portrait detail");
-  assert.ok(fs.statSync(weaponsSvg).size > 2_000, "weapon atlas should remain a substantial vector source");
+test("Blackglass artwork is generated as resolution-independent SVG rather than tiny raster atlases", () => {
+  assert.match(ART_JS, /data:image\/svg\+xml/);
+  assert.match(ART_JS, /viewBox="0 0 420 300"/);
+  assert.match(ART_JS, /viewBox="0 0 240 320"/);
+  assert.match(ART_JS, /viewBox="0 0 250 250"/);
+  assert.doesNotMatch(ART_JS, /atlas-polished|atlas-hd|\.webp/);
 });
 
-test("every playable evidence id has an explicit crop from the HD art", () => {
-  for (const id of suspects) assert.match(ART_CSS, new RegExp(`#suspects-${id.replaceAll("-", "\\-")}.*background-position`));
-  for (const id of weapons) assert.match(ART_CSS, new RegExp(`#weapons-${id.replaceAll("-", "\\-")}.*background-position`));
-  for (const id of rooms) assert.match(ART_CSS, new RegExp(`#rooms-${id.replaceAll("-", "\\-")}.*background-position`));
-  assert.match(ART_CSS, /cast-atlas-hd\.webp/);
-  assert.match(ART_CSS, /weapon-atlas-hd\.svg/);
-  assert.match(ART_CSS, /room-atlas-hd\.webp/);
+test("all nine rooms have unique illustrated builders with integrated noir plaques", () => {
+  for (const id of rooms) assert.match(ART_JS, new RegExp(`function ${id}\\(`));
+  assert.match(ART_JS, /ROOFTOP","GREENHOUSE/);
+  assert.match(ART_JS, /PENTHOUSE","SUITE/);
+  assert.match(ART_JS, /SECURITY","OFFICE/);
+  assert.match(ART_JS, /LAUNDRY","TUNNEL/);
+  assert.match(ART_JS, /GLASS","ATRIUM/);
+  assert.match(ART_JS, /SERVICE","KITCHEN/);
+  assert.match(ART_JS, /PARKING","GARAGE/);
+  assert.match(ART_JS, /BASEMENT","NIGHTCLUB/);
+  assert.match(ART_JS, /BOILER","ROOM/);
 });
 
-test("weapon evidence is vector artwork rather than fuzzy raster scraps", () => {
-  const svg = fs.readFileSync(path.join(BLACKGLASS, "weapon-atlas-hd.svg"), "utf8");
-  assert.match(svg, /width="1296" height="720"/);
-  assert.match(svg, /stroke="#e5c47f"/);
-  assert.ok((svg.match(/<g /g) || []).length >= 6);
-  assert.doesNotMatch(svg, /<image\b/);
+test("all suspects and weapons are present as crisp direct vector artwork", () => {
+  for (const id of suspects) assert.match(ART_JS, new RegExp(`"${id}"`));
+  for (const id of weapons) assert.match(ART_JS, new RegExp(`"${id}"`));
+  assert.match(ART_JS, /const SUSPECT_META/);
+  assert.match(ART_JS, /function suspectSvg/);
+  assert.match(ART_JS, /function weaponSvg/);
 });
 
 test("Blackglass evidence art explicitly removes blur, tint, and blending", () => {

@@ -17,14 +17,13 @@ await context.addInitScript(() => {
 const page = await context.newPage();
 page.setDefaultTimeout(30_000);
 
-function extractUrl(backgroundImage = "") {
-  const match = backgroundImage.match(/url\(["']?(.*?)["']?\)/);
-  return match?.[1] || "";
-}
-
 function overlaps(a, b) {
   if (!a || !b) return false;
   return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
+}
+
+function isRichSvgDataUrl(src = "") {
+  return src.startsWith("data:image/svg+xml") && src.length > 900 && src.includes("viewBox%3D%22");
 }
 
 try {
@@ -32,13 +31,13 @@ try {
   await page.locator(".game-start-panel").waitFor({ state: "visible" });
   await page.getByRole("button", { name: /open a case vs robot/i }).click();
   await page.locator("[data-testid=blackglass-noir-board]").waitFor({ state: "visible" });
-  await page.waitForTimeout(900);
+  await page.waitForTimeout(1000);
 
   const roll = page.getByRole("button", { name: /roll dice/i });
   if (await roll.isEnabled()) {
     await roll.click();
     await page.locator(".bn-hall.reachable, .bn-room.reachable").first().waitFor({ state: "visible" });
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(350);
   }
 
   const roomCount = await page.locator(".bn-room").count();
@@ -48,104 +47,108 @@ try {
   if (corridorCount < 180) throw new Error(`Expected a broad walkable floor, found ${corridorCount} corridor tiles`);
   if (evidenceCount < 20) throw new Error(`Expected notebook artwork, found ${evidenceCount} images`);
 
+  const board = await page.locator(".bn-board").evaluate((node) => {
+    const style = getComputedStyle(node);
+    const rect = node.getBoundingClientRect();
+    return { background: style.backgroundImage, width: rect.width, height: rect.height };
+  });
+  for (let i = 1; i <= 5; i += 1) {
+    if (!board.background.includes(`/blackglass/reference/noir-board-reference-${i}.webp`)) {
+      throw new Error(`Approved cinematic noir board tile ${i} is not part of the live board background: ${board.background}`);
+    }
+  }
+  const boardRatio = board.width / board.height;
+  if (boardRatio < 1.37 || boardRatio > 1.41) throw new Error(`Board aspect ratio drifted away from the approved tiled artwork: ${boardRatio}`);
+
+  const boardAssets = await page.evaluate(async () => {
+    const results = [];
+    for (let i = 1; i <= 5; i += 1) {
+      const src = `/blackglass/reference/noir-board-reference-${i}.webp`;
+      const response = await fetch(src);
+      const bytes = await response.arrayBuffer();
+      const dimensions = await new Promise((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => resolve({ width: image.naturalWidth, height: image.naturalHeight });
+        image.onerror = reject;
+        image.src = src;
+      });
+      results.push({ src, ok: response.ok, bytes: bytes.byteLength, ...dimensions });
+    }
+    return results;
+  });
+  const totalBoardBytes = boardAssets.reduce((sum, item) => sum + item.bytes, 0);
+  for (const asset of boardAssets) {
+    if (!asset.ok || asset.bytes < 8000 || asset.width !== 170 || asset.height !== 611) {
+      throw new Error(`Approved board tile failed its integrity check: ${JSON.stringify(asset)}`);
+    }
+  }
+  if (totalBoardBytes < 50000) throw new Error(`Approved board tiles are unexpectedly small: ${totalBoardBytes} bytes`);
+
   const evidence = await page.locator(".bn-notebook img").evaluateAll((images) => images.map((image) => {
     const style = getComputedStyle(image);
     const rect = image.getBoundingClientRect();
     return {
       src: image.getAttribute("src") || "",
       complete: image.complete,
-      naturalWidth: image.naturalWidth,
-      naturalHeight: image.naturalHeight,
       renderedWidth: rect.width,
       renderedHeight: rect.height,
-      backgroundImage: style.backgroundImage,
-      backgroundSize: style.backgroundSize,
-      backgroundPosition: style.backgroundPosition,
       filter: style.filter,
       blend: style.mixBlendMode,
       opacity: style.opacity,
+      objectFit: style.objectFit,
     };
   }));
 
   for (const art of evidence) {
-    if (!art.complete || art.naturalWidth < 1 || art.naturalHeight < 1) {
-      throw new Error(`Evidence carrier failed to load: ${JSON.stringify(art)}`);
-    }
-    if (!art.backgroundImage.includes("/blackglass/") || art.backgroundImage === "none") {
-      throw new Error(`Evidence art is not using committed Blackglass artwork: ${JSON.stringify(art)}`);
-    }
-    if (!art.backgroundSize || art.backgroundSize === "auto") {
-      throw new Error(`Evidence art is missing a crop size: ${JSON.stringify(art)}`);
-    }
-    if (art.src.includes("#suspects-") && !art.backgroundImage.includes("cast-atlas-hd.webp")) {
-      throw new Error(`Suspect portrait is not using the HD cast source: ${JSON.stringify(art)}`);
-    }
-    if (art.src.includes("#weapons-") && !art.backgroundImage.includes("weapon-atlas-hd.svg")) {
-      throw new Error(`Weapon evidence is not using the crisp vector source: ${JSON.stringify(art)}`);
-    }
-    if (art.src.includes("#rooms-") && !art.backgroundImage.includes("room-atlas-hd.webp")) {
-      throw new Error(`Room evidence is not using the HD room source: ${JSON.stringify(art)}`);
-    }
-    if (art.src.includes("#suspects-") && Math.abs(art.renderedWidth - art.renderedHeight) > 1) {
-      throw new Error(`Suspect portrait is stretched instead of square: ${JSON.stringify(art)}`);
-    }
-    if (art.filter !== "none" || art.blend !== "normal" || Number(art.opacity) !== 1) {
-      throw new Error(`Evidence image has unwanted grading: ${JSON.stringify(art)}`);
-    }
-  }
-
-  const atlasUrls = [...new Set(evidence.map((art) => extractUrl(art.backgroundImage)).filter(Boolean))];
-  const atlasLoads = await page.evaluate(async (urls) => Promise.all(urls.map((src) => new Promise((resolve) => {
-    const image = new Image();
-    image.onload = () => resolve({ src, width: image.naturalWidth, height: image.naturalHeight });
-    image.onerror = () => resolve({ src, width: 0, height: 0 });
-    image.src = src;
-  }))), atlasUrls);
-
-  for (const atlas of atlasLoads) {
-    if (atlas.src.includes("cast-atlas-hd.webp") && (atlas.width < 2000 || atlas.height < 300)) {
-      throw new Error(`HD cast atlas is below the quality floor: ${JSON.stringify(atlas)}`);
-    }
-    if (atlas.src.includes("room-atlas-hd.webp") && (atlas.width < 1500 || atlas.height < 900)) {
-      throw new Error(`HD room atlas is below the quality floor: ${JSON.stringify(atlas)}`);
-    }
-    if (atlas.src.includes("weapon-atlas-hd.svg") && (atlas.width < 1200 || atlas.height < 700)) {
-      throw new Error(`Vector weapon atlas is below the quality floor: ${JSON.stringify(atlas)}`);
-    }
+    if (!isRichSvgDataUrl(art.src)) throw new Error(`Evidence is not clean direct noir vector artwork: ${JSON.stringify(art)}`);
+    if (!art.complete) throw new Error(`Evidence artwork failed to load: ${JSON.stringify(art)}`);
+    if (art.renderedWidth < 28 || art.renderedHeight < 28) throw new Error(`Evidence thumbnail is too small to read: ${JSON.stringify(art)}`);
+    if (art.filter !== "none" || art.blend !== "normal" || Number(art.opacity) !== 1) throw new Error(`Evidence image has unwanted grading: ${JSON.stringify(art)}`);
   }
 
   const roomSources = await page.locator(".bn-room").evaluateAll((rooms) => rooms.map((room) => {
     const style = getComputedStyle(room);
     const label = room.querySelector(".bn-room-label");
+    const vignette = room.querySelector(".bn-room-vignette");
+    const rect = room.getBoundingClientRect();
     return {
       background: style.backgroundImage,
-      backgroundSize: style.backgroundSize,
-      backgroundPosition: style.backgroundPosition,
-      filter: style.filter,
       labelDisplay: label ? getComputedStyle(label).display : "missing",
+      vignetteDisplay: vignette ? getComputedStyle(vignette).display : "missing",
+      width: rect.width,
+      height: rect.height,
     };
   }));
   for (const room of roomSources) {
-    if (!room.background.includes("/blackglass/room-atlas-hd.webp")) {
-      throw new Error(`Room is not using the HD Blackglass room artwork: ${JSON.stringify(room)}`);
-    }
-    if (room.backgroundSize !== "300% 300%") {
-      throw new Error(`Room artwork is not cropped to a single room: ${JSON.stringify(room)}`);
-    }
-    if (room.filter !== "none") throw new Error(`Room image has unwanted grading: ${JSON.stringify(room)}`);
+    if (room.background !== "none") throw new Error(`Room hitbox is painting over the approved board art: ${JSON.stringify(room)}`);
     if (room.labelDisplay !== "none") throw new Error(`Duplicate room-title overlay is still visible: ${JSON.stringify(room)}`);
+    if (room.vignetteDisplay !== "none") throw new Error(`Legacy room vignette is still muddying the approved art: ${JSON.stringify(room)}`);
+    if (room.width < 120 || room.height < 90) throw new Error(`Room hitbox is too small for reliable interaction: ${JSON.stringify(room)}`);
   }
 
-  const playerPortraits = await page.locator('.bn-players img[src*="#suspects-"]').evaluateAll((images) => images.map((image) => {
+  const hallBase = await page.locator(".bn-hall:not(.reachable):not(.here)").first().evaluate((node) => {
+    const style = getComputedStyle(node);
+    return { background: style.backgroundImage, border: style.borderTopWidth, shadow: style.boxShadow };
+  });
+  if (hallBase.background !== "none" || hallBase.border !== "0px" || hallBase.shadow !== "none") {
+    throw new Error(`Default corridor hitboxes are obscuring the illustrated stone floor: ${JSON.stringify(hallBase)}`);
+  }
+
+  const playerPortraits = await page.locator(".bn-players img").evaluateAll((images) => images.map((image) => {
     const rect = image.getBoundingClientRect();
     const style = getComputedStyle(image);
-    return { width: rect.width, height: rect.height, background: style.backgroundImage, filter: style.filter };
+    return { width: rect.width, height: rect.height, src: image.getAttribute("src") || "", filter: style.filter, blend: style.mixBlendMode, opacity: style.opacity, objectFit: style.objectFit };
   }));
+  if (!playerPortraits.length) throw new Error("Expected player portrait cards in the bottom dock");
   for (const portrait of playerPortraits) {
-    if (Math.abs(portrait.width - portrait.height) > 1) throw new Error(`Player portrait is visibly stretched: ${JSON.stringify(portrait)}`);
-    if (!portrait.background.includes("cast-atlas-hd.webp")) throw new Error(`Player portrait is not HD: ${JSON.stringify(portrait)}`);
-    if (portrait.filter !== "none") throw new Error(`Player portrait has unwanted grading: ${JSON.stringify(portrait)}`);
+    const ratio = portrait.width / portrait.height;
+    if (ratio < .48 || ratio > .82) throw new Error(`Player portrait has the wrong portrait-card proportion: ${JSON.stringify(portrait)}`);
+    if (!isRichSvgDataUrl(portrait.src)) throw new Error(`Player portrait is not clean direct noir vector art: ${JSON.stringify(portrait)}`);
+    if (portrait.filter !== "none" || portrait.blend !== "normal" || Number(portrait.opacity) !== 1 || portrait.objectFit !== "cover") throw new Error(`Player portrait is visually degraded: ${JSON.stringify(portrait)}`);
   }
+
+  const goldButton = await page.locator(".bn-theory-form .bn-primary").evaluate((node) => getComputedStyle(node).backgroundImage);
+  if (!goldButton.includes("gradient")) throw new Error("Theory builder lost the cinematic brass action treatment");
 
   const rules = await page.locator(".game-learning-center .learning-launch").boundingBox();
   const brand = await page.locator(".bn-brand").boundingBox();

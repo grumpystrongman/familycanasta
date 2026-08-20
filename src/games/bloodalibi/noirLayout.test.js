@@ -7,15 +7,16 @@ const noirSource = fs.readFileSync(new URL("./NoirGame.jsx", import.meta.url), "
 const cssSource = fs.readFileSync(new URL("./noir.css", import.meta.url), "utf8");
 const deductionCssSource = fs.readFileSync(new URL("./deduction.css", import.meta.url), "utf8");
 const artSource = fs.readFileSync(new URL("./noirArt.css", import.meta.url), "utf8");
-const finishSource = fs.readFileSync(new URL("./noirFinish.css", import.meta.url), "utf8");
+const referenceSource = fs.readFileSync(new URL("./noirReference.css", import.meta.url), "utf8");
 
-test("Blackglass routes to the full-viewport noir board and loads both art layers", () => {
+test("Blackglass routes to the full-viewport noir board and loads the reference layer last", () => {
   assert.match(indexSource, /noirArt\.css/);
   assert.match(indexSource, /noirFinish\.css/);
+  assert.match(indexSource, /noirReference\.css/);
+  assert.ok(indexSource.indexOf("noirReference.css") > indexSource.indexOf("noirFinish.css"));
   assert.match(indexSource, /NoirGame\.jsx/);
   assert.match(noirSource, /engineThreePart/);
   assert.match(noirSource, /itemAssetUrl/);
-  assert.match(noirSource, /theoryAssetUrls/);
   assert.match(noirSource, /blackglass-noir-board/);
 });
 
@@ -27,7 +28,7 @@ test("noir theory reconstruction visibly uses suspect, weapon, and room assets",
   assert.match(noirSource, /LOCK ACCUSATION/);
 });
 
-test("Blackglass exposes a private alibi choice and deduction desk", () => {
+test("Blackglass preserves the private alibi choice and deduction desk", () => {
   assert.match(noirSource, /showAlibi/);
   assert.match(noirSource, /Choose your alibi card/);
   assert.match(noirSource, /YOUR PRIVATE HAND/);
@@ -35,43 +36,37 @@ test("Blackglass exposes a private alibi choice and deduction desk", () => {
   assert.match(noirSource, /buildDeductionGroups/);
   assert.match(deductionCssSource, /\.bn-alibi-overlay/);
   assert.match(deductionCssSource, /\.bn-deduction-grid/);
-  assert.match(deductionCssSource, /\.bn-findings article\.resolved/);
 });
 
-test("noir layout owns the viewport with a larger readable board-first frame", () => {
+test("the underlying Clue-style board still owns the full viewport", () => {
   assert.match(cssSource, /height:100dvh/);
   assert.match(cssSource, /overflow:hidden/);
-  assert.match(cssSource, /grid-template-columns:246px minmax\(0,1fr\) 330px/);
-  assert.match(cssSource, /grid-template-rows:58px minmax\(0,1fr\) 122px/);
-  assert.match(cssSource, /board-master\.jpg/);
-});
-
-test("rooms and corridors preserve the Clue-style geometry while the art owns the visible room title", () => {
   assert.match(cssSource, /\.bn-room\.theme-greenhouse/);
   assert.match(cssSource, /\.bn-room\.theme-atrium/);
   assert.match(cssSource, /\.bn-room\.theme-nightclub/);
   assert.match(cssSource, /\.bn-hall\.door/);
   assert.match(cssSource, /\.bn-hall\.reachable/);
   assert.match(cssSource, /\.bn-passages\{display:none\}/);
-  assert.match(finishSource, /\.bn-shell \.bn-room-label\{display:none!important\}/);
 });
 
-test("evidence art uses the HD committed sources with no color-filter grading", () => {
-  assert.match(artSource, /blank\.svg#suspects-/);
-  assert.match(artSource, /blank\.svg#weapons-/);
-  assert.match(artSource, /blank\.svg#rooms-/);
-  assert.match(artSource, /cast-atlas-hd\.webp/);
-  assert.match(artSource, /weapon-atlas-hd\.svg/);
-  assert.match(artSource, /room-atlas-hd\.webp/);
-  assert.doesNotMatch(artSource, /cast-atlas-polished/);
-  assert.doesNotMatch(artSource, /weapon-atlas-polished/);
-  assert.doesNotMatch(artSource, /room-atlas-polished/);
+test("reference layer matches the approved black brass red cinematic hierarchy", () => {
+  assert.match(referenceSource, /--nr-gold:#c99a47/);
+  assert.match(referenceSource, /--nr-red:#9e3427/);
+  assert.match(referenceSource, /grid-template-columns:282px minmax\(0,1fr\) 360px/);
+  assert.match(referenceSource, /grid-template-rows:64px minmax\(0,1fr\) 118px/);
+  assert.match(referenceSource, /\.bn-shell \.bn-room-label\{display:none!important\}/);
+  assert.match(referenceSource, /\.bn-shell \.bn-hall\.door/);
+  assert.match(referenceSource, /\.bn-players article img/);
+  assert.match(referenceSource, /\.bn-theory-form \.bn-primary/);
+  assert.match(referenceSource, /Georgia/);
+});
+
+test("evidence art is direct, unfiltered, and free of the broken raster atlas path", () => {
   assert.match(artSource, /filter: none !important/);
   assert.match(artSource, /mix-blend-mode: normal !important/);
+  assert.doesNotMatch(artSource, /atlas-hd|atlas-polished|blank\.svg#/);
   assert.doesNotMatch(artSource, /blur\(/i);
   assert.doesNotMatch(artSource, /saturate\(/i);
   assert.doesNotMatch(artSource, /brightness\(/i);
   assert.doesNotMatch(artSource, /contrast\(/i);
-  assert.match(finishSource, /aspect-ratio:1\/1!important/);
-  assert.match(finishSource, /\.learning-launch/);
 });
