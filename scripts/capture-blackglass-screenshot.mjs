@@ -52,16 +52,23 @@ try {
     const rect = node.getBoundingClientRect();
     return { background: style.backgroundImage, width: rect.width, height: rect.height };
   });
-  if (!board.background.includes("/blackglass/reference/noir-board-reference.svg")) throw new Error(`Approved cinematic noir board artwork is not the live board background: ${board.background}`);
+  if (!board.background.includes("/blackglass/reference/noir-board-reference.webp")) throw new Error(`Approved cinematic noir board artwork is not the live board background: ${board.background}`);
   const boardRatio = board.width / board.height;
   if (boardRatio < 1.29 || boardRatio > 1.36) throw new Error(`Board aspect ratio drifted away from the approved artwork: ${boardRatio}`);
 
   const boardAsset = await page.evaluate(async () => {
-    const response = await fetch("/blackglass/reference/noir-board-reference.svg");
-    const text = await response.text();
-    return { ok: response.ok, length: text.length, hasEmbeddedWebp: text.includes("data:image/webp;base64,") };
+    const src = "/blackglass/reference/noir-board-reference.webp";
+    const response = await fetch(src);
+    const bytes = await response.arrayBuffer();
+    const dimensions = await new Promise((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve({ width: image.naturalWidth, height: image.naturalHeight });
+      image.onerror = reject;
+      image.src = src;
+    });
+    return { ok: response.ok, bytes: bytes.byteLength, ...dimensions };
   });
-  if (!boardAsset.ok || boardAsset.length < 250000 || !boardAsset.hasEmbeddedWebp) throw new Error(`Approved board asset failed its integrity check: ${JSON.stringify(boardAsset)}`);
+  if (!boardAsset.ok || boardAsset.bytes < 150000 || boardAsset.width < 900 || boardAsset.height < 650) throw new Error(`Approved board asset failed its integrity check: ${JSON.stringify(boardAsset)}`);
 
   const evidence = await page.locator(".bn-notebook img").evaluateAll((images) => images.map((image) => {
     const style = getComputedStyle(image);
