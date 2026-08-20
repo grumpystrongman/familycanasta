@@ -9,8 +9,9 @@ const deductionCssSource = fs.readFileSync(new URL("./deduction.css", import.met
 const artSource = fs.readFileSync(new URL("./noirArt.css", import.meta.url), "utf8");
 const finishSource = fs.readFileSync(new URL("./noirFinish.css", import.meta.url), "utf8");
 
-test("Blackglass routes to the full-viewport noir board and loads canonical art styling", () => {
+test("Blackglass routes to the full-viewport noir board and loads both art layers", () => {
   assert.match(indexSource, /noirArt\.css/);
+  assert.match(indexSource, /noirFinish\.css/);
   assert.match(indexSource, /NoirGame\.jsx/);
   assert.match(noirSource, /engineThreePart/);
   assert.match(noirSource, /itemAssetUrl/);
@@ -45,29 +46,32 @@ test("noir layout owns the viewport with a larger readable board-first frame", (
   assert.match(cssSource, /board-master\.jpg/);
 });
 
-test("rooms and corridors preserve the polished Clue-style visual contract", () => {
+test("rooms and corridors preserve the Clue-style geometry while the art owns the visible room title", () => {
   assert.match(cssSource, /\.bn-room\.theme-greenhouse/);
   assert.match(cssSource, /\.bn-room\.theme-atrium/);
   assert.match(cssSource, /\.bn-room\.theme-nightclub/);
   assert.match(cssSource, /\.bn-hall\.door/);
   assert.match(cssSource, /\.bn-hall\.reachable/);
   assert.match(cssSource, /\.bn-passages\{display:none\}/);
-  assert.match(cssSource, /\.bn-room-label strong/);
+  assert.match(finishSource, /\.bn-shell \.bn-room-label\{display:none!important\}/);
 });
 
-test("evidence art uses the polished committed atlases with no color-filter grading", () => {
+test("evidence art uses the HD committed sources with no color-filter grading", () => {
   assert.match(artSource, /blank\.svg#suspects-/);
   assert.match(artSource, /blank\.svg#weapons-/);
   assert.match(artSource, /blank\.svg#rooms-/);
-  assert.match(artSource, /cast-atlas-polished\.webp/);
-  assert.match(artSource, /weapon-atlas-polished\.webp/);
-  assert.match(artSource, /room-atlas-polished\.webp/);
+  assert.match(artSource, /cast-atlas-hd\.webp/);
+  assert.match(artSource, /weapon-atlas-hd\.svg/);
+  assert.match(artSource, /room-atlas-hd\.webp/);
+  assert.doesNotMatch(artSource, /cast-atlas-polished/);
+  assert.doesNotMatch(artSource, /weapon-atlas-polished/);
+  assert.doesNotMatch(artSource, /room-atlas-polished/);
   assert.match(artSource, /filter: none !important/);
   assert.match(artSource, /mix-blend-mode: normal !important/);
   assert.doesNotMatch(artSource, /blur\(/i);
   assert.doesNotMatch(artSource, /saturate\(/i);
   assert.doesNotMatch(artSource, /brightness\(/i);
   assert.doesNotMatch(artSource, /contrast\(/i);
-  assert.doesNotMatch(artSource, /:has\(/);
-  assert.match(finishSource, /filter:none!important/);
+  assert.match(finishSource, /aspect-ratio:1\/1!important/);
+  assert.match(finishSource, /\.learning-launch/);
 });

@@ -1,7 +1,6 @@
 /* Blackglass art rendering.
-   Evidence <img> elements use a transparent carrier with a stable semantic fragment; approved
-   source art is cropped directly as the element background. This avoids putting a whole raster
-   atlas inside an <img>, avoids selector-carrier/pseudo-element hacks, and keeps all art unfiltered. */
+   Evidence images keep a tiny semantic carrier while the visible art is cropped from committed,
+   high-resolution Blackglass source atlases. No filters, tinting, blur, or blend tricks. */
 
 img[src*="/games/bloodalibi/items/direct/blank.svg#"] {
   display: block !important;
@@ -15,19 +14,21 @@ img[src*="/games/bloodalibi/items/direct/blank.svg#"] {
 }
 
 .bn-notebook section button {
-  height: 46px !important;
-  grid-template-columns: 40px minmax(0,1fr) 24px !important;
+  height: 48px !important;
+  grid-template-columns: 42px minmax(0,1fr) 24px !important;
 }
 .bn-notebook section button img {
-  width: 38px !important;
-  height: 38px !important;
+  width: 40px !important;
+  height: 40px !important;
   padding: 0 !important;
+  object-fit: cover !important;
 }
 
-/* Cast: six approved portraits across one strip. */
+/* Cast: six clean portrait crops across one HD strip. */
 img[src*="blank.svg#suspects-"] {
-  background-image: url("/blackglass/cast-atlas-polished.webp") !important;
+  background-image: url("/blackglass/cast-atlas-hd.webp") !important;
   background-size: 600% 100% !important;
+  background-position-y: 50% !important;
 }
 img[src$="#suspects-elias-flint"] { background-position: 0% 50% !important; }
 img[src$="#suspects-dex-vale"] { background-position: 20% 50% !important; }
@@ -36,9 +37,9 @@ img[src$="#suspects-theo-rook"] { background-position: 60% 50% !important; }
 img[src$="#suspects-june-mercer"] { background-position: 80% 50% !important; }
 img[src$="#suspects-mara-voss"] { background-position: 100% 50% !important; }
 
-/* Weapons: three columns by two rows. */
+/* Weapons: crisp vector evidence icons, three columns by two rows. */
 img[src*="blank.svg#weapons-"] {
-  background-image: url("/blackglass/weapon-atlas-polished.webp") !important;
+  background-image: url("/blackglass/weapon-atlas-hd.svg") !important;
   background-size: 300% 200% !important;
   background-color: #080a0b !important;
 }
@@ -49,9 +50,9 @@ img[src$="#weapons-revolver"] { background-position: 0% 100% !important; }
 img[src$="#weapons-poison"] { background-position: 50% 100% !important; }
 img[src$="#weapons-fire-axe"] { background-position: 100% 100% !important; }
 
-/* Room evidence cards: three columns by three rows. */
+/* Room evidence cards: high-resolution three-by-three room atlas. */
 img[src*="blank.svg#rooms-"] {
-  background-image: url("/blackglass/room-atlas-polished.webp") !important;
+  background-image: url("/blackglass/room-atlas-hd.webp") !important;
   background-size: 300% 300% !important;
 }
 img[src$="#rooms-greenhouse"] { background-position: 0% 0% !important; }
@@ -64,9 +65,9 @@ img[src$="#rooms-garage"] { background-position: 0% 100% !important; }
 img[src$="#rooms-nightclub"] { background-position: 50% 100% !important; }
 img[src$="#rooms-boiler"] { background-position: 100% 100% !important; }
 
-/* Board rooms crop that same approved three-by-three atlas directly. */
+/* The live board uses the same HD room art. The baked-in plaque is the only room title. */
 .bn-room {
-  background-image: url("/blackglass/room-atlas-polished.webp") !important;
+  background-image: url("/blackglass/room-atlas-hd.webp") !important;
   background-size: 300% 300% !important;
   background-repeat: no-repeat !important;
   filter: none !important;
@@ -82,18 +83,16 @@ img[src$="#rooms-boiler"] { background-position: 100% 100% !important; }
 .bn-room.theme-boiler { background-position: 100% 100% !important; }
 
 .bn-room-vignette {
-  background:
-    linear-gradient(180deg, rgba(0,0,0,.02), rgba(0,0,0,.08) 58%, rgba(0,0,0,.20)),
-    radial-gradient(circle at 50% 42%, transparent 0 68%, rgba(0,0,0,.14)) !important;
+  background: linear-gradient(180deg, rgba(0,0,0,.01), rgba(0,0,0,.04) 62%, rgba(0,0,0,.12)) !important;
 }
 
 @media (max-width: 1280px) {
   .bn-notebook section button {
-    height: 41px !important;
-    grid-template-columns: 35px minmax(0,1fr) 22px !important;
+    height: 43px !important;
+    grid-template-columns: 37px minmax(0,1fr) 22px !important;
   }
   .bn-notebook section button img {
-    width: 33px !important;
-    height: 33px !important;
+    width: 35px !important;
+    height: 35px !important;
   }
 }

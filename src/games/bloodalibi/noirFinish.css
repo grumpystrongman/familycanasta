@@ -1,29 +1,28 @@
-/* Final presentation pass. Keep this intentionally small and high-specificity so it remains the
-   last word over the base noir layout regardless of Vite CSS chunk ordering. */
+/* Final presentation pass. Loaded after the base noir and art layers. */
 .bn-shell .bn-title strong{font-size:14px!important;letter-spacing:.16em!important;white-space:nowrap!important}
 .bn-shell .bn-title small{margin-top:5px!important;font-size:7px!important;letter-spacing:.22em!important;white-space:nowrap!important}
 .bn-shell .bn-brand{padding-top:9px!important}
 
-/* This stylesheet is loaded only with Blood & Alibi, so the game's global learning control can
-   safely become a compact top-bar control without leaking into other games. */
+/* Keep the global learning control out of the notebook crest. */
 .game-learning-center .learning-launch{top:13px!important;left:194px!important;width:48px!important;height:31px!important;min-height:31px!important;padding:0!important;border:1px solid #74552c!important;border-radius:5px!important;color:#e4c57f!important;background:linear-gradient(180deg,#17130e,#0b0d0e)!important;box-shadow:inset 0 1px rgba(255,255,255,.04),0 3px 9px rgba(0,0,0,.5)!important;font-size:0!important;letter-spacing:.08em!important}
 .game-learning-center .learning-launch::after{content:"RULES";font:850 8px/1 Inter,ui-sans-serif,system-ui,sans-serif;letter-spacing:.12em}
 .game-learning-center .learning-launch:hover,.game-learning-center .learning-launch:focus-visible{border-color:#bd8d45!important;color:#fff0ca!important;background:linear-gradient(180deg,#302211,#17100a)!important}
 .game-learning-center .learning-panel{top:56px!important;left:10px!important;max-height:calc(100vh - 66px)!important}
 
-/* Do not fog the room art. The source images are already graded for the Blackglass palette. */
-.bn-shell .bn-room-vignette{background:linear-gradient(180deg,rgba(0,0,0,.015),rgba(0,0,0,.055) 62%,rgba(0,0,0,.16)),radial-gradient(circle at 50% 42%,transparent 0 70%,rgba(0,0,0,.12) 100%)!important}
-.bn-shell .bn-room-label{min-width:60%!important;padding:7px 9px 8px!important;background:linear-gradient(180deg,rgba(7,9,10,.90),rgba(3,5,6,.95))!important;box-shadow:0 5px 15px rgba(0,0,0,.72),inset 0 1px rgba(255,255,255,.04)!important}
-.bn-shell .bn-room-label strong{font-size:clamp(11px,1vw,16px)!important;line-height:1.04!important;text-shadow:0 1px 2px #000!important}
+/* The HD room artwork already contains its designed plaque. Never print a second title over it. */
+.bn-shell .bn-room-label{display:none!important}
+.bn-shell .bn-room-vignette{background:linear-gradient(180deg,rgba(0,0,0,.01),rgba(0,0,0,.035) 64%,rgba(0,0,0,.10))!important}
 
+/* Portrait cells are square source art. Keep every visible portrait square so the face cannot stretch. */
+.bn-shell img[src*="blank.svg#suspects-"]{aspect-ratio:1/1!important;object-fit:cover!important;filter:none!important;mix-blend-mode:normal!important;opacity:1!important}
 .bn-shell .bn-players{grid-template-columns:repeat(auto-fit,minmax(132px,1fr))!important}
-.bn-shell .bn-players article{grid-template-columns:52px minmax(0,1fr)!important}
-.bn-shell .bn-players article img[src*="/direct/suspects/"]{width:52px!important;min-height:88px!important;filter:none!important;opacity:1!important}
-.bn-shell img[src*="/games/bloodalibi/items/direct/"]{filter:none!important;mix-blend-mode:normal!important;opacity:1!important}
+.bn-shell .bn-players article{grid-template-columns:58px minmax(0,1fr)!important;align-items:center!important}
+.bn-shell .bn-players article img[src*="blank.svg#suspects-"]{width:58px!important;height:58px!important;min-height:58px!important;max-height:58px!important;background-size:600% 100%!important;border-radius:7px!important}
+.bn-shell img[src*="/games/bloodalibi/items/direct/blank.svg#"]{filter:none!important;mix-blend-mode:normal!important;opacity:1!important}
 
 @media(max-width:1280px){
   .game-learning-center .learning-launch{left:143px!important;width:44px!important}
   .bn-shell .bn-players{grid-template-columns:repeat(auto-fit,minmax(112px,1fr))!important}
-  .bn-shell .bn-players article{grid-template-columns:44px minmax(0,1fr)!important}
-  .bn-shell .bn-players article img[src*="/direct/suspects/"]{width:44px!important}
+  .bn-shell .bn-players article{grid-template-columns:48px minmax(0,1fr)!important}
+  .bn-shell .bn-players article img[src*="blank.svg#suspects-"]{width:48px!important;height:48px!important;min-height:48px!important;max-height:48px!important}
 }
