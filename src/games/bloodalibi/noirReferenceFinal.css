@@ -1,0 +1,24 @@
+/* Tiny final guardrail layer for legacy rules that used to target the old atlas carrier. */
+.bn-shell .bn-players{
+  grid-template-columns:none!important;
+  grid-auto-flow:column!important;
+  grid-auto-columns:minmax(150px,1fr)!important;
+}
+.bn-shell .bn-players article img{
+  width:62px!important;
+  height:96px!important;
+  min-height:96px!important;
+  max-height:96px!important;
+  aspect-ratio:auto!important;
+  object-fit:cover!important;
+}
+.bn-shell .bn-room{
+  background-size:cover!important;
+  background-position:center!important;
+}
+.bn-shell .bn-room-label{display:none!important}
+
+@media(max-width:1360px){
+  .bn-shell .bn-players{grid-auto-columns:minmax(128px,1fr)!important}
+  .bn-shell .bn-players article img{width:50px!important;height:80px!important;min-height:80px!important;max-height:80px!important}
+}
