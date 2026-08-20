@@ -13,15 +13,16 @@
 .bn-shell .bn-room-label{display:none!important}
 .bn-shell .bn-room-vignette{background:linear-gradient(180deg,rgba(0,0,0,.01),rgba(0,0,0,.035) 64%,rgba(0,0,0,.10))!important}
 
-/* Let the new portrait art read as a portrait instead of a tiny noisy thumbnail. */
+/* Portrait cells are square source art. Keep every visible portrait square so the face cannot stretch. */
+.bn-shell img[src*="blank.svg#suspects-"]{aspect-ratio:1/1!important;object-fit:cover!important;filter:none!important;mix-blend-mode:normal!important;opacity:1!important}
 .bn-shell .bn-players{grid-template-columns:repeat(auto-fit,minmax(132px,1fr))!important}
-.bn-shell .bn-players article{grid-template-columns:52px minmax(0,1fr)!important}
-.bn-shell .bn-players article img[src*="blank.svg#suspects-"]{width:52px!important;min-height:88px!important;filter:none!important;opacity:1!important;background-size:600% 100%!important}
+.bn-shell .bn-players article{grid-template-columns:58px minmax(0,1fr)!important;align-items:center!important}
+.bn-shell .bn-players article img[src*="blank.svg#suspects-"]{width:58px!important;height:58px!important;min-height:58px!important;max-height:58px!important;background-size:600% 100%!important;border-radius:7px!important}
 .bn-shell img[src*="/games/bloodalibi/items/direct/blank.svg#"]{filter:none!important;mix-blend-mode:normal!important;opacity:1!important}
 
 @media(max-width:1280px){
   .game-learning-center .learning-launch{left:143px!important;width:44px!important}
   .bn-shell .bn-players{grid-template-columns:repeat(auto-fit,minmax(112px,1fr))!important}
-  .bn-shell .bn-players article{grid-template-columns:44px minmax(0,1fr)!important}
-  .bn-shell .bn-players article img[src*="blank.svg#suspects-"]{width:44px!important}
+  .bn-shell .bn-players article{grid-template-columns:48px minmax(0,1fr)!important}
+  .bn-shell .bn-players article img[src*="blank.svg#suspects-"]{width:48px!important;height:48px!important;min-height:48px!important;max-height:48px!important}
 }
