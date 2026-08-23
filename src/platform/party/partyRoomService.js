@@ -10,6 +10,7 @@ import {
   update,
 } from "firebase/database";
 import { db } from "../../firebase";
+import { recordCompletedRoom } from "../leaderboardService";
 
 export const PARTY_AVATARS = ["🦊", "🐻", "🦉", "🐙", "🦁", "🐼", "🐯", "🦄", "🐸", "🤠", "🦝", "🦇"];
 
@@ -43,6 +44,7 @@ export async function createPartyRoom({ user, gameId, maxPlayers = 12, settings 
       maxPlayers,
       settings,
       createdAt: serverTimestamp(),
+      gameNumber: 0,
       members: {
         [user.uid]: {
           uid: user.uid,
@@ -100,7 +102,11 @@ export async function joinPartyRoom({ code, user, nickname, avatar, gameId }) {
 }
 
 export function watchPartyRoom(code, callback) {
-  return onValue(ref(db, `rooms/${code}`), (snapshot) => callback(snapshot.val()));
+  return onValue(ref(db, `rooms/${code}`), (snapshot) => {
+    const room = snapshot.val();
+    callback(room);
+    if (room) recordCompletedRoom(room, room.gameId || "", code).catch(() => {});
+  });
 }
 
 export async function setPartyReady(code, uid, ready) {
@@ -120,6 +126,7 @@ export async function startPartyGame(code, hostUid, createGameState, minimumPlay
     return {
       ...room,
       status: "playing",
+      gameNumber: Number(room.gameNumber || 0) + 1,
       startedAt: Date.now(),
       gameState: createGameState(players, room.settings || {}),
     };
