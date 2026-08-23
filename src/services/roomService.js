@@ -14,6 +14,8 @@ import { db } from "../firebase";
 import { DEFAULT_RULES, dealHand, nextDealer, randomDealer, teamRecord } from "../game/engine";
 import { executeRobotTurn } from "../game/botEngine";
 import { reconcileStrandedRound } from "../game/roundReconciliation";
+import { boardKeeperRepairs } from "../game/seatOrder";
+import { recordCompletedRoom } from "../platform/leaderboardService";
 
 const avatars = ["🦊","🐻","🦉","🐙","🦁","🐼","🐯","🦄","🐸","🤠"];
 const robotNames = ["Ruby", "Milo", "Hazel", "Otto", "Cleo", "Finn", "Ada", "Baxter"];
@@ -84,6 +86,7 @@ export async function createRoom({ user, nickname, avatar, rules = DEFAULT_RULES
 
     await set(ref(db, `rooms/${code}`), {
       roomCode: code,
+      gameId: "canasta",
       hostUid: user.uid,
       status: "lobby",
       createdAt: serverTimestamp(),
@@ -201,7 +204,11 @@ export async function setTeamBoardKeeper(code, hostUid, team, memberUid) {
 }
 
 export function watchRoom(code, callback) {
-  return onValue(ref(db, `rooms/${code}`), (snapshot) => callback(snapshot.val()));
+  return onValue(ref(db, `rooms/${code}`), (snapshot) => {
+    const room = snapshot.val();
+    callback(room);
+    if (room) recordCompletedRoom(room, "canasta", code).catch(() => {});
+  });
 }
 
 export function watchPrivateHand(code, uid, callback) {
@@ -212,6 +219,7 @@ export async function updateMember(code, uid, patch) {
   const snapshot = await get(ref(db, `rooms/${code}`));
   const room = snapshot.val();
   if (!room || room.status !== "lobby") throw new Error("Teams cannot be changed after the game starts.");
+  if (!room.members?.[uid]) throw new Error("Player not found.");
   if (patch.team !== undefined) {
     const team = Number(patch.team);
     if (team < 0 || team >= getTeamCount(room)) throw new Error("That team does not exist.");
@@ -220,7 +228,19 @@ export async function updateMember(code, uid, patch) {
     ).length;
     if (occupied >= getPlayersPerTeam(room)) throw new Error("That team is already full.");
   }
-  await update(ref(db, `rooms/${code}/members/${uid}`), patch);
+
+  const nextRoom = {
+    ...room,
+    members: {
+      ...(room.members || {}),
+      [uid]: { ...room.members[uid], ...patch },
+    },
+  };
+  const updates = Object.fromEntries(Object.entries(patch).map(([key, value]) => [`members/${uid}/${key}`, value]));
+  for (const [team, keeperUid] of Object.entries(boardKeeperRepairs(nextRoom))) {
+    updates[`teamBoardKeepers/${team}`] = keeperUid;
+  }
+  await update(ref(db, `rooms/${code}`), updates);
 }
 
 export async function leaveRoom(code, uid) {
@@ -267,11 +287,16 @@ export async function startOnlineGame(code, uid) {
   if (players.length !== requiredPlayers) {
     throw new Error(`This format needs exactly ${requiredPlayers} players. Add people or robots.`);
   }
+
+  const boardKeepers = { ...(room.teamBoardKeepers || {}), ...boardKeeperRepairs(room) };
   for (let team = 0; team < teamCount; team += 1) {
-    if (players.filter((player) => Number(player.team) === team).length !== playersPerTeam) {
+    const teamPlayers = players.filter((player) => Number(player.team) === team);
+    if (teamPlayers.length !== playersPerTeam) {
       throw new Error(`Every team must have exactly ${playersPerTeam} player${playersPerTeam === 1 ? "" : "s"}.`);
     }
-    if (!room.teamBoardKeepers?.[team]) throw new Error("Choose a board keeper for every team.");
+    if (!teamPlayers.some((player) => player.uid === boardKeepers[team])) {
+      boardKeepers[team] = teamPlayers[0].uid;
+    }
   }
 
   const dealerIndex = room.dealerIndex == null
@@ -282,13 +307,14 @@ export async function startOnlineGame(code, uid) {
 
   await update(ref(db, `rooms/${code}`), {
     status: "playing",
+    teamBoardKeepers: boardKeepers,
     dealerIndex,
     handNumber: (room.handNumber || 0) + 1,
     publicState: {
       ...dealt.publicState,
       handNumber: (room.handNumber || 0) + 1,
       teamBoards: teamRecord(teamCount, () => []),
-      boardKeepers: room.teamBoardKeepers,
+      boardKeepers,
     },
     stock: dealt.stock,
     privateHands: dealt.privateHands,
