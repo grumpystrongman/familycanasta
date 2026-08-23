@@ -90,6 +90,11 @@ function numericScore(value) {
   return value !== null && value !== "" && Number.isFinite(number) ? number : null;
 }
 
+function partnershipTeam(member) {
+  const seat = Number(member?.seat || 0);
+  return Math.abs(Number.isFinite(seat) ? seat : 0) % 2;
+}
+
 export function scoreForMember(room, member) {
   const state = room?.gameState || room?.publicState || {};
   const uid = member?.uid || member?.id;
@@ -97,8 +102,22 @@ export function scoreForMember(room, member) {
 
   if (gameId === "canasta") {
     const team = Number(member?.team);
-    const value = state?.teamScores?.[team];
-    return numericScore(value);
+    return numericScore(state?.teamScores?.[team]);
+  }
+
+  if (gameId === "spades" || gameId === "indians") {
+    return numericScore(state?.teamScores?.[partnershipTeam(member)]);
+  }
+
+  if (gameId === "gofish" || gameId === "gofyourself") {
+    const books = state?.books?.[uid];
+    if (Array.isArray(books)) return books.length;
+    if (books && typeof books === "object") return Object.keys(books).length;
+    return 0;
+  }
+
+  if (gameId === "poker") {
+    return numericScore(state?.balances?.[uid]);
   }
 
   for (const source of [state?.scores, state?.points, state?.totals]) {
@@ -165,6 +184,11 @@ export function extractCompletedRoomResult(room, fallbackGameId = "") {
   if (gameId === "canasta" && state.winnerTeam !== undefined && state.winnerTeam !== null) {
     const winningTeam = Number(state.winnerTeam);
     members.filter((member) => Number(member.team) === winningTeam).forEach((member) => winners.add(String(member.uid)));
+  }
+
+  if ((gameId === "spades" || gameId === "indians") && state.winnerTeam !== undefined && state.winnerTeam !== null) {
+    const winningTeam = Number(state.winnerTeam);
+    members.filter((member) => partnershipTeam(member) === winningTeam).forEach((member) => winners.add(String(member.uid)));
   }
 
   if (!winners.size && policy.metric === "score" && hasScores) {
