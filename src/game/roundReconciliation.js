@@ -6,13 +6,13 @@ function orderedPlayers(room) {
 }
 
 function playerHandIsEmpty(room, uid) {
-  const publishedCount = room?.publicState?.handCounts?.[uid];
-  if (publishedCount !== undefined && publishedCount !== null) {
-    return Number(publishedCount) === 0;
-  }
-
   const hand = room?.privateHands?.[uid];
-  return Array.isArray(hand) && hand.length === 0;
+  if (Array.isArray(hand)) return hand.length === 0;
+
+  const publishedCount = room?.publicState?.handCounts?.[uid];
+  return publishedCount !== undefined
+    && publishedCount !== null
+    && Number(publishedCount) === 0;
 }
 
 export function findStrandedRoundFinisher(room) {
