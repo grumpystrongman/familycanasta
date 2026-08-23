@@ -2,14 +2,16 @@ import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { onValue, ref } from "firebase/database";
 import { auth, db } from "./firebase";
-import { startOnlineGame } from "./services/roomService";
+import { reconcileFinishedRound, startOnlineGame } from "./services/roomService";
 import { TEAM_NAMES } from "./game/engine";
+import { findStrandedRoundFinisher } from "./game/roundReconciliation";
 
 export default function GameStateEnhancer() {
   const [roomCode, setRoomCode] = useState("");
   const [room, setRoom] = useState(null);
   const [discardTarget, setDiscardTarget] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [repairing, setRepairing] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -28,6 +30,20 @@ export default function GameStateEnhancer() {
     if (!roomCode || !db) return undefined;
     return onValue(ref(db, `rooms/${roomCode}`), (snapshot) => setRoom(snapshot.val()));
   }, [roomCode]);
+
+  const strandedFinisher = findStrandedRoundFinisher(room);
+  const isHost = Boolean(auth?.currentUser?.uid && room?.hostUid === auth.currentUser.uid);
+
+  useEffect(() => {
+    const uid = auth?.currentUser?.uid;
+    if (!uid || !roomCode || !isHost || !strandedFinisher || repairing) return;
+
+    setRepairing(true);
+    setError("");
+    reconcileFinishedRound(roomCode, uid)
+      .catch((event) => setError(event.message || "The completed hand could not be finalized."))
+      .finally(() => setRepairing(false));
+  }, [roomCode, isHost, strandedFinisher?.uid, repairing]);
 
   async function nextHand() {
     const uid = auth?.currentUser?.uid;
@@ -71,11 +87,21 @@ export default function GameStateEnhancer() {
     : roundEndReason === "stock-exhausted"
       ? "No legal continuation remained from the discard pile. Cards left in every hand were deducted, and no going-out bonus was awarded."
       : "The hand ended after the player completed the required canasta and played the last card. Remaining cards have been deducted.";
-  const isHost = auth?.currentUser?.uid && room?.hostUid === auth.currentUser.uid;
 
   return (
     <>
       {indicator}
+      {strandedFinisher && !handOver && (
+        <div className="round-complete-overlay">
+          <section className="round-complete-card">
+            <span className="round-kicker">HAND COMPLETE</span>
+            <h2>{strandedFinisher.nickname || "A player"} went out</h2>
+            <p>{isHost ? "Finalizing the hand and calculating scores…" : "Waiting for the host to finalize the hand and calculate scores…"}</p>
+            {repairing && <p>Finishing hand…</p>}
+            {error && <em>{error}</em>}
+          </section>
+        </div>
+      )}
       {handOver && (
         <div className="round-complete-overlay">
           <section className="round-complete-card">
