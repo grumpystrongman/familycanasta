@@ -62,6 +62,61 @@ test("robots are excluded and Canasta team winners inherit the final team score"
   assert.equal(result.players.ruby, undefined);
 });
 
+test("Spades and Indians apply partnership scores and wins to both partners", () => {
+  for (const gameId of ["spades", "indians"]) {
+    const room = {
+      gameId,
+      status: "playing",
+      members: {
+        a: { uid: "a", nickname: "Alice", seat: 0 },
+        b: { uid: "b", nickname: "Bob", seat: 1 },
+        c: { uid: "c", nickname: "Carol", seat: 2 },
+        d: { uid: "d", nickname: "Dan", seat: 3 },
+      },
+      gameState: { phase: "game-over", teamScores: { 0: 540, 1: 430 }, winnerTeam: 0 },
+    };
+    const result = extractCompletedRoomResult(room);
+    assert.equal(result.players.alice.score, 540);
+    assert.equal(result.players.carol.score, 540);
+    assert.equal(result.players.alice.won, true);
+    assert.equal(result.players.carol.won, true);
+    assert.equal(result.players.bob.score, 430);
+    assert.equal(result.players.bob.won, false);
+  }
+});
+
+test("Go Fish and Go F Yourself use completed books as the score", () => {
+  for (const gameId of ["gofish", "gofyourself"]) {
+    const room = {
+      gameId,
+      members: {
+        a: { uid: "a", nickname: "Alice", seat: 0 },
+        b: { uid: "b", nickname: "Bob", seat: 1 },
+      },
+      gameState: { phase: "game-over", books: { a: ["A", "K", "Q", "J"], b: ["2", "3", "4"] }, winnerUids: ["a"] },
+    };
+    const result = extractCompletedRoomResult(room);
+    assert.equal(result.players.alice.score, 4);
+    assert.equal(result.players.bob.score, 3);
+    assert.equal(result.players.alice.won, true);
+  }
+});
+
+test("Poker uses the final point stack as its all-time score", () => {
+  const room = {
+    gameId: "poker",
+    members: {
+      a: { uid: "a", nickname: "Alice", seat: 0 },
+      b: { uid: "b", nickname: "Bob", seat: 1 },
+    },
+    gameState: { phase: "game-over", balances: { a: 0, b: 60 }, winnerUid: "b" },
+  };
+  const result = extractCompletedRoomResult(room);
+  assert.equal(result.players.alice.score, 0);
+  assert.equal(result.players.bob.score, 60);
+  assert.equal(result.players.bob.won, true);
+});
+
 test("Party Stage final scores infer a winner from score objects", () => {
   const room = {
     gameId: "punchline",
