@@ -179,6 +179,10 @@ async function startApplication() {
       </AppErrorBoundary>,
     );
 
+    window.setTimeout(() => {
+      mountEnhancement("StandaloneLeaderboardTracker", () => import("./platform/StandaloneLeaderboardTracker"));
+    }, 100);
+
     if (selectedGameId() === "canasta") {
       window.setTimeout(() => {
         for (const [name, load] of enhancementLoaders) mountEnhancement(name, load);

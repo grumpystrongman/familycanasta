@@ -3,6 +3,7 @@ import GameGuidance from "./platform/GameGuidance";
 import GameLearningCenter from "./platform/GameLearningCenter";
 import TabletopLearningCenter from "./platform/TabletopLearningCenter";
 import LayoutModeControl from "./platform/LayoutModeControl";
+import AllTimeLeaderboard from "./platform/AllTimeLeaderboard";
 import { GAME_CATALOG, GAME_CATEGORIES } from "./gameCatalog.js";
 
 const gameLoaders = import.meta.glob("./games/*/index.jsx");
@@ -49,6 +50,8 @@ function GameHub() {
           );
         })}
       </nav>
+
+      <AllTimeLeaderboard />
 
       <div className="hub-library">
         {GAME_CATEGORIES.map((category) => {

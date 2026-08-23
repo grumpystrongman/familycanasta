@@ -10,6 +10,7 @@ import {
   update,
 } from "firebase/database";
 import { db } from "../../firebase";
+import { recordCompletedRoom } from "../../platform/leaderboardService";
 
 export { chompOnlinePlayers, firstOpenChompSeat } from "./onlineRoomModel.js";
 import { chompOnlinePlayers, firstOpenChompSeat } from "./onlineRoomModel.js";
@@ -49,6 +50,7 @@ export async function createChompOnlineRoom({ user, nickname }) {
       status: "lobby",
       maxPlayers: CHOMP_ONLINE_MAX_PLAYERS,
       createdAt: serverTimestamp(),
+      gameNumber: 0,
       members: {
         [user.uid]: {
           uid: user.uid,
@@ -118,7 +120,11 @@ export async function joinChompOnlineRoom({ code, user, nickname }) {
 export function watchChompOnlineRoom(code, onRoom, onError) {
   return onValue(
     ref(db, `rooms/${code}`),
-    (snapshot) => onRoom(snapshot.val()),
+    (snapshot) => {
+      const room = snapshot.val();
+      onRoom(room);
+      if (room) recordCompletedRoom(room, GAME_ID, code).catch(() => {});
+    },
     (error) => onError?.(error)
   );
 }
@@ -149,6 +155,7 @@ export async function startChompOnlineRound({ code, hostUid, snapshot, requireRe
     return {
       ...room,
       status: "playing",
+      gameNumber: Number(room.gameNumber || 0) + 1,
       startedAt: Date.now(),
       gameState: {
         phase: "playing",
@@ -175,13 +182,29 @@ export async function submitChompOnlineInput(code, uid) {
 }
 
 export async function publishChompOnlineSnapshot(code, snapshot, message, finished = false) {
-  await update(ref(db, `rooms/${code}`), {
+  const updates = {
     status: finished ? "finished" : "playing",
     "gameState/phase": finished ? "finished" : "playing",
     "gameState/snapshot": snapshot,
     "gameState/message": message || "CHOMP!",
     "gameState/updatedAt": Date.now(),
-  });
+  };
+
+  if (finished) {
+    const roomSnapshot = await get(ref(db, `rooms/${code}`));
+    const room = roomSnapshot.val();
+    const players = chompOnlinePlayers(room);
+    const scores = Object.fromEntries(players.map((player) => [
+      player.uid,
+      Number(snapshot?.chompers?.[Number(player.seat)]?.score || 0),
+    ]));
+    const best = players.length ? Math.max(...players.map((player) => scores[player.uid])) : 0;
+    updates["gameState/scores"] = scores;
+    updates["gameState/winnerUids"] = players.filter((player) => scores[player.uid] === best).map((player) => player.uid);
+    updates["gameState/completedAt"] = Date.now();
+  }
+
+  await update(ref(db, `rooms/${code}`), updates);
 }
 
 export async function resetChompOnlineLobby(code, hostUid) {

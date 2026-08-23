@@ -31,6 +31,15 @@
         ".read": "auth != null",
         ".write": "auth != null"
       }
+    },
+    "leaderboardResults": {
+      ".read": "auth != null",
+      "$gameId": {
+        "$completionId": {
+          ".write": "auth != null && !data.exists()",
+          ".validate": "newData.hasChildren(['schemaVersion','gameId','metric','direction','completedAt','players'])"
+        }
+      }
     }
   }
 }
