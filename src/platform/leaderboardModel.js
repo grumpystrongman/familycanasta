@@ -11,6 +11,23 @@ const TERMINAL_PHASES = new Set([
 ]);
 
 const LOW_SCORE_GAMES = new Set(["hearts", "golf"]);
+const SCORE_GAMES = new Set([
+  "canasta",
+  "punchline",
+  "lastonealive",
+  "doodlealibi",
+  "lexiconforge",
+  "hearts",
+  "spades",
+  "rummy",
+  "gofish",
+  "gofyourself",
+  "indians",
+  "poker",
+  "golf",
+  "chompageddon",
+  "slumlord",
+]);
 const WIN_ONLY_GAMES = new Set([
   "chess",
   "checkers",
@@ -43,7 +60,7 @@ export function playerKey(member = {}) {
 export function leaderboardPolicy(gameId, hasScores = false) {
   const id = normalizeGameId(gameId);
   if (WIN_ONLY_GAMES.has(id)) return { metric: "wins", direction: "desc", label: "Wins" };
-  if (hasScores) {
+  if (SCORE_GAMES.has(id) || hasScores) {
     const direction = LOW_SCORE_GAMES.has(id) ? "asc" : "desc";
     return { metric: "score", direction, label: direction === "asc" ? "Best low score" : "High score" };
   }
