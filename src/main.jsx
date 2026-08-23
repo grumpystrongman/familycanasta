@@ -123,6 +123,7 @@ const enhancementLoaders = [
   ["BlackThreeRuleFix", () => import("./BlackThreeRuleFix")],
   ["SafeDiscardRule", () => import("./SafeDiscardRule")],
   ["HomeRulesOptions", () => import("./HomeRulesOptions")],
+  ["SeatOrderEnhancer", () => import("./SeatOrderEnhancer")],
   ["ScoringDisplayFix", () => import("./ScoringDisplayFix")],
   ["EmoteEnhancer", () => import("./EmoteEnhancer")],
   ["ChatBubbleEnhancer", () => import("./ChatBubbleEnhancer")],
@@ -185,7 +186,7 @@ async function startApplication() {
     }
   } catch (error) {
     console.error("Family game room startup failed.", error);
-    root.render(<StartupStatus title="The family game room could not start" detail={errorDetail(error)} />);
+    root.render(<StartupStatus title="The family game room could not start" detail={errorDetail(error)} />;
   }
 }
 
