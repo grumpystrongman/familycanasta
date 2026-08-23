@@ -50,6 +50,15 @@ test("detects a Firebase-null empty hand from the published zero hand count", ()
   assert.equal(findStrandedRoundFinisher(room)?.uid, "north");
 });
 
+test("does not trust a stale zero hand count when the private hand still contains cards", () => {
+  const room = roomWithEmptyLegalHand();
+  room.privateHands.north = [card("n1", "5")];
+  room.publicState.handCounts.north = 0;
+
+  assert.equal(findStrandedRoundFinisher(room), null);
+  assert.equal(reconcileStrandedRound(room), room);
+});
+
 test("does not end a stranded zero-card hand when the team has not satisfied the go-out rule", () => {
   const room = roomWithEmptyLegalHand();
   room.publicState.teamBoards[0] = [{ rank: "K", cards: [card("k1"), card("k2"), card("k3")] }];
