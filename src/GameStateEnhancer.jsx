@@ -1,16 +1,26 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { onAuthStateChanged } from "firebase/auth";
 import { onValue, ref } from "firebase/database";
 import { auth, db } from "./firebase";
-import { startOnlineGame } from "./services/roomService";
+import { reconcileFinishedRound, startOnlineGame } from "./services/roomService";
 import { TEAM_NAMES } from "./game/engine";
+import { findStrandedRoundFinisher } from "./game/roundReconciliation";
 
 export default function GameStateEnhancer() {
+  const [uid, setUid] = useState(() => auth?.currentUser?.uid || "");
   const [roomCode, setRoomCode] = useState("");
   const [room, setRoom] = useState(null);
   const [discardTarget, setDiscardTarget] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [repairing, setRepairing] = useState(false);
   const [error, setError] = useState("");
+  const repairAttemptKey = useRef("");
+
+  useEffect(() => {
+    if (!auth) return undefined;
+    return onAuthStateChanged(auth, (user) => setUid(user?.uid || ""));
+  }, []);
 
   useEffect(() => {
     const locate = () => {
@@ -29,8 +39,38 @@ export default function GameStateEnhancer() {
     return onValue(ref(db, `rooms/${roomCode}`), (snapshot) => setRoom(snapshot.val()));
   }, [roomCode]);
 
+  const strandedFinisher = findStrandedRoundFinisher(room);
+  const isHost = Boolean(uid && room?.hostUid === uid);
+  const strandedKey = strandedFinisher
+    ? `${roomCode}:${room?.handNumber || room?.publicState?.handNumber || 0}:${strandedFinisher.uid}`
+    : "";
+
+  async function finalizeStrandedHand({ retry = false } = {}) {
+    if (!uid || !roomCode || !isHost || !strandedFinisher) return;
+    if (!retry && repairAttemptKey.current === strandedKey) return;
+
+    repairAttemptKey.current = strandedKey;
+    setRepairing(true);
+    setError("");
+    try {
+      await reconcileFinishedRound(roomCode, uid);
+    } catch (event) {
+      setError(event.message || "The completed hand could not be finalized.");
+    } finally {
+      setRepairing(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!strandedKey) {
+      repairAttemptKey.current = "";
+      return;
+    }
+    if (!isHost) return;
+    finalizeStrandedHand();
+  }, [strandedKey, isHost, uid, roomCode]);
+
   async function nextHand() {
-    const uid = auth?.currentUser?.uid;
     if (!uid || !roomCode) return;
     setBusy(true);
     setError("");
@@ -71,11 +111,26 @@ export default function GameStateEnhancer() {
     : roundEndReason === "stock-exhausted"
       ? "No legal continuation remained from the discard pile. Cards left in every hand were deducted, and no going-out bonus was awarded."
       : "The hand ended after the player completed the required canasta and played the last card. Remaining cards have been deducted.";
-  const isHost = auth?.currentUser?.uid && room?.hostUid === auth.currentUser.uid;
 
   return (
     <>
       {indicator}
+      {strandedFinisher && !handOver && (
+        <div className="round-complete-overlay">
+          <section className="round-complete-card">
+            <span className="round-kicker">HAND COMPLETE</span>
+            <h2>{strandedFinisher.nickname || "A player"} went out</h2>
+            <p>{isHost ? "Finalizing the hand and calculating scores…" : "Waiting for the host to finalize the hand and calculate scores…"}</p>
+            {repairing && <p>Finishing hand…</p>}
+            {error && (
+              <>
+                <em>{error}</em>
+                {isHost && <button disabled={repairing} onClick={() => finalizeStrandedHand({ retry:true })}>Retry finalizing hand</button>}
+              </>
+            )}
+          </section>
+        </div>
+      )}
       {handOver && (
         <div className="round-complete-overlay">
           <section className="round-complete-card">

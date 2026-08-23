@@ -186,7 +186,7 @@ async function startApplication() {
     }
   } catch (error) {
     console.error("Family game room startup failed.", error);
-    root.render(<StartupStatus title="The family game room could not start" detail={errorDetail(error)} />;
+    root.render(<StartupStatus title="The family game room could not start" detail={errorDetail(error)} />);
   }
 }
 
