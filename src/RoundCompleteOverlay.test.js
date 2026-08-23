@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 
 function zIndexFor(css, selector) {
   const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const match = css.match(new RegExp(`${escaped}\\{[^}]*z-index:(\\d+)`, "m"));
+  const match = css.match(new RegExp(`${escaped}\\s*\\{[^}]*z-index:\\s*(\\d+)`, "s"));
   return match ? Number(match[1]) : null;
 }
 
@@ -28,6 +28,6 @@ test("round-complete overlay stays above the fixed hand and adaptive navigation"
 
 test("round-complete results remain reachable on short screens", async () => {
   const css = await readFile(new URL("./stateEnhancer.css", import.meta.url), "utf8");
-  assert.match(css, /\.round-complete-overlay\{[^}]*overflow-y:auto/);
-  assert.match(css, /\.round-complete-card\{[^}]*max-height:calc\(100dvh - 40px\)[^}]*overflow-y:auto/);
+  assert.match(css, /\.round-complete-overlay\s*\{[^}]*overflow-y:\s*auto/s);
+  assert.match(css, /\.round-complete-card\s*\{[^}]*max-height:\s*calc\(100dvh\s*-\s*40px\)[^}]*overflow-y:\s*auto/s);
 });
