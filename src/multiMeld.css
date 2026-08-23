@@ -18,11 +18,27 @@
 .selection-advisor.grouped-meld-mode > .multi-meld-tools {
   flex: 1 1 100%;
   width: 100%;
+  min-height: 0;
   margin-left: 0;
+}
+
+/*
+ * A large grouped selection can produce enough preview rows to exceed the
+ * hand's advisor viewport. Keep the commit action first and pinned to the
+ * visible edge so a legal play never disappears below the preview.
+ */
+.selection-advisor.grouped-meld-mode .multi-meld-button {
+  order: -10;
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  flex-basis: 100%;
+  box-shadow: 0 8px 18px rgba(4, 25, 19, .35), 0 0 0 3px #4fc58e33;
 }
 
 .multi-meld-preview {
   flex-basis: 100%;
+  min-width: 0;
   display: grid;
   gap: 8px;
   padding: 10px;
@@ -177,6 +193,7 @@
 
 .selection-advisor.grouped-meld-mode {
   align-items: flex-start;
+  scrollbar-gutter: stable;
 }
 
 .board-meld .real-card,
