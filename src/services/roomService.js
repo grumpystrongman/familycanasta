@@ -13,6 +13,7 @@ import {
 import { db } from "../firebase";
 import { DEFAULT_RULES, dealHand, nextDealer, randomDealer, teamRecord } from "../game/engine";
 import { executeRobotTurn } from "../game/botEngine";
+import { reconcileStrandedRound } from "../game/roundReconciliation";
 
 const avatars = ["🦊","🐻","🦉","🐙","🦁","🐼","🐯","🦄","🐸","🤠"];
 const robotNames = ["Ruby", "Milo", "Hazel", "Otto", "Cleo", "Finn", "Ada", "Baxter"];
@@ -238,11 +239,26 @@ export async function sendMessage(code, member, text) {
   });
 }
 
+export async function reconcileFinishedRound(code, hostUid) {
+  const result = await runTransaction(ref(db, `rooms/${code}`), (room) => {
+    if (!room || room.hostUid !== hostUid) return room;
+    return reconcileStrandedRound(room);
+  }, { applyLocally: false });
+  return result.committed;
+}
+
 export async function startOnlineGame(code, uid) {
   const snapshot = await get(ref(db, `rooms/${code}`));
   if (!snapshot.exists()) throw new Error("Room not found.");
   const room = snapshot.val();
   if (room.hostUid !== uid) throw new Error("Only the host can start the game.");
+
+  const phase = room.publicState?.phase || room.status;
+  if (room.status !== "lobby" && phase !== "handOver") {
+    throw new Error(phase === "playing"
+      ? "The current hand is still active. Finish the hand before dealing again."
+      : "The next hand cannot be dealt from the current game state.");
+  }
 
   const teamCount = getTeamCount(room);
   const playersPerTeam = getPlayersPerTeam(room);
