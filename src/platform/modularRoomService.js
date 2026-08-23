@@ -9,6 +9,7 @@ import {
   update,
 } from "firebase/database";
 import { db } from "../firebase";
+import { recordCompletedRoom } from "./leaderboardService";
 
 const AVATARS = ["🦊", "🐻", "🦉", "🐙", "🦁", "🐼", "🐯", "🦄", "🐸", "🤠"];
 const ROBOT_NAMES = ["Ruby", "Milo", "Hazel", "Otto", "Cleo", "Finn"];
@@ -51,6 +52,7 @@ export async function createModularRoom({ user, nickname, avatar, gameId, maxPla
       maxPlayers,
       rules,
       createdAt: serverTimestamp(),
+      gameNumber: 0,
       members: { [user.uid]: member },
       gameState: { phase: "lobby", message: "Waiting for players." },
     });
@@ -114,7 +116,11 @@ export async function addModularRobot(code, hostUid) {
 }
 
 export function watchModularRoom(code, callback) {
-  return onValue(ref(db, `rooms/${code}`), (snapshot) => callback(snapshot.val()));
+  return onValue(ref(db, `rooms/${code}`), (snapshot) => {
+    const room = snapshot.val();
+    callback(room);
+    if (room) recordCompletedRoom(room, room.gameId || "", code).catch(() => {});
+  });
 }
 
 export async function startModularGame(code, hostUid, createGameState, minimumPlayers = 2) {
@@ -127,6 +133,8 @@ export async function startModularGame(code, hostUid, createGameState, minimumPl
     return {
       ...room,
       status: "playing",
+      gameNumber: Number(room.gameNumber || 0) + 1,
+      startedAt: Date.now(),
       gameState: createGameState(members, room.rules || {}),
     };
   }, { applyLocally: false });
